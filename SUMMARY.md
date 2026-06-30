@@ -186,3 +186,18 @@ The README referenced .env.example without explaining the copy/edit/run workflow
 
 **References:**
 - README.md: Overriding defaults with a .env file
+
+## [2026-06-29 20:00] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Theme default logic
+
+**Summary:**
+Simplified the theme-default logic in index.html and graphing.html. Removed the dead `|| (systemDark ? 'dark' : 'light')` branch that confused the source of the default. Now: `defaultTheme = '${THEME_DEFAULT}' || 'dark'`, then `theme = stored || defaultTheme`. A user's previously saved localStorage theme is honored; the env THEME_DEFAULT applies on first visit (or after clearing localStorage). Verified served HTML contains the correct substituted default.
+
+**Rationale:**
+The previous expression was syntactically valid but had a dead branch that obscured the real default source. Clarifying it makes the env-var flow obvious and confirms THEME_DEFAULT reaches the page correctly. The user-reported light-mode issue was caused by a previously saved localStorage value, not by the env var failing to apply — this is the intended, documented behavior (user choice wins).
+
+**References:**
+- index.html, graphing.html (theme init script)
+- README.md: THEME_DEFAULT row
