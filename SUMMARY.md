@@ -482,3 +482,21 @@ Root cause: `applyThemeToPlot`'s selectors (`.tic path, .axis path, .axis line, 
 - src/scripts/graphing/plot.ts (applyThemeToPlot, themeColors import)
 - tests/e2e/graphing.spec.ts (dark-mode rendering test)
 - TODO.md: 2026-06-30 Fix: Dark-mode plot grid + bold axes legibility
+
+## [2026-06-30 14:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing — hover coordinate readout
+
+**Summary:**
+Added a floating coordinate tooltip that appears when hovering the plot. Two modes: hovering a discrete "Show points" marker shows that marker's exact (x, y); hovering along a curve shows the computed (x, y) on the nearest curve. Pure `hover.ts` module (`HoverInfo` type, named constants, `formatNumber`, `nearestWithinThreshold` — node-testable). `plot.ts` gains `attachHoverReadout`, a rAF-throttled hover handler that snap-hits discrete markers within 8px, else the nearest curve within 20px pixel-y, emits via new `onHover` callback, and suppresses the tooltip for 150ms after zoom/pan. `GraphingCalculator.tsx` holds `hover` state and renders `CoordTooltip` (position: fixed, clamped to plot bounds, themed). function-plot's native crosshair (`.inner-tip`) is suppressed via a persistent CSS rule in `global.css`.
+
+**Rationale:**
+Keeps coordinate math in a node-testable pure module (no DOM/function-plot dependency), separates the plot's hover handler as a single, focused seam (`attachHoverReadout`), and renders the tooltip as a React component so theming is automatic and the text color never regresses below WCAG AA (curve color is a visual swatch only, never text). The pure-helpers split allows unit-testing `formatNumber` and `nearestWithinThreshold` without a browser. Gesture suppression (rAF throttle + 150ms post-zoom blackout) prevents tooltip flicker during interactive pan/zoom. Test coverage is deep: unit tests on the pure functions, plus e2e on both snap-to-marker and curve-hover modes, pointer-leave, native-tip suppression, and color-contrast a11y.
+
+**References:**
+- Spec: `docs/superpowers/specs/2026-06-30-hover-coordinate-tooltip-design.md`
+- Plan: `docs/superpowers/plans/2026-06-30-hover-coordinate-tooltip.md`
+- Files: `src/scripts/graphing/hover.ts`, `src/scripts/graphing/hover.test.ts`, `src/scripts/graphing/plot.ts`, `src/components/graphing/GraphingCalculator.tsx`, `src/styles/global.css`, `tests/e2e/graphing.spec.ts`
+- Unit tests: 20 passing (11 math + 3 theme + 6 hover)
+- E2E tests: 8 passing (native-tip suppression, dot-hover, curve-hover, pointer-leave, a11y)
