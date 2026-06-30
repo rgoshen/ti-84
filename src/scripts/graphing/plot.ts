@@ -210,9 +210,8 @@ interface AttachHoverOptions {
 function attachHoverReadout(opts: AttachHoverOptions): () => void {
   const { instance, target, getEquations, onHover } = opts;
   const svg = target.querySelector('svg');
-  const rect = svg?.querySelector<SVGRectElement>('rect.zoom-and-drag');
   const canvas = svg?.querySelector<SVGGElement>('g.canvas');
-  if (!svg || !rect || !canvas) return () => {};
+  if (!svg || !canvas) return () => {};
 
   let rafId: number | null = null;
   let pending: PointerEvent | null = null;
@@ -234,7 +233,7 @@ function attachHoverReadout(opts: AttachHoverOptions): () => void {
     const ev = pending;
     pending = null;
     // Bail if the plot was torn down between queueing and running this frame.
-    if (!ev || !rect.isConnected) return;
+    if (!ev || !svg.isConnected) return;
     // Stay hidden during/just after a pan or zoom gesture.
     if (performance.now() - (lastGestureAt.get(target) ?? -Infinity) < GESTURE_SUPPRESS_MS) {
       onHover(null);

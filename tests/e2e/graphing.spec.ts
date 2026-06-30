@@ -204,7 +204,9 @@ test('hovering a Show-points marker shows its exact (x, y)', async ({ page }) =>
   await expect(dot).toBeVisible();
   const box = await dot.boundingBox();
   if (!box) throw new Error('origin marker has no bounding box');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  // Offset +5px in x: still within DOT_HIT_RADIUS_PX=8 so dot-snap fires, but
+  // curve-mode at this cursor would report a non-zero x — proving the dot branch ran.
+  await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2);
   const tip = page.getByRole('status');
   await expect(tip).toBeVisible();
   await expect(tip).toContainText('(0, 0)');
@@ -231,7 +233,9 @@ test('hovering along the curve shows the (x, y) on the curve', async ({ page }) 
     return { x: s.x, y: s.y };
   });
 
-  await page.mouse.move(onCurve.x, onCurve.y);
+  // Offset +10px in screen-y: still within CURVE_HIT_RADIUS_PX=20, but the cursor's
+  // data-y is now ~0.19 off the curve — a wrong implementation reporting cursor-y would fail.
+  await page.mouse.move(onCurve.x, onCurve.y + 10);
   const tip = page.getByRole('status');
   await expect(tip).toBeVisible();
   const text = (await tip.textContent()) ?? '';

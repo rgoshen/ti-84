@@ -88,6 +88,11 @@ function EquationLabel({ expr, className }: { expr: string; className?: string }
   return <span className={className}>{`y = ${expr}`}</span>;
 }
 
+// Conservative estimates of the rendered tooltip dimensions used to clamp it
+// inside the plot bounds without measuring the element on every pointer move.
+const TOOLTIP_EST_WIDTH_PX = 96;
+const TOOLTIP_EST_HEIGHT_PX = 28;
+
 /**
  * Floating coordinate readout. Positioned with `position: fixed` at the pointer's
  * viewport coords and clamped to the plot bounds. The (x, y) text stays in the
@@ -105,8 +110,8 @@ function CoordTooltip({
   let left = hover.clientX + OFFSET;
   let top = hover.clientY - OFFSET;
   if (b) {
-    left = Math.min(Math.max(left, b.left), Math.max(b.left, b.right - 96));
-    top = Math.min(Math.max(top, b.top), Math.max(b.top, b.bottom - 28));
+    left = Math.min(Math.max(left, b.left), Math.max(b.left, b.right - TOOLTIP_EST_WIDTH_PX));
+    top = Math.min(Math.max(top, b.top), Math.max(b.top, b.bottom - TOOLTIP_EST_HEIGHT_PX));
   }
   return (
     <div
@@ -170,6 +175,8 @@ export default function GraphingCalculator(): React.JSX.Element {
 
     const build = (): void => {
       if (disposed) return;
+      // function-plot appends to the target; clear it so each build starts fresh.
+      // replaceChildren() (vs innerHTML) keeps this a plain, XSS-free DOM clear.
       target.replaceChildren();
       setHover(null);
       try {
