@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+import 'katex/dist/katex.min.css';
+import GraphingCalculator from '@/components/graphing/GraphingCalculator.tsx';
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graphing Calculator Online</title>
+    <meta
+      name="description"
+      content="Free online graphing calculator. Instantly plot equations, stack multiple functions, zoom and pan, and read a value table — all in your browser."
+    />
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <header class="border-b">
+      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <h1 class="text-2xl font-semibold tracking-tight">Graphing Calculator Online</h1>
+        <a href="/" class="text-sm font-medium text-muted-foreground hover:text-foreground">
+          Home
+        </a>
+      </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-6xl px-6 py-8">
+      <GraphingCalculator client:only="react" />
+    </main>
+  </body>
+</html>

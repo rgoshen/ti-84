@@ -347,3 +347,22 @@ Vitest: 11 passing — gridlineCrossings rule (integer x OR integer y, none both
 - package.json, astro.config.mjs, tsconfig.json, vitest.config.ts, src/styles/global.css, src/pages/index.astro
 - src/scripts/graphing/math.ts, src/scripts/graphing/math.test.ts
 - TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 0 + 1)
+
+## [2026-06-29 21:52] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing calculator — React island (Astro port)
+
+**Summary:**
+Ported graphing.html into a React island. Added `src/scripts/graphing/plot.ts` (framework-free function-plot wrapper: render, point overlay, theme, throttled zoom/pan sync), `src/components/graphing/GraphingCalculator.tsx` (shadcn/ui controls, equation list, window panel, value table; KaTeX labels with plain-text fallback), `src/pages/graphing.astro` (dark, KaTeX CSS, `client:only="react"`), plus `playwright.config.ts` and `tests/e2e/graphing.spec.ts`. Reuses the tested `@/scripts/graphing/math` unchanged. `npm run build`, `npm test` (11), and the Playwright e2e all pass. Not committed — left in working tree for review.
+
+**Rationale:**
+Point-on-curve alignment is achieved by appending the overlay into function-plot's `g.canvas` and positioning markers with the instance's own `meta.xScale`/`yScale` (no tick-reading), and zoom/pan stays in sync by reading the live domain in a rAF-throttled `all:zoom` handler that redraws the overlay and reports the new view via `onViewChange` (never recreating the plot). Plot recreation is keyed to [equations, appliedWindow, dark]; the zoom-mirrored displayWindow feeds only the value table + window inputs.
+
+**Bug Fix Context (if applicable):**
+function-plot is CommonJS (`exports.default = functionPlot`); the ESM default import resolved to a namespace wrapper under Vite/esbuild dev (TypeError: functionPlot is not a function). Normalized the import to the callable (`.default ?? default`), verified working in both dev and production builds.
+
+**References:**
+- src/scripts/graphing/plot.ts, src/components/graphing/GraphingCalculator.tsx, src/pages/graphing.astro
+- playwright.config.ts, tests/e2e/graphing.spec.ts
+- TODO.md: Graphing Calculator React Island (Astro port)
