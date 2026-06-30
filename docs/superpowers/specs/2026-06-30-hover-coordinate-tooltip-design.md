@@ -4,6 +4,7 @@
 - **Status:** Approved (pre-implementation)
 - **Component:** Graphing calculator (`src/components/graphing/GraphingCalculator.tsx`, `src/scripts/graphing/plot.ts`)
 - **Branch:** `feature/hover-coordinate-tooltip`
+- **Revised 2026-06-30** — spec-gap-auditor gaps **G1–G7 closed** (see Revision changelog at foot). Inline fixes tagged `[Gxx]`.
 
 ## Summary
 
@@ -11,7 +12,8 @@ When the user hovers over the plot, show a floating tooltip with the `(x, y)`
 value at the pointer. Two modes, one tooltip:
 
 1. **Dot mode** — hovering a discrete "Show points" marker shows that marker's
-   **exact** `(x, y)` (these sit at whole-number gridline crossings).
+   own `(x, y)` (these sit at whole-number gridline crossings: integer in one
+   axis, bisected in the other — see [G6]).
 2. **Curve mode** — hovering anywhere along a plotted curve (whether or not
    "Show points" is on) shows the **computed** `(x, y)` at the pointer's x on the
    nearest curve.
@@ -19,7 +21,7 @@ value at the pointer. Two modes, one tooltip:
 ## Goals
 
 - A floating, themed tooltip that tracks the cursor and reads `(x, y)`.
-- Exact values on the discrete markers; computed values along the curve.
+- The marker's own values on the discrete dots; computed values along the curve.
 - Correct after interactive zoom/pan (use the live scales).
 - Light/dark themed, accessible, and covered by unit + e2e tests.
 
@@ -61,50 +63,84 @@ pointermove on plot surface
 pointerleave → onHover(null) → tooltip hidden
 ```
 
+### Constants [G1]
+
+Named in `hover.ts` (no magic numbers), following the existing `MARKER_RADIUS` /
+`MAX_POINTS` / `SAMPLES` convention:
+
+| Name | Value | Meaning |
+|---|---|---|
+| `DOT_HIT_RADIUS_PX` | `8` | pointer-to-marker distance that counts as "on the dot" |
+| `CURVE_HIT_RADIUS_PX` | `20` | pointer-to-curve pixel-y distance that counts as "on the curve" |
+| `COORD_DECIMALS` | `3` | decimals shown before trailing-zero trim |
+| `GESTURE_SUPPRESS_MS` | `150` | window after the last zoom/pan event during which the tooltip stays hidden [G7] |
+
 ### Types
 
 ```ts
 interface HoverInfo {
   x: number;        // data-space x
   y: number;        // data-space y
-  clientX: number;  // viewport px for tooltip positioning
+  clientX: number;  // viewport px for tooltip positioning (position: fixed) [G5]
   clientY: number;
-  color: string;    // owning curve color (tooltip accent)
-  exact: boolean;   // true = on a discrete marker, false = computed on curve
+  color: string;    // owning curve color — used ONLY as a non-text accent [G3]
+  onMarker: boolean; // true = snapped to a discrete marker (its stored coords);
+                     // false = computed on the nearest curve. NOT a claim of
+                     // mathematical exactness — integer-y marker x is bisected. [G6]
 }
 ```
 
 ### Components / changes
 
 1. **`plot.ts` — marker coordinates.** When `drawPointsOverlay` creates each
-   marker, stash its exact data `(x, y)` (e.g. `data-x` / `data-y` attributes or
-   a parallel list) so hover returns exact values without re-deriving them.
+   marker, stash its data `(x, y)` and owning `color` (e.g. a parallel list of
+   `{ x, y, color }` kept alongside the overlay) so a hover returns the marker's
+   own coordinates without re-deriving them. (These are the marker's stored
+   coordinates, integer in one axis and bisected in the other — not exact. [G6])
 
-2. **`plot.ts` — hover handler.** Add a `pointermove` / `pointerleave` listener
-   on the plot surface (the `rect.zoom-and-drag` or svg), rAF-throttled like the
-   `all:zoom` handler. Logic:
-   - Dot hit-test first: nearest marker within ~8px → `exact: true`, stored coords.
-   - Else curve: `dataX = xScale.invert(cursorPx)`; for each equation evaluate
-     `evalAt(expr, dataX)`; choose the curve whose `yScale(y)` is nearest the
-     cursor pixel-y and within ~20px → `exact: false`.
-   - Else emit `null`.
-   - Re-reads the live scales each time, so it is correct after zoom/pan.
+2. **`plot.ts` — hover handler** (extracted as `attachHoverReadout(instance, target, opts)`
+   for a single, focused seam [G8]). A `pointermove` / `pointerleave` listener on
+   the plot surface (`rect.zoom-and-drag`), rAF-throttled like the `all:zoom`
+   handler. Logic, re-reading the live scales each call (correct after zoom/pan):
+   - **Gesture guard [G7]:** if a zoom/pan happened within `GESTURE_SUPPRESS_MS`
+     (tracked via a timestamp set in the `all:zoom` handler), emit `null` and stop
+     — no tooltip mid-gesture.
+   - **Dot hit-test first:** nearest stored marker within `DOT_HIT_RADIUS_PX`
+     (compare in pixel space via the live scales) → `onMarker: true`, stored coords + color.
+   - **Else curve:** `dataX = xScale.invert(cursorPx)`; for each equation evaluate
+     `evalAt(expr, dataX)`; pick the curve whose `yScale(y)` is nearest the cursor
+     pixel-y within `CURVE_HIT_RADIUS_PX` (via `nearestWithinThreshold`) →
+     `onMarker: false`, computed coords + that curve's color.
+   - **Else** emit `null`.
+   - Guards `if (!xScale || !yScale) return` (scales may be absent), mirroring
+     `drawPointsOverlay`.
 
-3. **`plot.ts` — `onHover` option.** Add `onHover?: (info: HoverInfo | null) => void`
-   to `RenderGraphOptions`; wire the listeners in `renderGraph` and clean them up
-   when the plot is rebuilt.
+3. **`plot.ts` — `onHover` option + lifecycle [G4].** Add
+   `onHover?: (info: HoverInfo | null) => void` to `RenderGraphOptions`.
+   `attachHoverReadout` returns a `cleanup()` that removes the pointer listeners
+   and `cancelAnimationFrame`s any queued frame; `renderGraph` calls it on
+   rebuild. `pointerleave` emits `onHover(null)`. The component wraps the callback
+   with its existing `disposed` flag (as it already does for `onViewChange`) so no
+   `setState` fires after unmount.
 
-4. **`plot.ts` — suppress native tip.** Hide `.inner-tip` (style-based, version
-   independent) so only our tooltip shows.
+4. **Native tip suppression [G2].** Add a persistent, plot-scoped CSS rule in
+   `global.css` — `[data-testid="plot"] .inner-tip { display: none !important; }`
+   — rather than inline-hiding the element. function-plot recreates/repositions
+   the tip group on zoom and on each hover, so an inline style would not survive;
+   `!important` overrides function-plot's inline updates.
 
-5. **React tooltip (`GraphingCalculator.tsx`).** Hold `hover: HoverInfo | null`
-   in state set from `onHover`. Render a themed, absolutely-positioned `<div>`
-   (rounded chip, `bg-popover` / `text-popover-foreground`, subtle border +
-   shadow), offset up-right of the cursor and clamped inside the plot card. Text
-   tinted with `color`. `role="status"` + `aria-live="polite"`.
+5. **React tooltip (`GraphingCalculator.tsx`).** Hold `hover: HoverInfo | null` in
+   state set from `onHover`. Render a themed tooltip via `position: fixed` at
+   `clientX/clientY` (+ a small up-right offset), clamped to the plot card's
+   `getBoundingClientRect()` so it never leaves the plot [G5]. Chip styling:
+   `bg-popover` + `text-popover-foreground`, subtle border + shadow. **The `(x,y)`
+   text stays in `popover-foreground` (AA-contrast); the curve `color` is used
+   ONLY as a small leading swatch dot / left-border accent, never as the text
+   color [G3].** `role="status"` + `aria-live="polite"`.
 
-6. **Formatting (pure helper).** `formatNumber(n)`: round to 3 decimals, trim
-   trailing zeros (integers stay integers). Display `(${formatNumber(x)}, ${formatNumber(y)})`.
+6. **Formatting (pure helper).** `formatNumber(n)`: round to `COORD_DECIMALS`,
+   trim trailing zeros (integers stay integers; `-0 → "0"`). Display
+   `(${formatNumber(x)}, ${formatNumber(y)})`.
 
 7. **Selector (pure helper).** `nearestWithinThreshold(candidates, cursorPx, thresholdPx)`
    returns the candidate nearest `cursorPx` within the threshold, else `null` —
@@ -116,10 +152,11 @@ interface HoverInfo {
   candidate; tooltip hidden if nothing else matches.
 - Cursor in empty space (beyond the thresholds) → `onHover(null)`, tooltip hidden.
 - Multiple curves overlapping → nearest-by-pixel-y wins; tie broken by list order.
-- Plot rebuild (equation/window/theme change) → listeners removed and
-  re-attached; stale `hover` cleared.
+- Plot rebuild (equation/window/theme change) → `cleanup()` removes listeners and
+  cancels any queued frame; stale `hover` cleared; listeners re-attached. [G4]
 - After zoom/pan → handler reads the current `meta.xScale`/`yScale`, so readouts
-  track the new view.
+  track the new view; and the tooltip is suppressed for `GESTURE_SUPPRESS_MS`
+  after the last gesture event so it doesn't flicker mid-pan/zoom. [G7]
 
 ## Testing
 
@@ -130,17 +167,34 @@ interface HoverInfo {
 
 **E2e (playwright, dark mode):**
 - Plot `sin(x)`, enable Show points; hover a known marker → tooltip visible with
-  the expected exact `(x, y)`.
+  that marker's coordinates (e.g. the origin dot → `(0, 0)`).
 - Hover along the curve away from any marker → tooltip visible; its x ≈ the
   cursor's data-x (within tolerance).
 - Move the pointer off the plot → tooltip removed.
+- A11y/contrast [G3]: assert the `(x, y)` text color resolves to the popover
+  foreground token (not a curve palette color), so it can't silently regress to a
+  low-contrast tint.
 
 ## Files touched
 
-- `src/scripts/graphing/plot.ts` — marker coords, hover handler, `onHover`
-  option, native-tip suppression.
+- `src/scripts/graphing/plot.ts` — marker coords, `attachHoverReadout`, `onHover`
+  option + cleanup, gesture timestamp on `all:zoom`.
 - `src/scripts/graphing/hover.ts` *(new, pure)* — `formatNumber`,
-  `nearestWithinThreshold` + `HoverInfo` type.
+  `nearestWithinThreshold`, the constants, + `HoverInfo` type.
 - `src/scripts/graphing/hover.test.ts` *(new)* — unit tests.
 - `src/components/graphing/GraphingCalculator.tsx` — hover state + tooltip.
+- `src/styles/global.css` — scoped `.inner-tip` suppression rule. [G2]
 - `tests/e2e/graphing.spec.ts` — hover e2e.
+
+## Revision changelog
+
+| Gap | Summary | Where closed |
+|-----|---------|--------------|
+| G1 | Named the thresholds/precision as symbolic constants (no magic numbers) | §Constants, §Components #2/#6 |
+| G2 | Native-tip suppression pinned to a persistent scoped CSS rule (survives redraw) | §Components #4, §Files touched |
+| G3 | `(x,y)` text kept in popover-foreground (AA); curve color demoted to a non-text swatch | §Components #5, §Testing (a11y assertion) |
+| G4 | Specified `cleanup()` (listener removal + rAF cancel), `disposed` guard, pointerleave-null | §Components #3, §Edge cases |
+| G5 | Tooltip positioning fixed at `clientX/clientY`, clamped to the plot card rect | §Types, §Components #5 |
+| G6 | Renamed `exact` → `onMarker`; clarified marker x is bisected, not exact | §Types, §Components #1, §Testing |
+| G7 | Gesture-suppression window (`GESTURE_SUPPRESS_MS`) hides the tooltip mid-pan/zoom | §Constants, §Components #2, §Edge cases |
+| G8 *(note)* | Hover handler extracted as `attachHoverReadout(...)` seam to keep `plot.ts` focused | §Components #2 |
