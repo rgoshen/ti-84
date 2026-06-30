@@ -230,3 +230,19 @@ The function-line forcing changes were not the requested fix and may have interf
 
 **References:**
 - graphing.html: applyThemeToPlot
+
+## [2026-06-29 20:30] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — axes, points, triangles
+
+**Summary:**
+1. Bold origin axes — added drawOriginAxes() that draws x=0 (vertical) and y=0 (horizontal) lines at 2px stroke on top of the plot, themed to the axis color, only when 0 is within the current x/y domain. The rest of the grid stays thinner.
+2. Inverse points fix — reversed the yScale range from [padT, height-padB] to [height-padB, padT] because SVG y grows downward. Points were being plotted at the mirrored y-coordinate; now they sit on the actual function curve.
+3. Triangles fix — switched the triangle marker from a <polygon> (whose points attribute was rendering unreliably) to a <path> with an explicit M/L/L/Z d attribute, slightly enlarged so triangles render reliably.
+
+**Rationale:**
+SVG coordinate space has y increasing downward, so a d3 scale mapping yMin→top and yMax→bottom inverts the plot. Reversing the range aligns pixel positions with the math. The origin axes are a standard graphing-calculator convention (the x and y axes should be more prominent than grid lines). The polygon→path switch makes triangle rendering deterministic across browsers.
+
+**References:**
+- graphing.html: getYScale, drawOriginAxes, makeMarker
