@@ -118,3 +118,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* function-plot draws a native crosshair tip (.inner-tip) on hover; we render
+   our own floating coordinate tooltip instead, so suppress the native one.
+   Scoped to the plot; !important overrides function-plot's inline hover styles. */
+[data-testid='plot'] .inner-tip {
+  display: none !important;
+}

@@ -164,3 +164,34 @@ test('markers stay on the curve through an interactive zoom, and the window inpu
   expect(after.count).toBeGreaterThan(0);
   expect(after.maxDist).toBeLessThan(5);
 });
+
+test('suppresses function-plot native crosshair tip', async ({ page }) => {
+  await page.goto('/graphing');
+  // The native tip only activates once a curve is plotted and hovered.
+  await page.locator('#eq-input').fill('sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+
+  // Hover a real screen point on the curve (the longest graph path). On
+  // curve-hover function-plot clears the inline display:none it sets at load,
+  // which would reveal the crosshair; our scoped !important rule must keep it hidden.
+  const onCurve = await page.evaluate(() => {
+    const svg = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement;
+    const path = [...svg.querySelectorAll('g.graph path')].sort(
+      (a, b) => (b as SVGPathElement).getTotalLength() - (a as SVGPathElement).getTotalLength(),
+    )[0] as SVGPathElement;
+    const p = path.getPointAtLength(path.getTotalLength() * 0.5);
+    const ctm = path.getScreenCTM()!;
+    const pt = svg.createSVGPoint();
+    pt.x = p.x;
+    pt.y = p.y;
+    const s = pt.matrixTransform(ctm);
+    return { x: s.x, y: s.y };
+  });
+  await page.mouse.move(onCurve.x, onCurve.y);
+
+  const display = await page
+    .locator('[data-testid="plot"] .inner-tip')
+    .evaluate((el) => getComputedStyle(el).display);
+  expect(display).toBe('none');
+});
