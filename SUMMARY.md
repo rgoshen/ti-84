@@ -158,3 +158,17 @@ The dead `HOST_PORT` env var created an inconsistent default (8084 vs 8080) and 
 
 **References:**
 - docker-compose.yml, Dockerfile
+
+## [2026-06-29 19:50] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker Compose default port
+
+**Summary:**
+Restored the default host port to 8084 in docker-compose.yml (`${HOST_PORT:-8084}:80`), .env.example, and all docs (README, CONTRIBUTING, docs/README). The previous "fix" wrongly reverted to 8080; 8084 was intentional because 8080 is already in use on the host.
+
+**Rationale:**
+Respect the user's explicit port choice. 8084 is the project default going forward.
+
+**References:**
+- docker-compose.yml, .env.example, README.md, CONTRIBUTING.md, docs/README.md
