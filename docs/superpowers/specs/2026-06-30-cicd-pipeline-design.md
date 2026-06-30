@@ -66,7 +66,7 @@ required check.
 ### `.github/workflows/release.yml` (`on: push: branches: [main]`)
 - `verify` job: `uses: ./.github/workflows/_verify.yml`.
 - `release` job: `needs: verify`.
-  - `permissions: { contents: write, issues: write, pull-requests: write, id-token: write }`.
+  - `permissions: { contents: write, issues: write, pull-requests: write }`.
   - `actions/checkout@v4` with `fetch-depth: 0` (semantic-release needs full history).
   - `actions/setup-node@v4` (node 24, `cache: npm`), `npm ci`.
   - `cycjimmy/semantic-release-action@v6` (`id: release`) with `GITHUB_TOKEN`,
@@ -80,8 +80,9 @@ required check.
   - `docker/login-action@v4` → `registry: ghcr.io`, `username: ${{ github.actor }}`, `password: ${{ secrets.GITHUB_TOKEN }}`.
   - `docker/metadata-action@v6` (see tags below).
   - `docker/build-push-action@v7`: `context: .`, `platforms: linux/amd64,linux/arm64`,
-    `push: true`, `tags`/`labels` from metadata, `cache-from/to: type=gha`, and the
-    `PUBLIC_*` build-args (Dockerfile defaults).
+    `push: true`, `tags`/`labels` from metadata, `cache-from/to: type=gha`. No
+    `build-args` are passed — the Dockerfile's `PUBLIC_*` defaults already are the
+    production values (matching `docker-compose.yml`), so no overrides are needed.
 
 ### GHCR tag strategy (`docker/metadata-action@v6`)
 Fed the released tag via `value=`, since the workflow is triggered by the push to
@@ -151,9 +152,11 @@ Add CI + release status badges and a "Container image" section:
 - **Broken `main`:** `verify` fails → `release`/`publish` never run → no
   release/image for a red main.
 - **Pre-1.0 image tags:** bare-major `0` intentionally suppressed.
-- **First run from 0.1.0:** the first `feat` →
-  `0.2.0`; the first `fix` → `0.1.1`; a breaking change pre-1.0 →
-  `0.2.0` per SemVer 0.x convention (commit-analyzer default).
+- **First run from 0.1.0:** assumes a **seeded `v0.1.0` baseline tag** (see the
+  README setup — without it, semantic-release's first release would be `1.0.0`).
+  With the tag in place: the first `feat` → `0.2.0`; the first `fix` → `0.1.1`;
+  a breaking change pre-1.0 → `0.2.0` per SemVer 0.x convention
+  (commit-analyzer default).
 
 ## Verification (this infra task)
 - `actionlint` over `.github/workflows/*.yml` (syntax + action-pinning lint).

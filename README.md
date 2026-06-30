@@ -141,9 +141,20 @@ with different titles, default theme, or iframe source.
 
 These are GitHub settings, not files:
 
-1. **Branch protection** (Settings → Branches → add rule for `main`): require the
+1. **Seed the version baseline** (once, before the first release): semantic-release
+   starts a fresh project at `1.0.0` unless a baseline tag exists. To keep this
+   project on 0.x, tag the current release point and push it:
+
+   ```bash
+   git tag v0.1.0 && git push origin v0.1.0
+   ```
+
+   After this, the first `feat` merged to `main` releases `0.2.0` and the first
+   `fix` releases `0.1.1`.
+
+2. **Branch protection** (Settings → Branches → add rule for `main`): require the
    status check **`ci / verify`** to pass before merging.
-2. **Package visibility** (after the first release, on the `ti-84` package page →
+3. **Package visibility** (after the first release, on the `ti-84` package page →
    Package settings): set to **Public** if you want anonymous `docker pull`.
 
 ## Contributing

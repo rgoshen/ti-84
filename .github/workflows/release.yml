@@ -20,7 +20,6 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-      id-token: write
     outputs:
       published: ${{ steps.release.outputs.new_release_published }}
       git_tag: ${{ steps.release.outputs.new_release_git_tag }}
