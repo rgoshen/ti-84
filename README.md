@@ -6,7 +6,10 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Made with HTML](https://img.shields.io/badge/Made%20with-HTML-E34F26?logo=html5&logoColor=white)](https://developer.mozilla.org/docs/Web/HTML)
 
-A simple, professional single-page website that embeds the TI-84 online calculator with a light/dark theme toggle built on Tailwind CSS and served via Docker.
+A simple, professional website with a light/dark theme toggle built on Tailwind CSS and served via Docker. Includes two pages accessible from a shared navigation menu:
+
+- **TI-84 Calculator** — embeds the online TI-84 calculator
+- **Graphing Calculator Online** — a content page describing the in-browser graphing calculator (equation plotting, multiple functions, interactive controls, cross-device support, algebra/calculus/trigonometry features)
 
 ## Screenshots
 
@@ -20,11 +23,14 @@ A simple, professional single-page website that embeds the TI-84 online calculat
 
 ![Dark theme screenshot](docs/screenshot-dark.png)
 
+> Capture screenshots from both the TI-84 page and the Graphing Calculator Online page.
+
 ## Features
 
 - Light and dark themes (remembers your choice via `localStorage`)
+- Shared navigation menu between both pages
 - Responsive, clean layout
-- Single static `index.html` — no build step required
+- Single static HTML files — no build step required
 - Served by Nginx inside a Docker container
 
 ## Prerequisites
@@ -55,14 +61,15 @@ docker rm graphing-calculator
 
 ## Running without Docker
 
-Open `index.html` directly in any modern browser. No build step is required since Tailwind is loaded via CDN.
+Open `index.html` (TI-84) or `graphing.html` (Graphing Calculator Online) directly in any modern browser. No build step is required since Tailwind is loaded via CDN.
 
 ## Project structure
 
 ```
 .
-├── index.html        # The website (Tailwind via CDN, theme toggle, embedded iframe)
-├── Dockerfile        # Nginx Alpine image serving index.html
+├── index.html        # TI-84 Calculator page (Tailwind via CDN, theme toggle, embedded iframe, nav menu)
+├── graphing.html     # Graphing Calculator Online content page (themed, nav menu)
+├── Dockerfile        # Nginx Alpine image serving all HTML files
 ├── docs/             # Screenshots and assets
 ├── CONTRIBUTING.md   # How to contribute
 └── README.md
