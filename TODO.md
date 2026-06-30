@@ -40,3 +40,36 @@ Add a separate, in-house graphing calculator that lets the user type in an equat
 - Avoid MUI to prevent a dual-styling-system (CSS-in-JS vs Tailwind) clash and a premature React migration; revisit if the app grows well beyond this feature.
 
 **Status:** Planned — not yet started.
+
+## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
+
+**Objective:**
+Add an AI component that accepts a math problem from the user and displays a clear, step-by-step walkthrough of how to solve it. This is a companion feature to the custom graphing calculator and lives on the same site.
+
+**Approach:**
+- Keep the static `index.html` + CDN Tailwind foundation (no React/build-tool migration).
+- Frontend: a text input for the problem and a rendered "steps" panel (ordered list, Tailwind-styled) showing each step with its reasoning.
+- Backend: a small serverless/API route that proxies requests to an LLM (e.g. OpenAI, Anthropic, or a local model via Ollama). The frontend never holds API keys.
+  - Because the current deployment is a static Nginx container, this requires introducing a lightweight API layer (e.g. an Azure Function, Cloudflare Worker, or a small Node/Express sidecar). The static site can call the API via `fetch`.
+- Prompt design: instruct the model to return structured JSON (array of `{ step_number, expression, explanation }`) so the frontend can render consistent, formatted steps rather than free-form text.
+- Consider LaTeX/MathJax rendering for the math expressions in each step.
+- Reuse the existing light/dark theme toggle for the solver panel.
+
+**Tests:**
+- Manual: submitting a sample problem (e.g. `2x + 5 = 13`) renders multiple ordered steps with correct math; invalid/empty input shows a friendly error; theme toggle updates the panel.
+- Unit tests (if backend is added): deterministic tests for request validation, prompt construction, and JSON-response parsing.
+- Evaluation set: a small set of canonical problems with expected final answers to catch regressions in model output.
+
+**Risks & Tradeoffs:**
+- Introduces a backend/API dependency — breaks the pure-static-site simplicity. Mitigate by keeping the static site as-is and adding the API as a separate deployable.
+- LLM cost and latency per request; consider caching common problems and streaming responses for perceived speed.
+- Hallucinated/incorrect steps — mitigate via a strong system prompt, JSON schema validation, and (optionally) a verifier pass. Surface a disclaimer that steps should be verified.
+- API key security — keys must live server-side only; never embed in the static site.
+- Model choice affects quality of step-by-step reasoning; a reasoning-capable model is preferred. Evaluate before committing.
+- Avoid MUI (React-only) for the UI; Tailwind is sufficient for the input and steps panel.
+
+**Dependencies:**
+- Requires the API layer decision (serverless vs. sidecar) before implementation.
+- Coordinate with the graphing calculator feature so both share a consistent input/panel styling system.
+
+**Status:** Planned — not yet started.
