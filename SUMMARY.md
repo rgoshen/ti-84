@@ -260,3 +260,17 @@ The points and origin axes were offset from the real plot because Function Plot'
 
 **References:**
 - graphing.html: getXScale, getYScale, readAxisTicks, drawOriginAxes
+
+## [2026-06-29 20:50] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — bold grid axes
+
+**Summary:**
+Replaced the overlay origin-axis lines (`drawOriginAxes`) with a new `boldGridAxes()` function that finds Function Plot's existing grid lines at x=0 and y=0 and increases their stroke-width to 2px. The x/y axis grid lines now stand out bolder than the rest of the coordinate grid, matching standard graphing calculator conventions. Uses the same `readAxisTicks()` from the previous commit to locate the zero-position ticks accurately.
+
+**Rationale:**
+The previous approach drew new lines on top, but the request was to make the *existing* grid lines bolder. Restyling Function Plot's actual grid lines is cleaner and matches the visual intent exactly.
+
+**References:**
+- graphing.html: boldGridAxes, applyThemeToPlot
