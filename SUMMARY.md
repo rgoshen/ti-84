@@ -500,3 +500,18 @@ Keeps coordinate math in a node-testable pure module (no DOM/function-plot depen
 - Files: `src/scripts/graphing/hover.ts`, `src/scripts/graphing/hover.test.ts`, `src/scripts/graphing/plot.ts`, `src/components/graphing/GraphingCalculator.tsx`, `src/styles/global.css`, `tests/e2e/graphing.spec.ts`
 - Unit tests: 20 passing (11 math + 3 theme + 6 hover)
 - E2E tests: 8 passing (native-tip suppression, dot-hover, curve-hover, pointer-leave, a11y)
+
+## [2026-06-30 22:40] Commit Summary
+
+**Change Type:** CI
+**Scope:** GitHub Actions / release automation
+
+**Summary:**
+Added GitHub Actions CI/CD pipeline: `.github/workflows/ci.yml` (runs on every PR: astro check, vitest, build, playwright e2e), reusable `.github/workflows/_verify.yml` (invoked post-release to prevent race conditions), and `.github/workflows/release.yml` (triggered on main: semantic-release handles versioning, changelog, tag, and pushes multi-arch GHCR image). Added `.releaserc.json` (semantic-release config). Documented in README.md: new "Container image" section (pull commands for ghcr.io/rgoshen/ti-84) and "CI/CD & releases" section with one-time GitHub settings (branch protection, package visibility).
+
+**Rationale:**
+A mature, automated release pipeline reduces manual effort and human error, and Conventional Commits + semantic-release are industry standard for language-agnostic projects. Multi-arch GHCR publishing makes the image accessible across dev and production hardware. A reusable _verify gate ensures the release artifact is tested before publish, closing a window where the tag and image could diverge.
+
+**References:**
+- Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
+- TODO.md: 2026-06-30 Feature: CI/CD pipeline (semantic-release + GHCR)
