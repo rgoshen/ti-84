@@ -180,3 +180,24 @@ Port the vanilla-JS graphing calculator (graphing.html) into a React island insi
 - ~~Deferred: bold zero-axis gridlines (`boldGridAxes`)~~ — DONE: ported to `plot.ts` as `boldZeroAxes` (bolds the "0" tick line in each axis; re-applied on zoom). No in-island theme toggle (the page header has one).
 
 **Status:** Implemented; left in working tree (not committed) for review.
+
+## [2026-06-30] Fix: Dark-mode plot grid + bold axes legibility
+
+**Objective:**
+In dark mode the function-plot gridlines were nearly invisible and the x=0/y=0 axes did not read as bold (unlike light mode). Make the dark theme's grid visible and the origin cross prominent, with no change to the (already-good) light theme.
+
+**Approach:**
+- Root cause (confirmed by probing the live SVG, both themes): function-plot draws the origin axes as `.x.origin`/`.y.origin` paths stroked **solid black at 0.2 opacity** — `applyThemeToPlot` never recolored them, so on the dark `#0f172a` background they vanished (black@20% ≈ invisible; on white that same paint is the `#ccc` axis you see in light mode). Separately, every gridline is forced to `opacity: 0.1` by function-plot, where even white lands only ~24/255 above a near-black background, so the slate-500 grid was ~9/255 from the background — fainter than light's grid.
+- Extracted the palette + colour math into a pure, node-testable `src/scripts/graphing/theme.ts` (`themeColors`, `hexToRgb`, `blendOver`, `relativeLuminance`, `lineContrast`, `lineDelta`). `ThemeColors` gains `gridOpacity` + `axisOpacity`.
+- Dark theme: brighten grid to slate-400 and raise `gridOpacity` to 0.24; recolour the origin cross to slate-300 (`#cbd5e1`) at `axisOpacity` 0.55. Light theme reproduces function-plot's own defaults exactly (slate-400 grid @0.1, black origin @0.2) → pixel-identical.
+- `applyThemeToPlot` now overrides stroke AND opacity for gridlines (`.axis line, .axis path`) and recolours the `.origin` cross. Re-applied after each zoom/pan (unchanged wiring).
+
+**Tests:**
+- Vitest `theme.test.ts` (new): blends-before-measuring contrast helpers; asserts dark origin WCAG contrast ≥ 2.0, dark grid sRGB delta ≥ 24, light remains visible, and dark ≥ light for both (the reported asymmetry). Started red against the pre-fix palette, green after.
+- Playwright e2e (new test): loads /graphing in dark mode, asserts the `.origin` stroke is light (not black) at opacity ≥ 0.4 and gridline opacity ≥ 0.2 — guards the `applyThemeToPlot` wiring.
+
+**Risks & Tradeoffs:**
+- function-plot's `0.1` gridline opacity caps how much contrast colour alone can buy, so the fix raises opacity for dark; values were tuned and visually verified by screenshot in both themes.
+- Selectors depend on function-plot's class names (`.origin`, `.axis line/path`); covered by the e2e guard so a future library upgrade that renames them fails loudly.
+
+**Status:** Implemented on `feature/dark-mode-plot-contrast`.

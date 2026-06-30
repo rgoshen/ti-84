@@ -1,6 +1,7 @@
 import functionPlotDefault from 'function-plot';
 import type { FunctionPlotDatum, FunctionPlotScale } from 'function-plot';
 import { gridlineCrossings, type Window2D } from '@/scripts/graphing/math';
+import { themeColors, type ThemeColors } from '@/scripts/graphing/theme';
 
 // function-plot ships as CommonJS (`exports.default = functionPlot`). Depending on
 // the bundler's ESM interop (Vite/esbuild in dev vs Rollup in build), the default
@@ -38,13 +39,6 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const PLOT_HEIGHT = 560;
 const MARKER_RADIUS = 4;
 
-interface ThemeColors {
-  bg: string;
-  grid: string;
-  axis: string;
-  text: string;
-}
-
 /**
  * Minimal view of function-plot's live d3 linear scale: maps a data value to a
  * canvas-local pixel and exposes the current domain. function-plot types the scale
@@ -60,26 +54,29 @@ function asNumericScale(scale: FunctionPlotScale | undefined): NumericScale | nu
   return scale ? (scale as unknown as NumericScale) : null;
 }
 
-/** Port of graphing.html themeColors(): plot colors for dark vs light. */
-function themeColors(dark: boolean): ThemeColors {
-  return {
-    bg: dark ? '#0f172a' : '#ffffff',
-    grid: dark ? '#1e293b' : '#e2e8f0',
-    axis: dark ? '#64748b' : '#94a3b8',
-    text: dark ? '#cbd5e1' : '#334155',
-  };
-}
-
-/** Port of graphing.html applyThemeToPlot(): recolor svg background, axes, grid, text. */
+/**
+ * Recolor the rendered svg for the current theme: background, faint gridlines,
+ * the bold x=0/y=0 origin cross, and axis text.
+ *
+ * function-plot renders the per-tick gridlines and the `.domain` frame at a low
+ * fixed opacity, and paints the `.origin` cross solid black — none of which
+ * survives a dark background. So we override stroke AND opacity here, not color
+ * alone. function-plot recreates these elements on every zoom/pan, so this is
+ * re-applied after each redraw.
+ */
 function applyThemeToPlot(target: HTMLElement, c: ThemeColors): void {
   const svg = target.querySelector('svg');
   if (!svg) return;
   svg.style.background = c.bg;
-  svg.querySelectorAll<SVGElement>('.tic path, .axis path, .axis line').forEach((el) => {
-    el.style.stroke = c.axis;
+  // Faint gridlines: the per-tick lines plus the axis domain frame.
+  svg.querySelectorAll<SVGElement>('.axis line, .axis path').forEach((el) => {
+    el.style.stroke = c.grid;
+    el.style.opacity = String(c.gridOpacity);
   });
-  svg.querySelectorAll<SVGElement>('.grid').forEach((el) => {
-    el.style.color = c.grid;
+  // The bold x=0 / y=0 origin cross (function-plot's `.x.origin` / `.y.origin`).
+  svg.querySelectorAll<SVGElement>('.origin').forEach((el) => {
+    el.style.stroke = c.axis;
+    el.style.opacity = String(c.axisOpacity);
   });
   svg.querySelectorAll<SVGElement>('text').forEach((el) => {
     el.style.fill = c.text;
