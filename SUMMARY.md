@@ -428,3 +428,21 @@ Root cause = nginx absolute-redirect behind a port mapping, confirmed via `curl 
 
 **References:**
 - nginx.conf: try_files + absolute_redirect
+
+
+## [2026-06-29 22:34] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing calculator — restore bold zero-axis gridlines
+
+**Summary:**
+Ported graphing.html's `boldGridAxes` into `plot.ts` as `boldZeroAxes`. With `grid: true`, function-plot 1.25.4 draws gridlines as the axis tick lines (no separate `g.grid`), so we bold the line of the "0" tick in each of `g.x.axis` / `g.y.axis`. Called on initial render and re-applied in the `all:zoom` handler (function-plot recreates the axes on each gesture), alongside a theme re-apply so axis/grid/text colors also survive zoom.
+
+**Rationale:**
+The x=0 / y=0 axes should stand out from the grid (standard graphing-calculator convention) — a feature from the original that was deferred during the React port. The earlier `g.grid line` approach found nothing under function-plot 1.25.4; inspecting the live SVG showed the 0 tick's line spans the plot (x-axis 0-tick y2=-520, y-axis 0-tick x2=662), so bolding that line is the correct, version-accurate fix.
+
+**Tests:**
+Verified headless: the "0" tick line has stroke-width 2 in both axes while others are default, and it persists after a wheel-zoom.
+
+**References:**
+- src/scripts/graphing/plot.ts: boldZeroAxes, renderGraph zoom handler

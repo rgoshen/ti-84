@@ -84,7 +84,29 @@ function applyThemeToPlot(target: HTMLElement, c: ThemeColors): void {
   svg.querySelectorAll<SVGElement>('text').forEach((el) => {
     el.style.fill = c.text;
   });
-  // TODO: port bold zero-axis gridlines (boldGridAxes from graphing.html).
+}
+
+/**
+ * Make the gridlines at x=0 and y=0 bolder than the rest (graphing.html's
+ * boldGridAxes), so the axes stand out. With `grid: true`, function-plot draws
+ * gridlines AS the axis tick lines (the 0 tick's line spans the whole plot), so
+ * we bold the line of the "0" tick in each axis. function-plot recreates these
+ * on every zoom/pan, so this is re-applied after each redraw.
+ */
+function boldZeroAxes(target: HTMLElement): void {
+  const svg = target.querySelector('svg');
+  if (!svg) return;
+  for (const axis of ['x', 'y'] as const) {
+    const g = svg.querySelector(`g.${axis}.axis`);
+    if (!g) continue;
+    g.querySelectorAll('.tick').forEach((tick) => {
+      const text = tick.querySelector('text');
+      const line = tick.querySelector<SVGLineElement>('line');
+      if (text && line && parseFloat(text.textContent ?? '') === 0) {
+        line.style.strokeWidth = '2';
+      }
+    });
+  }
 }
 
 /** Build one SVG marker of the given shape centered at the canvas-local pixel (cx, cy). */
@@ -183,6 +205,7 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
   });
 
   applyThemeToPlot(target, colors);
+  boldZeroAxes(target);
   drawPointsOverlay(instance, target, win, equations);
 
   // function-plot owns interactive scroll-zoom / drag-pan; it redraws the curve and
@@ -202,6 +225,10 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
       const xd = xScale.domain();
       const yd = yScale.domain();
       const view: Window2D = { xMin: xd[0], xMax: xd[1], yMin: yd[0], yMax: yd[1] };
+      // function-plot recreated the axes/grid for the new view: re-apply theme,
+      // re-bold the zero axes, and redraw the overlay.
+      applyThemeToPlot(target, colors);
+      boldZeroAxes(target);
       drawPointsOverlay(instance, target, view, equations);
       onViewChange(view);
     });
