@@ -209,3 +209,69 @@ test('hovering a Show-points marker shows its exact (x, y)', async ({ page }) =>
   await expect(tip).toBeVisible();
   await expect(tip).toContainText('(0, 0)');
 });
+
+test('hovering along the curve shows the (x, y) on the curve', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+
+  // Pick a real screen point on the longest graph path (the curve).
+  const onCurve = await page.evaluate(() => {
+    const svg = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement;
+    const path = [...svg.querySelectorAll('g.graph path')].sort(
+      (a, b) => (b as SVGPathElement).getTotalLength() - (a as SVGPathElement).getTotalLength(),
+    )[0] as SVGPathElement;
+    const p = path.getPointAtLength(path.getTotalLength() * 0.5);
+    const ctm = path.getScreenCTM()!;
+    const pt = svg.createSVGPoint();
+    pt.x = p.x;
+    pt.y = p.y;
+    const s = pt.matrixTransform(ctm);
+    return { x: s.x, y: s.y };
+  });
+
+  await page.mouse.move(onCurve.x, onCurve.y);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  const text = (await tip.textContent()) ?? '';
+  const m = text.match(/\(\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)/);
+  expect(m).not.toBeNull();
+  const x = parseFloat(m![1]);
+  const y = parseFloat(m![2]);
+  // The reported point lies on sin(x): proves the readout reads the curve.
+  expect(Math.abs(y - Math.sin(x))).toBeLessThan(0.05);
+});
+
+test('moving the pointer off the plot hides the tooltip', async ({ page }) => {
+  await plotWithPoints(page);
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByRole('status')).toBeVisible();
+  await page.mouse.move(2, 2); // top-left corner, off the plot
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('tooltip coordinate text uses the foreground colour, not the curve colour', async ({
+  page,
+}) => {
+  await plotWithPoints(page); // 2x^2 -> first palette colour #60a5fa
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  const colours = await tip.evaluate((el) => {
+    const swatch = el.querySelector('span[aria-hidden]') as HTMLElement;
+    return { text: getComputedStyle(el).color, swatch: getComputedStyle(swatch).backgroundColor };
+  });
+  // Colour is a non-text accent: the text must not be the curve colour.
+  expect(colours.text).not.toBe(colours.swatch);
+});

@@ -259,7 +259,7 @@ function attachHoverReadout(opts: AttachHoverOptions): () => void {
       }
     });
     if (best !== null) {
-      const b = best;
+      const b: { x: number; y: number; color: string; dist: number } = best;
       onHover({ x: b.x, y: b.y, clientX: ev.clientX, clientY: ev.clientY, color: b.color, onMarker: true });
       return;
     }
