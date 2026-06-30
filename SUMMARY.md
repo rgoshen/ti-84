@@ -446,3 +446,18 @@ Verified headless: the "0" tick line has stroke-width 2 in both axes while other
 
 **References:**
 - src/scripts/graphing/plot.ts: boldZeroAxes, renderGraph zoom handler
+
+
+## [2026-06-29 22:36] Commit Summary
+
+**Change Type:** Test
+**Scope:** Graphing e2e — zoom regression test + robust webServer
+
+**Summary:**
+Extracted the on-curve measurement into a `maxMarkerToCurvePx(page)` helper and added a second Playwright test that drives function-plot's scroll-zoom (wheel on `rect.zoom-and-drag`), then asserts the markers are still on the curve (≤5px) and the x-min window input changed (the view tracked the zoom). Switched the playwright webServer from `npm run dev` to `npm run build && npm run preview` with `reuseExistingServer: false`.
+
+**Bug Fix Context:**
+`npm run dev` is unreliable as an e2e webServer because Astro 7 keeps a persistent dev-server daemon: the command detects "already running" and exits, so Playwright reports "webServer exited early," and a stale daemon serves old content (the page had no `#eq-input`, both tests timed out). `preview` has no daemon and serves the fresh production build; `reuseExistingServer: false` prevents reusing a stray server. Both tests pass.
+
+**References:**
+- tests/e2e/graphing.spec.ts, playwright.config.ts

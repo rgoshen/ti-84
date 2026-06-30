@@ -115,7 +115,7 @@ Move the project onto Astro + TypeScript as a multi-page STATIC site (simple lan
 - [x] function-plot wrapper module (plot.ts): instance-scale overlay-in-canvas, zoom/pan sync. (Independently verified: markers ≤2.6px from curve; ≤1px after zoom; window inputs track zoom.)
 - [x] /graphing ported as a React island (controls via shadcn/ui; plot via ref).
 - [x] /ti-84 page ported (iframe src via build-time env, `src/config.ts` → `TI84_IFRAME_SRC`).
-- [x] Playwright e2e: markers on curve (zoom/pan verified manually; add to e2e).
+- [x] Playwright e2e: markers on curve, AND a zoom regression test (markers stay on curve through an interactive zoom + window inputs track it). webServer switched to build+preview to avoid Astro 7's persistent dev daemon.
 - [x] README updated for the new stack (callout removed; structure tree + Docker section rewritten).
 - [x] Favicon (`public/favicon.svg`, linked from the Base layout — kills the /favicon.ico 404).
 - [x] Docker cutover: multi-stage build (node build → nginx serve dist/), env → build-time `PUBLIC_*`, legacy envsubst/entrypoint removed, `nginx.conf` clean URLs.

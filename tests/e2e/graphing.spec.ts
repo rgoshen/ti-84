@@ -1,40 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Loads /graphing, plots 2x^2, enables "Show points", and asserts the markers
- * exist AND lie on the rendered curve.
- *
- * The on-curve check is geometric and library-agnostic: it samples the function
- * curve path in screen-space (via getPointAtLength + getScreenCTM) and verifies
- * every overlay marker's screen-space center is within a few pixels of the curve.
- * A regression that appended markers to the svg root instead of function-plot's
- * `g.canvas` would offset every marker by the chart margin and fail this assertion.
+ * Geometric, library-agnostic on-curve check: samples the function curve path in
+ * screen-space (getPointAtLength + getScreenCTM) and returns the largest distance
+ * from any overlay marker's screen-space center to the curve. A regression that
+ * appended markers to the svg root instead of function-plot's `g.canvas`, or that
+ * failed to re-sync the overlay after zoom, would move markers tens of pixels off
+ * the curve and blow past the threshold.
  */
-test('plots 2x^2 and renders point markers that lie on the curve', async ({ page }) => {
-  await page.goto('/graphing');
-
-  // Plot 2x^2.
-  await page.locator('#eq-input').fill('2x^2');
-  await page.getByRole('button', { name: 'Plot' }).click();
-
-  // The function-plot svg renders inside the plot container.
-  const svg = page.locator('[data-testid="plot"] svg');
-  await expect(svg).toBeVisible();
-
-  // The equation is listed.
-  await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
-
-  // Enable "Show points" for the equation.
-  await page.getByRole('checkbox').click();
-
-  // Markers appear in the overlay.
-  const markers = page.locator('[data-testid="plot"] .points-overlay circle');
-  await expect(markers.first()).toBeVisible();
-  const markerCount = await markers.count();
-  expect(markerCount).toBeGreaterThan(0);
-
-  // Geometric on-curve verification in the browser.
-  const result = await page.evaluate(() => {
+async function maxMarkerToCurvePx(page: Page): Promise<{ count: number; maxDist: number }> {
+  return page.evaluate(() => {
     const svgEl = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement | null;
     if (!svgEl) return { count: 0, maxDist: Number.POSITIVE_INFINITY };
 
@@ -75,7 +50,6 @@ test('plots 2x^2 and renders point markers that lie on the curve', async ({ page
       ys[i] = screen.y;
     }
 
-    // For each marker, find its nearest distance to the sampled curve.
     let maxDist = 0;
     for (const c of circles) {
       const r = c.getBoundingClientRect();
@@ -92,9 +66,68 @@ test('plots 2x^2 and renders point markers that lie on the curve', async ({ page
     }
     return { count: circles.length, maxDist };
   });
+}
 
+/** Plot 2x^2 and enable "Show points". */
+async function plotWithPoints(page: Page): Promise<void> {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('2x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+  await page.getByRole('checkbox').click();
+  await expect(page.locator('[data-testid="plot"] .points-overlay circle').first()).toBeVisible();
+}
+
+test('plots 2x^2 and renders point markers that lie on the curve', async ({ page }) => {
+  await plotWithPoints(page);
+
+  const markerCount = await page.locator('[data-testid="plot"] .points-overlay circle').count();
+  expect(markerCount).toBeGreaterThan(0);
+
+  const result = await maxMarkerToCurvePx(page);
   expect(result.count).toBe(markerCount);
   // Markers sit on the curve; allow a few px for sampling granularity. A margin
   // offset bug would be tens of pixels off and fail here.
   expect(result.maxDist).toBeLessThan(5);
+});
+
+test('markers stay on the curve through an interactive zoom, and the window inputs track it', async ({
+  page,
+}) => {
+  await plotWithPoints(page);
+
+  const before = await maxMarkerToCurvePx(page);
+  expect(before.maxDist).toBeLessThan(5);
+  const xMinBefore = await page.locator('input[type="number"]').first().inputValue();
+
+  // Drive function-plot's own scroll-zoom (it binds d3-zoom to rect.zoom-and-drag),
+  // then let the rAF-throttled overlay re-sync run.
+  await page.evaluate(() => {
+    const rect = document.querySelector(
+      '[data-testid="plot"] svg rect.zoom-and-drag',
+    ) as SVGRectElement | null;
+    if (!rect) throw new Error('zoom target rect.zoom-and-drag not found');
+    const b = rect.getBoundingClientRect();
+    rect.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        clientX: b.left + b.width / 2,
+        clientY: b.top + b.height / 2,
+        deltaY: -400,
+        deltaMode: 0,
+      }),
+    );
+  });
+  await page.waitForTimeout(150);
+
+  // The view actually changed: the x-min window input tracked the zoom.
+  const xMinAfter = await page.locator('input[type="number"]').first().inputValue();
+  expect(xMinAfter).not.toBe(xMinBefore);
+
+  // And the markers are still on the curve after the zoom redraw (the drift bug).
+  const after = await maxMarkerToCurvePx(page);
+  expect(after.count).toBeGreaterThan(0);
+  expect(after.maxDist).toBeLessThan(5);
 });
