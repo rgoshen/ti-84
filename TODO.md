@@ -176,7 +176,7 @@ Port the vanilla-JS graphing calculator (graphing.html) into a React island insi
 
 **Risks & Tradeoffs:**
 - function-plot ships CJS (`exports.default`); ESM interop differs between dev (esbuild) and build (Rollup). Normalized the default import to the callable in plot.ts.
-- Per the wiring design, equation/applied-window/theme changes recreate the plot (resetting interactive zoom); zoom is mirrored to displayWindow for the table/inputs only. Original auto-persisted zoom across edits via shared mutable state — deferred in favor of the cleaner applied/display split.
+- DECISION (kept): equation/applied-window/theme changes recreate the plot, which resets an in-progress interactive zoom; zoom is mirrored to displayWindow for the table/inputs only. The original auto-persisted zoom across edits via shared mutable state. We deliberately keep the reset-on-edit behavior (cleaner applied/display split, lower risk; resetting the view on an equation change is a defensible default). Not a pending task.
 - ~~Deferred: bold zero-axis gridlines (`boldGridAxes`)~~ — DONE: ported to `plot.ts` as `boldZeroAxes` (bolds the "0" tick line in each axis; re-applied on zoom). No in-island theme toggle (the page header has one).
 
 **Status:** Implemented; left in working tree (not committed) for review.
