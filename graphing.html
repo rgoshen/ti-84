@@ -308,51 +308,32 @@
       svg.querySelectorAll('text').forEach((el) => {
         el.style.fill = c.text;
       });
-      drawOriginAxes(svg, c);
+      // Make grid lines at x=0 and y=0 bolder than the rest.
+      boldGridAxes(svg);
     }
 
-    // Draw bold x=0 and y=0 axis lines on top of the plot.
-    function drawOriginAxes(svg, c) {
-      svg.querySelectorAll('.origin-axis').forEach((n) => n.remove());
-      const xScale = getXScale();
-      const yScale = getYScale();
-      if (!xScale || !yScale) return;
+    // Find Function Plot's grid lines at x=0 and y=0 and make them bolder.
+    function boldGridAxes(svg) {
+      const ticks = readAxisTicks(svg, 'x').concat(readAxisTicks(svg, 'y'));
+      const zeroTicks = ticks.filter(t => t.value === 0);
+      if (zeroTicks.length === 0) return;
 
-      const ns = 'http://www.w3.org/2000/svg';
-      const g = document.createElementNS(ns, 'g');
-      g.setAttribute('class', 'origin-axis');
-      const stroke = c.axis;
-      // Derive plot bounds from the scales themselves (pixel positions of domain edges).
-      const xLeft = xScale(state.xMin);
-      const xRight = xScale(state.xMax);
-      const yTop = yScale(state.yMax);
-      const yBottom = yScale(state.yMin);
-
-      // y=0 axis (horizontal), only if 0 is within the y domain
-      if (state.yMin <= 0 && state.yMax >= 0) {
-        const cy = yScale(0);
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', xLeft);
-        line.setAttribute('y1', cy);
-        line.setAttribute('x2', xRight);
-        line.setAttribute('y2', cy);
-        line.setAttribute('stroke', stroke);
-        line.setAttribute('stroke-width', '2');
-        g.appendChild(line);
-      }
-      // x=0 axis (vertical), only if 0 is within the x domain
-      if (state.xMin <= 0 && state.xMax >= 0) {
-        const cx = xScale(0);
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', cx);
-        line.setAttribute('y1', yTop);
-        line.setAttribute('x2', cx);
-        line.setAttribute('y2', yBottom);
-        line.setAttribute('stroke', stroke);
-        line.setAttribute('stroke-width', '2');
-        g.appendChild(line);
-      }
-      svg.appendChild(g);
+      // Grid lines are <line> elements inside <g.grid> with data attributes.
+      svg.querySelectorAll('g.grid line').forEach((line) => {
+        const x1 = parseFloat(line.getAttribute('x1')) || 0;
+        const y1 = parseFloat(line.getAttribute('y1')) || 0;
+        const x2 = parseFloat(line.getAttribute('x2')) || 0;
+        const y2 = parseFloat(line.getAttribute('y2')) || 0;
+        // A grid line passes through x=0 or y=0 if one of its endpoints does.
+        const passesThroughZero = zeroTicks.some((tick) => {
+          if (tick.pixel === x1 || tick.pixel === x2) return true; // vertical line at x=0
+          if (tick.pixel === y1 || tick.pixel === y2) return true; // horizontal line at y=0
+          return false;
+        });
+        if (passesThroughZero) {
+          line.style.strokeWidth = '2';
+        }
+      });
     }
 
     function drawPointsOverlay() {
