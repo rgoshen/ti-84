@@ -6,7 +6,6 @@ services:
     ports:
       - "${HOST_PORT:-8080}:80"
     environment:
-      HOST_PORT: ${HOST_PORT:-8084}
       SITE_TITLE_TI84: ${SITE_TITLE_TI84:-TI-84 Calculator}
       SITE_TITLE_GRAPHING: ${SITE_TITLE_GRAPHING:-Graphing Calculator Online}
       THEME_DEFAULT: ${THEME_DEFAULT:-dark}

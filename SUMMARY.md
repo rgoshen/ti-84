@@ -144,3 +144,17 @@ Docker Compose gives a one-command, reproducible local run with named-container 
 **References:**
 - docker-compose.yml, .env.example, Dockerfile, docker-entrypoint.sh
 - index.html, graphing.html (env var placeholders)
+
+## [2026-06-29 19:45] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker Compose port mapping
+
+**Summary:**
+Removed the stray `HOST_PORT: ${HOST_PORT:-8084}` entry from the docker-compose `environment` block, which had a conflicting default (8084) and was never used by the container (nginx listens on port 80). The external port is controlled solely by the `ports` mapping `${HOST_PORT:-8080}:80`. Also removed the unused `HOST_PORT` ENV default from the Dockerfile for consistency.
+
+**Rationale:**
+The dead `HOST_PORT` env var created an inconsistent default (8084 vs 8080) and confused the actual port mapping, which reads from `ports:`. The container has no use for `HOST_PORT` — only the host-side `ports` mapping matters. Single source of truth restores the exposed port.
+
+**References:**
+- docker-compose.yml, Dockerfile
