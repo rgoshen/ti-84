@@ -4,13 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Graphing Calculator Online</title>
-  <meta name="description" content="Free online graphing calculator. Instantly plot equations, compare multiple functions, zoom and pan, and analyze algebra, calculus, and trigonometry — all in your browser." />
+  <meta name="description" content="Free online graphing calculator. Instantly plot equations, stack multiple functions, zoom and pan, and analyze algebra, calculus, and trigonometry — all in your browser." />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
     };
   </script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://unpkg.com/function-plot@1.23.2/dist/function-plot.js"></script>
   <script>
     (function () {
       const stored = localStorage.getItem('theme');
@@ -18,12 +20,13 @@
       const theme = stored || (prefersDark ? 'dark' : 'light');
       if (theme === 'light') document.documentElement.classList.remove('dark');
       else document.documentElement.classList.add('dark');
+      window.__initialTheme = theme;
     })();
   </script>
 </head>
 <body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
-  <header class="border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
-    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+  <header class="border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-20">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-6">
         <h1 class="text-2xl font-semibold tracking-tight">Graphing Calculator Online</h1>
         <nav aria-label="Main" class="flex items-center gap-1">
@@ -51,205 +54,312 @@
     </div>
   </header>
 
-  <main class="flex-1 w-full max-w-5xl mx-auto px-6 py-10 space-y-16">
+  <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-8 space-y-8">
 
-    <section aria-labelledby="intro-heading">
-      <h2 id="intro-heading" class="text-3xl font-bold tracking-tight">Graphing Calculator Online</h2>
-      <p class="mt-4 text-lg text-slate-600 dark:text-slate-300">
-        A free, browser-based graphing calculator. Plot equations instantly, compare multiple functions, and analyze algebra, calculus, and trigonometry — no downloads, no installs, works on any device.
-      </p>
-    </section>
+    <section aria-labelledby="calc-heading">
+      <h2 id="calc-heading" class="sr-only">Graphing Calculator</h2>
 
-    <section aria-labelledby="why-heading">
-      <h3 id="why-heading" class="text-2xl font-semibold tracking-tight">Why Use an Online Graphing Calculator?</h3>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-lg">1. Instant Graphing</h4>
-          <p class="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Enter any equation, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code> or <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = sin(x)</code>, and the graph is instantly plotted. No waiting for calculations or device startup — ideal for quick analysis or classroom demonstrations.
-          </p>
-        </article>
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-lg">2. No Software to Download</h4>
-          <p class="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            The tool operates entirely in the browser. No installation is required, so it runs on most devices without consuming storage space or needing updates.
-          </p>
-        </article>
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-lg">3. Multiple Function Graphing</h4>
-          <p class="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Plot and compare more than one equation simultaneously. Useful for studying systems of equations, comparing polynomials and trigonometric functions, or analyzing overlapping graphs.
-          </p>
-        </article>
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-lg">4. Interactive Graph Controls</h4>
-          <p class="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Zoom in/out, pan across the graph, and change the viewing window to inspect different sections of your functions. Focus on maxima, minima, intersections, and other curve features.
-          </p>
-        </article>
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800 sm:col-span-2">
-          <h4 class="font-semibold text-lg">5. Cross-Device Support</h4>
-          <p class="mt-2 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            The graphing calculator adapts to your screen size and browser, whether you're on a desktop, tablet, or smartphone. Access it anywhere — classroom, home, or mobile — around the clock.
-          </p>
-        </article>
-      </div>
-      <p class="mt-6 text-slate-600 dark:text-slate-300">
-        All these combined make it an accurate and useful interactive graphing calculator — perfect for learning, homework, teaching demonstrations, and practical problem-solving in classroom and workplace settings.
-      </p>
-    </section>
+      <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <div class="space-y-4">
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
+            <label for="eq-input" class="block text-sm font-medium">Add an equation</label>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Use x as the variable, e.g. <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">x^2</code>, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">sin(x)</code>, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">2x + 1</code>. The plotter accepts <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y =</code> or just the expression.</p>
+            <div class="mt-3 flex gap-2">
+              <input id="eq-input" type="text" inputmode="text" autocomplete="off" placeholder="y = sin(x)"
+                class="flex-1 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500" />
+              <button id="add-eq" type="button"
+                class="rounded-md bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-3 py-2 text-sm font-medium hover:opacity-90 transition">
+                Plot
+              </button>
+            </div>
+            <p id="eq-error" class="mt-2 hidden text-xs text-red-600 dark:text-red-400"></p>
+          </div>
 
-    <section aria-labelledby="features-heading">
-      <h3 id="features-heading" class="text-2xl font-semibold tracking-tight">Key Features of the Graphing Calculator Online</h3>
-      <p class="mt-3 text-slate-600 dark:text-slate-300">
-        Powerful capabilities designed to make math simple and interactive. From algebra to calculus and trigonometry, these features help you visualise, analyse, and solve functions effortlessly.
-      </p>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium">Plotted equations</h3>
+              <button id="clear-eq" type="button"
+                class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 transition">
+                Clear all
+              </button>
+            </div>
+            <ul id="eq-list" class="mt-3 space-y-2"></ul>
+            <p id="eq-empty" class="mt-3 text-xs text-slate-500 dark:text-slate-400">No equations plotted yet. Add one above.</p>
+          </div>
 
-      <div class="mt-8 space-y-8">
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-xl">Graph Equations Online</h4>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Quickly plot any equation using standard math notation. Enter a function like <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code> or <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = sin(x)</code> and the graph appears instantly. The tool updates in real time as you modify values, making it easy to see how changes affect the graph.
-          </p>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            This interactive approach helps students, teachers, and professionals clearly understand function behaviour, explore relationships between variables, and identify critical points such as maxima, minima, and intercepts.
-          </p>
-        </article>
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
+            <h3 class="text-sm font-medium">Window</h3>
+            <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
+              <label class="block">
+                <span class="text-slate-500 dark:text-slate-400">x min</span>
+                <input id="x-min" type="number" value="-10" step="any"
+                  class="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5" />
+              </label>
+              <label class="block">
+                <span class="text-slate-500 dark:text-slate-400">x max</span>
+                <input id="x-max" type="number" value="10" step="any"
+                  class="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5" />
+              </label>
+              <label class="block">
+                <span class="text-slate-500 dark:text-slate-400">y min</span>
+                <input id="y-min" type="number" value="-5" step="any"
+                  class="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5" />
+              </label>
+              <label class="block">
+                <span class="text-slate-500 dark:text-slate-400">y max</span>
+                <input id="y-max" type="number" value="5" step="any"
+                  class="mt-1 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5" />
+              </label>
+            </div>
+            <button id="apply-window" type="button"
+              class="mt-3 w-full rounded-md border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+              Apply window
+            </button>
+            <p class="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Scroll on the graph to zoom; drag to pan.</p>
+          </div>
+        </div>
 
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-xl">Algebra Graphing Calculator</h4>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Serving as a unique algebra graphing calculator, this tool supports a variety of algebraic tasks:
-          </p>
-          <ul class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span>Plot linear and quadratic equations — visualize straight lines and curves immediately.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span>Visualize polynomial functions — explore cubic, quartic, and higher-order polynomials with ease.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span>Identify slopes, intercepts, and vertices — quickly locate key points to analyze graphs.</span></li>
-          </ul>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Functions such as <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code> are displayed clearly, allowing users to compare multiple functions side by side, study intersections, and deepen their understanding of algebraic relationships.
-          </p>
-        </article>
-
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-xl">Calculus Graphing Tool</h4>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            This calculus graphing tool provides essential functionality for analysing change and growth in mathematical functions:
-          </p>
-          <ul class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Derivatives</strong> — see instantaneous rates of change for any function.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Integrals</strong> — visualise areas under curves to understand accumulation.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Limits and curve behaviour</strong> — explore how functions behave near specific points or as values approach infinity.</span></li>
-          </ul>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            These features make it easier to grasp complex concepts in calculus — such as slopes of tangent lines, curve area, and overall function behaviour — without needing extra software or hardware.
-          </p>
-        </article>
-
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-xl">Trigonometry Graph Calculator</h4>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            The trigonometry graph calculator supports all standard trigonometric functions, including:
-          </p>
-          <ul class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><code class="px-1 rounded bg-slate-100 dark:bg-slate-700">sin(x)</code></span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><code class="px-1 rounded bg-slate-100 dark:bg-slate-700">cos(x)</code></span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><code class="px-1 rounded bg-slate-100 dark:bg-slate-700">tan(x)</code></span></li>
-          </ul>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            Ideal for studying periodic functions, waveforms, angles, and rotations. Graph multiple trigonometric functions at once to compare amplitudes, periods, and phase shifts — useful for math, physics, and engineering applications.
-          </p>
-        </article>
-
-        <article class="rounded-xl border border-slate-200 dark:border-slate-800 p-6 bg-white dark:bg-slate-800">
-          <h4 class="font-semibold text-xl">Scientific Graphing Calculator Functions</h4>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            As a fully featured scientific graphing calculator, this tool also supports advanced mathematical operations:
-          </p>
-          <ul class="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Exponents and roots</strong> — handle square roots, cube roots, and higher-order roots easily.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Logarithmic functions</strong> — explore log base 10, natural logs, and exponential relationships.</span></li>
-            <li class="flex gap-2"><span class="text-slate-400">•</span><span><strong>Trigonometric calculations</strong> — solve advanced trigonometric problems with precision.</span></li>
-          </ul>
-          <p class="mt-3 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-            This makes the calculator suitable for higher-level mathematics, engineering calculations, and scientific analysis — all within a simple, browser-based interface.
-          </p>
-        </article>
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-2 overflow-hidden">
+          <div id="plot" class="w-full" style="min-height: 560px;"></div>
+        </div>
       </div>
     </section>
 
-    <section aria-labelledby="how-heading">
-      <h3 id="how-heading" class="text-2xl font-semibold tracking-tight">How Do You Use a Graphing Calculator Online?</h3>
-      <p class="mt-3 text-slate-600 dark:text-slate-300">
-        Using this online math calculator is simple and intuitive, even for beginners. Follow these steps to visualise and analyze functions quickly:
-      </p>
-      <ol class="mt-6 space-y-4">
-        <li class="flex gap-4 rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <span class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold">1</span>
-          <div>
-            <h4 class="font-semibold">Enter Your Function</h4>
-            <p class="mt-1 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              Type any equation, such as <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code>, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = sin(x)</code>, or more complex expressions. You can also enter multiple equations separated by commas to compare them side by side.
-            </p>
+    <details class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-6 group">
+      <summary class="cursor-pointer text-lg font-semibold tracking-tight list-none flex items-center justify-between">
+        <span>About the Graphing Calculator Online</span>
+        <span class="text-slate-400 group-open:rotate-180 transition">▾</span>
+      </summary>
+
+      <div class="mt-6 space-y-10 text-slate-600 dark:text-slate-300">
+        <section>
+          <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Why Use an Online Graphing Calculator?</h3>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+              <h4 class="font-semibold text-slate-900 dark:text-slate-100">1. Instant Graphing</h4>
+              <p class="mt-2 text-sm leading-relaxed">Enter any equation, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code> or <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = sin(x)</code>, and the graph is instantly plotted. No waiting for calculations or device startup.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+              <h4 class="font-semibold text-slate-900 dark:text-slate-100">2. No Software to Download</h4>
+              <p class="mt-2 text-sm leading-relaxed">Operates entirely in the browser. No installation required, so it runs on most devices without consuming storage or needing updates.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+              <h4 class="font-semibold text-slate-900 dark:text-slate-100">3. Multiple Function Graphing</h4>
+              <p class="mt-2 text-sm leading-relaxed">Plot and compare more than one equation simultaneously — useful for systems of equations, polynomials, trig functions, or overlapping graphs.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+              <h4 class="font-semibold text-slate-900 dark:text-slate-100">4. Interactive Graph Controls</h4>
+              <p class="mt-2 text-sm leading-relaxed">Zoom in/out, pan over the graph, and change viewing windows to inspect maxima, minima, intersections, and other curve features.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 sm:col-span-2">
+              <h4 class="font-semibold text-slate-900 dark:text-slate-100">5. Cross-Device Support</h4>
+              <p class="mt-2 text-sm leading-relaxed">Adapts to your screen size and browser — desktop, tablet, or smartphone. Access it anywhere: classroom, home, or mobile.</p>
+            </div>
           </div>
-        </li>
-        <li class="flex gap-4 rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <span class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold">2</span>
-          <div>
-            <h4 class="font-semibold">View the Graph Instantly</h4>
-            <p class="mt-1 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              As soon as you enter the function, the graph appears immediately on the screen. No waiting, no processing delays.
-            </p>
+        </section>
+
+        <section>
+          <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Key Features</h3>
+          <div class="mt-4 space-y-4 text-sm leading-relaxed">
+            <p><strong class="text-slate-900 dark:text-slate-100">Graph Equations Online:</strong> Quickly plot any equation using standard math notation. The graph appears instantly and updates in real time as you modify values.</p>
+            <p><strong class="text-slate-900 dark:text-slate-100">Algebra Graphing Calculator:</strong> Plot linear, quadratic, and polynomial functions. Identify slopes, intercepts, and vertices. Compare multiple functions side by side and study intersections.</p>
+            <p><strong class="text-slate-900 dark:text-slate-100">Calculus Graphing Tool:</strong> Visualize derivatives (instantaneous rates of change), integrals (areas under curves), and limits / curve behaviour near specific points or infinity.</p>
+            <p><strong class="text-slate-900 dark:text-slate-100">Trigonometry Graph Calculator:</strong> Supports <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">sin(x)</code>, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">cos(x)</code>, <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">tan(x)</code>. Graph multiple trig functions at once to compare amplitudes, periods, and phase shifts.</p>
+            <p><strong class="text-slate-900 dark:text-slate-100">Scientific Graphing Calculator Functions:</strong> Exponents and roots, logarithmic functions (log base 10, natural log, exponentials), and advanced trigonometric calculations.</p>
           </div>
-        </li>
-        <li class="flex gap-4 rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <span class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold">3</span>
-          <div>
-            <h4 class="font-semibold">Explore with Interactive Controls</h4>
-            <p class="mt-1 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              Use zoom and pan features to examine different sections of your graph. Focus on key points like maxima, minima, intercepts, or regions of interest for deeper analysis.
-            </p>
-          </div>
-        </li>
-        <li class="flex gap-4 rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-800">
-          <span class="flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-semibold">4</span>
-          <div>
-            <h4 class="font-semibold">Compare Multiple Functions</h4>
-            <p class="mt-1 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              Add additional equations to see multiple graphs simultaneously. Perfect for studying systems of equations, overlapping trigonometric functions, or polynomial comparisons.
-            </p>
-          </div>
-        </li>
-      </ol>
-      <p class="mt-6 text-slate-600 dark:text-slate-300">
-        This function plotter online is fully responsive, works smoothly on desktops, tablets, and mobile devices, and is designed to make graphing quick, accurate, and convenient for all users.
-      </p>
-    </section>
+        </section>
+
+        <section>
+          <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100">How to Use</h3>
+          <ol class="mt-4 space-y-3 text-sm leading-relaxed list-decimal list-inside">
+            <li><strong>Enter your function</strong> — type an equation like <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = x^2</code> or <code class="px-1 rounded bg-slate-100 dark:bg-slate-700">y = sin(x)</code>. Add multiple equations one at a time to compare them.</li>
+            <li><strong>View the graph instantly</strong> — the graph appears immediately. No waiting, no processing delays.</li>
+            <li><strong>Explore with interactive controls</strong> — scroll to zoom, drag to pan, or set the window manually to focus on key points.</li>
+            <li><strong>Compare multiple functions</strong> — keep adding equations to stack them on the same axes. Use Clear all to reset.</li>
+          </ol>
+        </section>
+      </div>
+    </details>
 
   </main>
 
   <footer class="border-t border-slate-200 dark:border-slate-800">
-    <div class="max-w-5xl mx-auto px-6 py-4 text-sm text-slate-500 dark:text-slate-400 text-center">
+    <div class="max-w-6xl mx-auto px-6 py-4 text-sm text-slate-500 dark:text-slate-400 text-center">
       &copy; <span id="year"></span> Graphing Calculator Online. All rights reserved by their respective owners.
     </div>
   </footer>
 
   <script>
+    const PALETTE = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+
+    const state = {
+      equations: [],
+      xMin: -10, xMax: 10, yMin: -5, yMax: 5,
+    };
+
+    const plotEl = document.getElementById('plot');
+    const input = document.getElementById('eq-input');
+    const addBtn = document.getElementById('add-eq');
+    const clearBtn = document.getElementById('clear-eq');
+    const listEl = document.getElementById('eq-list');
+    const emptyEl = document.getElementById('eq-empty');
+    const errEl = document.getElementById('eq-error');
+
+    function themeColors() {
+      const dark = document.documentElement.classList.contains('dark');
+      return {
+        bg: dark ? '#0f172a' : '#ffffff',
+        grid: dark ? '#1e293b' : '#e2e8f0',
+        axis: dark ? '#475569' : '#94a3b8',
+        text: dark ? '#cbd5e1' : '#334155',
+      };
+    }
+
+    function normalizeExpr(raw) {
+      let s = String(raw).trim();
+      if (!s) return '';
+      s = s.replace(/^y\s*=\s*/i, '');
+      return s;
+    }
+
+    function renderPlot() {
+      const c = themeColors();
+      try {
+        functionPlot({
+          target: '#plot',
+          width: plotEl.clientWidth,
+          height: 560,
+          xLabel: 'x',
+          yLabel: 'y',
+          grid: true,
+          disableZoom: false,
+          xAxis: { domain: [state.xMin, state.xMax] },
+          yAxis: { domain: [state.yMin, state.yMax] },
+          data: state.equations.map((eq) => ({
+            fn: eq.expr,
+            color: eq.color,
+            graphType: 'polyline',
+          })),
+        });
+        applyThemeToPlot(c);
+        hideError();
+      } catch (e) {
+        showError('Could not plot that equation. Check your syntax and try again.');
+      }
+    }
+
+    function applyThemeToPlot(c) {
+      const svg = plotEl.querySelector('svg');
+      if (!svg) return;
+      svg.style.background = c.bg;
+      svg.querySelectorAll('.tic path, .axis path, .axis line').forEach((el) => {
+        el.style.stroke = c.axis;
+      });
+      svg.querySelectorAll('.grid').forEach((el) => {
+        el.style.color = c.grid;
+      });
+      svg.querySelectorAll('text').forEach((el) => {
+        el.style.fill = c.text;
+      });
+    }
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+    }
+    function hideError() {
+      errEl.classList.add('hidden');
+    }
+
+    function renderList() {
+      listEl.innerHTML = '';
+      if (state.equations.length === 0) {
+        emptyEl.classList.remove('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+      }
+      state.equations.forEach((eq, i) => {
+        const li = document.createElement('li');
+        li.className = 'flex items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm';
+
+        const left = document.createElement('div');
+        left.className = 'flex items-center gap-2 min-w-0';
+        const swatch = document.createElement('span');
+        swatch.className = 'inline-block h-3 w-3 rounded-full flex-shrink-0';
+        swatch.style.background = eq.color;
+        const label = document.createElement('span');
+        label.className = 'truncate font-mono';
+        label.textContent = 'y = ' + eq.expr;
+        left.appendChild(swatch);
+        left.appendChild(label);
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Remove';
+        remove.className = 'text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition flex-shrink-0';
+        remove.addEventListener('click', () => {
+          state.equations.splice(i, 1);
+          renderList();
+          renderPlot();
+        });
+
+        li.appendChild(left);
+        li.appendChild(remove);
+        listEl.appendChild(li);
+      });
+    }
+
+    function addEquation() {
+      const expr = normalizeExpr(input.value);
+      if (!expr) {
+        showError('Enter an equation first.');
+        return;
+      }
+      const color = PALETTE[state.equations.length % PALETTE.length];
+      state.equations.push({ expr, color });
+      input.value = '';
+      renderList();
+      renderPlot();
+    }
+
+    addBtn.addEventListener('click', addEquation);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addEquation();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      state.equations = [];
+      renderList();
+      renderPlot();
+    });
+
+    document.getElementById('apply-window').addEventListener('click', () => {
+      state.xMin = parseFloat(document.getElementById('x-min').value);
+      state.xMax = parseFloat(document.getElementById('x-max').value);
+      state.yMin = parseFloat(document.getElementById('y-min').value);
+      state.yMax = parseFloat(document.getElementById('y-max').value);
+      renderPlot();
+    });
+
     const toggle = document.getElementById('theme-toggle');
     const label = document.getElementById('theme-label');
-
     function syncLabel() {
       label.textContent = document.documentElement.classList.contains('dark') ? 'Dark' : 'Light';
     }
     syncLabel();
-
     toggle.addEventListener('click', () => {
       const isDark = document.documentElement.classList.toggle('dark');
       localStorage.setItem('theme', isDark ? 'dark' : 'light');
       syncLabel();
+      renderPlot();
     });
 
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    window.addEventListener('resize', () => renderPlot());
+
+    renderList();
+    renderPlot();
   </script>
 </body>
 </html>

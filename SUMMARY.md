@@ -96,5 +96,18 @@ Added a shared navigation menu to index.html with two options (TI-84, Graphing C
 A shared nav turns the single-page site into a small themed multi-page experience with consistent styling and theme behavior. Copying all HTML files via a glob keeps the Dockerfile simple while supporting multiple pages. The Graphing Calculator Online page is content-only for now; the interactive equation plotting feature remains planned in TODO.md.
 
 **References:**
-- TODO.md: Planned Feature — Custom Equation Graphing Calculator
 - index.html, graphing.html
+
+## [2026-06-29 18:30] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator Online page
+
+**Summary:**
+Replaced the text-only graphing.html with a fully functional online graphing calculator. Uses Function Plot (D3-based, ~30KB, via CDN) to plot equations entered by the user. Supports stacking multiple equations on the same axes (each gets a distinct color and a removable chip in the list), a Clear all control, manual window/domain controls, and native zoom/pan (scroll + drag). The plot re-themes (background, grid, axes, text) when the light/dark toggle changes. The descriptive marketing content from the prior version is preserved inside a collapsible "About" details section below the calculator.
+
+**Rationale:**
+The previous version misinterpreted the requirement as a content page. This commit delivers the actual interactive graphing calculator that was requested, while keeping the static-site + CDN approach (no React/build step). Function Plot was chosen for its small size and native support for multiple functions, zoom, and pan.
+
+**References:**
+- TODO.md: Custom Equation Graphing Calculator (now implemented)
