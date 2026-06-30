@@ -69,7 +69,9 @@ required check.
   - `permissions: { contents: write, issues: write, pull-requests: write, id-token: write }`.
   - `actions/checkout@v4` with `fetch-depth: 0` (semantic-release needs full history).
   - `actions/setup-node@v4` (node 24, `cache: npm`), `npm ci`.
-  - `cycjimmy/semantic-release-action@v4` with `GITHUB_TOKEN`; outputs
+  - `cycjimmy/semantic-release-action@v6` (`id: release`) with `GITHUB_TOKEN`,
+    and `extra_plugins` pinning `@semantic-release/changelog` +
+    `@semantic-release/git` (the core plugins ship with the action). Outputs:
     `new_release_published`, `new_release_version`, `new_release_git_tag`.
 - `publish` job: `needs: release`, `if: needs.release.outputs.new_release_published == 'true'`.
   - `permissions: { contents: read, packages: write }`.
@@ -115,13 +117,16 @@ on 0.x; `{{major}}` begins emitting `1` automatically at v1.0.0).
 ```
 `@semantic-release/npm` with `npmPublish: false` bumps `package.json` version
 without publishing (project stays `private`). `commit-analyzer`,
-`release-notes-generator`, `npm`, and `github` ship with semantic-release core;
-`changelog` and `git` are added as devDeps.
+`release-notes-generator`, `npm`, and `github` ship with the action;
+`changelog` and `git` are supplied (pinned) via the action's `extra_plugins`.
 
 ### `package.json` devDependencies (pinned)
-Add: `semantic-release`, `@semantic-release/changelog`, `@semantic-release/git`,
-`@astrojs/check` (the last makes `astro check` work in `_verify`). Pin exact
-versions; let Dependabot/maintenance bump them.
+Add only `@astrojs/check` (+ its peer `typescript`, already present) so
+`astro check` runs in `_verify`. semantic-release itself and its plugins are
+NOT added to `package.json` — they are provided by
+`cycjimmy/semantic-release-action@v6` (core) and its pinned `extra_plugins`
+(`@semantic-release/changelog`, `@semantic-release/git`), keeping the app's
+dependency surface lean.
 
 ### `CHANGELOG.md`
 Seed a minimal stub (title + note that it is auto-generated); semantic-release
