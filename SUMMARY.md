@@ -413,3 +413,18 @@ the new header toggle actually re-themes the plot, with no change to the plot ef
 - Deleted: index.html, graphing.html
 - README.md, docs/README.md, TODO.md
 - TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 2)
+
+
+## [2026-06-29 22:30] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker/nginx — /ti-84 and /graphing navigation broke behind the published port
+
+**Summary:**
+nginx served `/ti-84/index.html`, so a request to `/ti-84` (no trailing slash) got a 301 to add the slash. nginx built that redirect as an ABSOLUTE URL using its internal listen port (`:80`, omitted as the http default), ignoring the published port (`:8084`) — so the Location was `http://localhost/ti-84/` (port 80), where nothing listens. Clicking the TI-84/Graphing card or nav item followed it to a dead URL (a Chrome error page). Worse, it was a permanent 301, so browsers cached it. Fix in `nginx.conf`: serve the directory index directly with `try_files $uri $uri/index.html $uri.html =404;` (no trailing-slash redirect at all) and `absolute_redirect off;` as defense. Now `/ti-84` and `/graphing` return 200 directly on the correct port; real 404s preserved.
+
+**Bug Fix Context:**
+Root cause = nginx absolute-redirect behind a port mapping, confirmed via `curl -I` (Location: http://localhost/ti-84/ → after fix: 200, no redirect). Already-affected browsers must hard-refresh once to drop the cached 301.
+
+**References:**
+- nginx.conf: try_files + absolute_redirect
