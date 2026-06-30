@@ -35,10 +35,17 @@ A simple, professional single-page website that embeds the TI-84 online calculat
 
 ```bash
 docker build -t ti-84 .
-docker run -p 8080:80 ti-84
+docker run --name graphing-calculator -p 8080:80 ti-84
 ```
 
 Open <http://localhost:8080> in your browser.
+
+To stop and remove the container when you're done:
+
+```bash
+docker stop graphing-calculator
+docker rm graphing-calculator
+```
 
 ## Running without Docker
 

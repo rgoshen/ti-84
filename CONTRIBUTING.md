@@ -20,7 +20,7 @@ Be respectful and inclusive in all interactions. Professional, civil communicati
 
    ```bash
    docker build -t ti-84 .
-   docker run -p 8080:80 ti-84
+   docker run --name graphing-calculator -p 8080:80 ti-84
    ```
 
 5. Commit your changes using **Conventional Commits**:
