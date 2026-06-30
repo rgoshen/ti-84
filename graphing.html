@@ -11,6 +11,13 @@
       darkMode: 'class',
     };
   </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <style>
+    .katex-inline .katex { font-size: 1em; color: inherit; }
+    .katex-inline .katex-display { margin: 0; }
+    th .katex { font-size: 0.85em; color: inherit; }
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script src="https://d3js.org/d3.v4.min.js"></script>
   <script src="https://unpkg.com/function-plot@1.23.2/dist/function-plot.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.js"></script>
@@ -302,16 +309,32 @@
         el.style.fill = c.text;
       });
       // Force each function line to keep its color and be visible in dark mode.
-      const contents = svg.querySelectorAll('g.content');
-      contents.forEach((g, i) => {
+      // Function Plot wraps each function in a .content group; target the path
+      // inside each one and also fall back to any path with a stroke style.
+      const contentGroups = svg.querySelectorAll('g.content');
+      contentGroups.forEach((g, i) => {
         const eq = state.equations[i];
         if (!eq) return;
         const path = g.querySelector('path');
         if (path) {
           path.style.stroke = eq.color;
-          path.style.strokeWidth = '2.5';
+          path.style.strokeWidth = '3';
+          path.style.fill = 'none';
+          path.style.opacity = '1';
         }
       });
+      // Fallback: any path that has a colored stroke but isn't an axis/grid line.
+      if (contentGroups.length === 0) {
+        svg.querySelectorAll('path').forEach((path) => {
+          const stroke = path.getAttribute('stroke') || path.style.stroke;
+          if (!stroke) return;
+          // skip axis/grid lines (grey-ish)
+          if (stroke === c.axis || stroke === c.grid) return;
+          path.style.strokeWidth = '3';
+          path.style.fill = 'none';
+          path.style.opacity = '1';
+        });
+      }
     }
 
     function drawPointsOverlay() {
@@ -395,6 +418,27 @@
       errEl.classList.add('hidden');
     }
 
+    // Pretty-print an equation as "y = <expr>" using KaTeX.
+    // Falls back to plain monospace text if KaTeX or math.js is unavailable.
+    function prettyExpr(expr, container) {
+      const prefix = 'y = ';
+      if (typeof katex === 'undefined' || typeof math === 'undefined') {
+        container.textContent = prefix + expr;
+        return;
+      }
+      try {
+        const node = math.parse(expr);
+        const tex = node.toTex({ implicit: 'hide' });
+        katex.render(prefix + tex, container, {
+          throwOnError: false,
+          displayMode: false,
+          output: 'html',
+        });
+      } catch (e) {
+        container.textContent = prefix + expr;
+      }
+    }
+
     function renderList() {
       listEl.innerHTML = '';
       if (state.equations.length === 0) {
@@ -432,8 +476,8 @@
         swatchWrap.appendChild(colorInput);
 
         const label = document.createElement('span');
-        label.className = 'truncate font-mono text-xs';
-        label.textContent = 'y = ' + eq.expr;
+        label.className = 'truncate text-xs katex-inline';
+        prettyExpr(eq.expr, label);
 
         left.appendChild(swatchWrap);
         left.appendChild(label);
@@ -514,10 +558,13 @@
       tableEmpty.classList.add('hidden');
 
       const headRow = document.createElement('tr');
-      headRow.appendChild(th('x'));
+      const xHead = th('');
+      xHead.textContent = 'x';
+      headRow.appendChild(xHead);
       state.equations.forEach((eq) => {
-        const cell = th('y = ' + eq.expr);
+        const cell = th('');
         cell.style.color = eq.color;
+        prettyExpr(eq.expr, cell);
         headRow.appendChild(cell);
       });
       tableHead.appendChild(headRow);

@@ -201,3 +201,18 @@ The previous expression was syntactically valid but had a dead branch that obscu
 **References:**
 - index.html, graphing.html (theme init script)
 - README.md: THEME_DEFAULT row
+
+## [2026-06-29 20:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — dark mode lines + pretty-printed equations
+
+**Summary:**
+1. Dark mode line visibility — rewrote applyThemeToPlot to force each function line's stroke to the equation color, stroke-width 3px, fill none, opacity 1. Added a fallback that targets any non-axis/non-grid path when Function Plot's g.content groups aren't found. Lines are now clearly visible against the dark SVG background.
+2. Pretty-printed equations — added KaTeX (CSS + JS, CDN) and used math.js's node.toTex() to render the equation label in the plotted-equations list and the value-table header as proper math notation (e.g. y = x², y = sin(x)) instead of plain monospace text. Falls back to plain text if KaTeX or math.js fails to load. Added a small style block so KaTeX inherits the equation's color and stays compact in both locations.
+
+**Rationale:**
+The prior g.content selector was unreliable across Function Plot versions, leaving some lines invisible in dark mode. Forcing stroke properties on every function path (with a fallback) is deterministic. Pretty-printing was explicitly requested and uses the already-loaded math.js to convert expressions to LaTeX, so no extra parsing logic is needed.
+
+**References:**
+- graphing.html: applyThemeToPlot, prettyExpr, renderList, renderTable
