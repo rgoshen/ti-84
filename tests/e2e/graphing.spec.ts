@@ -164,3 +164,118 @@ test('markers stay on the curve through an interactive zoom, and the window inpu
   expect(after.count).toBeGreaterThan(0);
   expect(after.maxDist).toBeLessThan(5);
 });
+
+test('suppresses function-plot native crosshair tip', async ({ page }) => {
+  await page.goto('/graphing');
+  // The native tip only activates once a curve is plotted and hovered.
+  await page.locator('#eq-input').fill('sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+
+  // Hover a real screen point on the curve (the longest graph path). On
+  // curve-hover function-plot clears the inline display:none it sets at load,
+  // which would reveal the crosshair; our scoped !important rule must keep it hidden.
+  const onCurve = await page.evaluate(() => {
+    const svg = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement;
+    const path = [...svg.querySelectorAll('g.graph path')].sort(
+      (a, b) => (b as SVGPathElement).getTotalLength() - (a as SVGPathElement).getTotalLength(),
+    )[0] as SVGPathElement;
+    const p = path.getPointAtLength(path.getTotalLength() * 0.5);
+    const ctm = path.getScreenCTM()!;
+    const pt = svg.createSVGPoint();
+    pt.x = p.x;
+    pt.y = p.y;
+    const s = pt.matrixTransform(ctm);
+    return { x: s.x, y: s.y };
+  });
+  await page.mouse.move(onCurve.x, onCurve.y);
+
+  const display = await page
+    .locator('[data-testid="plot"] .inner-tip')
+    .evaluate((el) => getComputedStyle(el).display);
+  expect(display).toBe('none');
+});
+
+test('hovering a Show-points marker shows its exact (x, y)', async ({ page }) => {
+  await plotWithPoints(page); // 2x^2 with Show points -> a marker at (0, 0)
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  await expect(dot).toBeVisible();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  // Offset +5px in x: still within DOT_HIT_RADIUS_PX=8 so dot-snap fires, but
+  // curve-mode at this cursor would report a non-zero x — proving the dot branch ran.
+  await page.mouse.move(box.x + box.width / 2 + 5, box.y + box.height / 2);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  await expect(tip).toContainText('(0, 0)');
+});
+
+test('hovering along the curve shows the (x, y) on the curve', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+
+  // Pick a real screen point on the longest graph path (the curve).
+  const onCurve = await page.evaluate(() => {
+    const svg = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement;
+    const path = [...svg.querySelectorAll('g.graph path')].sort(
+      (a, b) => (b as SVGPathElement).getTotalLength() - (a as SVGPathElement).getTotalLength(),
+    )[0] as SVGPathElement;
+    const p = path.getPointAtLength(path.getTotalLength() * 0.5);
+    const ctm = path.getScreenCTM()!;
+    const pt = svg.createSVGPoint();
+    pt.x = p.x;
+    pt.y = p.y;
+    const s = pt.matrixTransform(ctm);
+    return { x: s.x, y: s.y };
+  });
+
+  // Offset +10px in screen-y: still within CURVE_HIT_RADIUS_PX=20, but the cursor's
+  // data-y is now ~0.19 off the curve — a wrong implementation reporting cursor-y would fail.
+  await page.mouse.move(onCurve.x, onCurve.y + 10);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  const text = (await tip.textContent()) ?? '';
+  const m = text.match(/\(\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)/);
+  expect(m).not.toBeNull();
+  const x = parseFloat(m![1]);
+  const y = parseFloat(m![2]);
+  // The reported point lies on sin(x): proves the readout reads the curve.
+  expect(Math.abs(y - Math.sin(x))).toBeLessThan(0.05);
+});
+
+test('moving the pointer off the plot hides the tooltip', async ({ page }) => {
+  await plotWithPoints(page);
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.getByRole('status')).toBeVisible();
+  await page.mouse.move(2, 2); // top-left corner, off the plot
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('tooltip coordinate text uses the foreground colour, not the curve colour', async ({
+  page,
+}) => {
+  await plotWithPoints(page); // 2x^2 -> first palette colour #60a5fa
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  const colours = await tip.evaluate((el) => {
+    const swatch = el.querySelector('span[aria-hidden]') as HTMLElement;
+    return { text: getComputedStyle(el).color, swatch: getComputedStyle(swatch).backgroundColor };
+  });
+  // Colour is a non-text accent: the text must not be the curve colour.
+  expect(colours.text).not.toBe(colours.swatch);
+});

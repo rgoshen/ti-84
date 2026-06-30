@@ -4,6 +4,7 @@ import { evaluate, parse } from 'mathjs';
 import katex from 'katex';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { formatNumber, type HoverInfo } from '@/scripts/graphing/hover';
 import {
   renderGraph,
   type FunctionPlotInstance,
@@ -87,6 +88,48 @@ function EquationLabel({ expr, className }: { expr: string; className?: string }
   return <span className={className}>{`y = ${expr}`}</span>;
 }
 
+// Conservative estimates of the rendered tooltip dimensions used to clamp it
+// inside the plot bounds without measuring the element on every pointer move.
+const TOOLTIP_EST_WIDTH_PX = 96;
+const TOOLTIP_EST_HEIGHT_PX = 28;
+
+/**
+ * Floating coordinate readout. Positioned with `position: fixed` at the pointer's
+ * viewport coords and clamped to the plot bounds. The (x, y) text stays in the
+ * popover foreground (AA contrast); the curve colour is a non-text swatch only.
+ */
+function CoordTooltip({
+  hover,
+  boundsRef,
+}: {
+  hover: HoverInfo;
+  boundsRef: React.RefObject<HTMLDivElement | null>;
+}): React.JSX.Element {
+  const OFFSET = 12;
+  const b = boundsRef.current?.getBoundingClientRect();
+  let left = hover.clientX + OFFSET;
+  let top = hover.clientY - OFFSET;
+  if (b) {
+    left = Math.min(Math.max(left, b.left), Math.max(b.left, b.right - TOOLTIP_EST_WIDTH_PX));
+    top = Math.min(Math.max(top, b.top), Math.max(b.top, b.bottom - TOOLTIP_EST_HEIGHT_PX));
+  }
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed z-50 rounded-md border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md"
+      style={{ left, top }}
+    >
+      <span
+        aria-hidden="true"
+        className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+        style={{ background: hover.color }}
+      />
+      ({formatNumber(hover.x)}, {formatNumber(hover.y)})
+    </div>
+  );
+}
+
 export default function GraphingCalculator(): React.JSX.Element {
   const [equations, setEquations] = useState<EquationItem[]>([]);
   // appliedWindow drives plot creation; displayWindow mirrors interactive zoom/pan
@@ -101,6 +144,7 @@ export default function GraphingCalculator(): React.JSX.Element {
       ? document.documentElement.classList.contains('dark')
       : true,
   );
+  const [hover, setHover] = useState<HoverInfo | null>(null);
 
   const plotRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<FunctionPlotInstance | null>(null);
@@ -134,6 +178,7 @@ export default function GraphingCalculator(): React.JSX.Element {
       // function-plot appends to the target; clear it so each build starts fresh.
       // replaceChildren() (vs innerHTML) keeps this a plain, XSS-free DOM clear.
       target.replaceChildren();
+      setHover(null);
       try {
         instanceRef.current = renderGraph({
           target,
@@ -142,6 +187,9 @@ export default function GraphingCalculator(): React.JSX.Element {
           dark,
           onViewChange: (w) => {
             if (!disposed) setDisplayWindow(w);
+          },
+          onHover: (info) => {
+            if (!disposed) setHover(info);
           },
         });
         setError(null);
@@ -394,6 +442,7 @@ export default function GraphingCalculator(): React.JSX.Element {
         <Card className="overflow-hidden p-2">
           <div ref={plotRef} data-testid="plot" className="w-full" style={{ minHeight: 560 }} />
         </Card>
+        {hover ? <CoordTooltip hover={hover} boundsRef={plotRef} /> : null}
 
         <Card className="gap-3 p-4">
           <div className="flex items-center justify-between">

@@ -201,3 +201,17 @@ In dark mode the function-plot gridlines were nearly invisible and the x=0/y=0 a
 - Selectors depend on function-plot's class names (`.origin`, `.axis line/path`); covered by the e2e guard so a future library upgrade that renames them fails loudly.
 
 **Status:** Implemented on `feature/dark-mode-plot-contrast`.
+
+## [2026-06-30] Feature: Hover coordinate tooltip
+
+**Objective:**
+Hovering over the plot shows a floating tooltip with the (x, y) value at the pointer. Two modes: hovering a discrete "Show points" marker shows that marker's exact coordinates; hovering along a plotted curve shows the computed (x, y) on the nearest curve at the pointer's x-coordinate.
+
+**Approach:**
+Pure helpers in new `src/scripts/graphing/hover.ts` (named constants `DOT_HIT_RADIUS_PX`, `CURVE_HIT_RADIUS_PX`, `COORD_DECIMALS`, `GESTURE_SUPPRESS_MS`; the `HoverInfo` type; `formatNumber` and `nearestWithinThreshold` pure functions). `plot.ts` adds `attachHoverReadout`, a DOM handler that hit-tests the pointer against discrete markers (snap within 8px), else the nearest curve (within 20px pixel-y of the data-evaluated curve, picked via `nearestWithinThreshold`), emits `HoverInfo | null` via a new `onHover` callback (mirroring `onViewChange`), and is rAF-throttled with gesture-suppression (no tooltip during zoom/pan). `GraphingCalculator.tsx` renders one themed `<CoordTooltip />` (position: fixed, clamped to the plot bounds, Tailwind `bg-popover text-popover-foreground`, a curve-color swatch as a non-text accent). function-plot's native crosshair tip is suppressed via a scoped CSS rule in `global.css`. Reference spec at `docs/superpowers/specs/2026-06-30-hover-coordinate-tooltip-design.md` and plan at `docs/superpowers/plans/2026-06-30-hover-coordinate-tooltip.md`.
+
+**Tests:**
+Vitest unit suite for `hover.ts` covers `formatNumber` (integers, rounding, trailing-zero trim, -0 normalization) and `nearestWithinThreshold` (picking closest within threshold, null outside, deterministic tie-break). Playwright e2e (dark mode, 8 tests): native-tip suppression (`.inner-tip` has `display: none`); dot-hover exact coords (origin marker → `(0, 0)`); curve-hover on-curve coords (computed y matches sin(x)); pointer-leave hides tooltip; tooltip text uses popover-foreground (AA contrast), not curve color. Full suites green: Vitest 20 (11 math + 3 theme + 6 hover), Playwright 8 graphing e2e.
+
+**Risks & Tradeoffs:**
+Depends on function-plot's internal DOM structure and scale objects (`meta.xScale/yScale`, `.inner-tip`, `.canvas` group) — guarded and verified by the comprehensive e2e suite. Touch/no-hover devices are explicitly deferred (tooltip is a progressive enhancement for v1; future "tap to read" feature would follow). The rAF throttle + gesture-suppression window trade some near-miss responsiveness for stable UX mid-zoom/pan.
