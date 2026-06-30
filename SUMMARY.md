@@ -129,3 +129,18 @@ Dark mode lines were invisible because Function Plot's default styling faded aga
 
 **References:**
 - TODO.md: Custom Equation Graphing Calculator
+
+## [2026-06-29 19:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Docker / configuration
+
+**Summary:**
+Added docker-compose.yml with sensible default environment variables (HOST_PORT, SITE_TITLE_TI84, SITE_TITLE_GRAPHING, THEME_DEFAULT, TI84_IFRAME_SRC). Added .env.example documenting all variables. Refactored the Docker image to use a docker-entrypoint.sh that runs envsubst over the HTML templates at container start, so env vars actually flow into the served pages (titles, default theme, iframe source). Updated index.html and graphing.html to use ${VAR} placeholders for those values. Updated README with a Compose quick-start, a variables table, a .env example, and the plain docker run equivalent. .gitignore now excludes .env and .env.local while .env.example stays tracked.
+
+**Rationale:**
+Docker Compose gives a one-command, reproducible local run with named-container and port defaults baked in. Routing env vars through envsubst (vs. a static COPY) means the same image can be reused across environments (dev/staging/prod) with different titles, default themes, or iframe sources without rebuilding. Keeping .env out of version control protects any real overrides while .env.example documents the contract.
+
+**References:**
+- docker-compose.yml, .env.example, Dockerfile, docker-entrypoint.sh
+- index.html, graphing.html (env var placeholders)

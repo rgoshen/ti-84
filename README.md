@@ -35,13 +35,61 @@ A simple, professional website with a light/dark theme toggle built on Tailwind 
 
 ## Prerequisites
 
-- [Docker](https://www.docker.com/) installed
+- [Docker](https://www.docker.com/) installed (Docker Compose is bundled with modern Docker)
 
-## Running locally with Docker
+## Running with Docker Compose (recommended)
+
+A `docker-compose.yml` is included with sensible defaults, so you can simply:
+
+```bash
+docker compose up -d
+```
+
+Open <http://localhost:8080> in your browser.
+
+### Configurable environment variables
+
+Defaults are baked into `docker-compose.yml`. Override any of them by creating a `.env` file (see `.env.example`) or by exporting them in your shell before running `docker compose up`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `HOST_PORT` | `8080` | Host port mapped to the container's port 80 |
+| `SITE_TITLE_TI84` | `TI-84 Calculator` | Browser tab title and page heading for the TI-84 page |
+| `SITE_TITLE_GRAPHING` | `Graphing Calculator Online` | Browser tab title and page heading for the Graphing Calculator page |
+| `THEME_DEFAULT` | `dark` | Default theme for first-time visitors (`dark` or `light`) — users can still toggle, and their choice is saved in `localStorage` |
+| `TI84_IFRAME_SRC` | `https://ti84calc.com/ti84calc` | Source URL for the embedded TI-84 iframe |
+
+Example `.env`:
+
+```env
+HOST_PORT=9090
+SITE_TITLE_TI84=My Custom TI-84
+THEME_DEFAULT=light
+TI84_IFRAME_SRC=https://example.com/calc
+```
+
+Then:
+
+```bash
+docker compose up -d
+```
+
+Stop and remove the container:
+
+```bash
+docker compose down
+```
+
+## Running locally with Docker (without Compose)
 
 ```bash
 docker build -t ti-84 .
-docker run -d --name graphing-calculator -p 8080:80 ti-84
+docker run -d --name graphing-calculator -p 8080:80 \
+  -e SITE_TITLE_TI84="TI-84 Calculator" \
+  -e SITE_TITLE_GRAPHING="Graphing Calculator Online" \
+  -e THEME_DEFAULT=dark \
+  -e TI84_IFRAME_SRC="https://ti84calc.com/ti84calc" \
+  ti-84
 ```
 
 The `-d` flag runs the container in detached (headless) mode in the background.
@@ -67,11 +115,14 @@ Open `index.html` (TI-84) or `graphing.html` (Graphing Calculator Online) direct
 
 ```
 .
-├── index.html        # TI-84 Calculator page (Tailwind via CDN, theme toggle, embedded iframe, nav menu)
-├── graphing.html     # Graphing Calculator Online content page (themed, nav menu)
-├── Dockerfile        # Nginx Alpine image serving all HTML files
-├── docs/             # Screenshots and assets
-├── CONTRIBUTING.md   # How to contribute
+├── index.html            # TI-84 Calculator page (template with env var placeholders)
+├── graphing.html         # Graphing Calculator Online page (template with env var placeholders)
+├── Dockerfile            # Nginx Alpine + gettext entrypoint that envsubst's the templates
+├── docker-entrypoint.sh  # Substitutes env vars into HTML at container start
+├── docker-compose.yml    # Compose file with default env vars
+├── .env.example          # Example environment file (copy to .env to override)
+├── docs/                 # Screenshots and assets
+├── CONTRIBUTING.md       # How to contribute
 └── README.md
 ```
 
