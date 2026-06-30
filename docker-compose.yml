@@ -4,7 +4,7 @@ services:
     image: ti-84:latest
     container_name: graphing-calculator
     ports:
-      - "${HOST_PORT:-8080}:80"
+      - "${HOST_PORT:-8084}:80"
     environment:
       SITE_TITLE_TI84: ${SITE_TITLE_TI84:-TI-84 Calculator}
       SITE_TITLE_GRAPHING: ${SITE_TITLE_GRAPHING:-Graphing Calculator Online}

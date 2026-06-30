@@ -45,7 +45,7 @@ A `docker-compose.yml` is included with sensible defaults, so you can simply:
 docker compose up -d
 ```
 
-Open <http://localhost:8080> in your browser.
+Open <http://localhost:8084> in your browser.
 
 ### Configurable environment variables
 
@@ -53,7 +53,7 @@ Defaults are baked into `docker-compose.yml`. Override any of them by creating a
 
 | Variable | Default | Description |
 |---|---|---|
-| `HOST_PORT` | `8080` | Host port mapped to the container's port 80 |
+| `HOST_PORT` | `8084` | Host port mapped to the container's port 80 |
 | `SITE_TITLE_TI84` | `TI-84 Calculator` | Browser tab title and page heading for the TI-84 page |
 | `SITE_TITLE_GRAPHING` | `Graphing Calculator Online` | Browser tab title and page heading for the Graphing Calculator page |
 | `THEME_DEFAULT` | `dark` | Default theme for first-time visitors (`dark` or `light`) — users can still toggle, and their choice is saved in `localStorage` |
@@ -84,7 +84,7 @@ docker compose down
 
 ```bash
 docker build -t ti-84 .
-docker run -d --name graphing-calculator -p 8080:80 \
+docker run -d --name graphing-calculator -p 8084:80 \
   -e SITE_TITLE_TI84="TI-84 Calculator" \
   -e SITE_TITLE_GRAPHING="Graphing Calculator Online" \
   -e THEME_DEFAULT=dark \
@@ -94,7 +94,7 @@ docker run -d --name graphing-calculator -p 8080:80 \
 
 The `-d` flag runs the container in detached (headless) mode in the background.
 
-Open <http://localhost:8080> in your browser. View logs with:
+Open <http://localhost:8084> in your browser. View logs with:
 
 ```bash
 docker logs graphing-calculator
