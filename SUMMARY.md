@@ -41,3 +41,17 @@ A named container is easier to stop, remove, and reference in scripts/logs than 
 **References:**
 - README.md: Running locally with Docker
 - CONTRIBUTING.md: Getting Started
+
+## [2026-06-29 17:30] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Docker instructions
+
+**Summary:**
+Added the `-d` (detached/headless) flag to all `docker run` commands in README.md, CONTRIBUTING.md, and docs/README.md so the container runs in the background. Added a note explaining detached mode and a `docker logs` command for viewing container output.
+
+**Rationale:**
+Detached mode is the standard way to run a long-lived web server container without blocking the terminal. Surfacing the logs command makes the headless workflow complete.
+
+**References:**
+- README.md: Running locally with Docker

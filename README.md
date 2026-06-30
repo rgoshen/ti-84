@@ -35,10 +35,16 @@ A simple, professional single-page website that embeds the TI-84 online calculat
 
 ```bash
 docker build -t ti-84 .
-docker run --name graphing-calculator -p 8080:80 ti-84
+docker run -d --name graphing-calculator -p 8080:80 ti-84
 ```
 
-Open <http://localhost:8080> in your browser.
+The `-d` flag runs the container in detached (headless) mode in the background.
+
+Open <http://localhost:8080> in your browser. View logs with:
+
+```bash
+docker logs graphing-calculator
+```
 
 To stop and remove the container when you're done:
 
