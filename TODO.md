@@ -108,7 +108,19 @@ Move the project onto Astro + TypeScript as a multi-page STATIC site (simple lan
 - Env-var title injection (current Docker envsubst of `${SITE_TITLE_*}`) must move to Astro env / config; Docker/deploy changes deferred to Phase 2.
 - Scope discipline: Phase 2 (shared shell + simple landing + ti-84 page) is a separate slice. AI solver is out of scope entirely for now (keeps output static).
 
-**Status:** In progress — Phase 0 + 1.
+**Remaining deliverables (checklist):**
+- [x] Phase 0 toolchain (Astro + TS + Tailwind v4 + Vitest), pinned deps, build green.
+- [x] Pure math core extracted + unit-tested (math.ts, 11 tests).
+- [ ] React + shadcn/ui set up (@astrojs/react, components.json, cn util, base components).
+- [ ] function-plot wrapper module (plot.ts): scales, overlay-in-canvas, zoom/pan sync.
+- [ ] /graphing ported as a React island (controls via shadcn/ui; plot via ref).
+- [ ] /ti-84 page ported (iframe src via build-time env).
+- [ ] Playwright e2e: markers on curve, survive zoom/pan.
+- [ ] README updated for the new stack (done incrementally; finalize at cutover).
+- [ ] Docker cutover: multi-stage build (node build → nginx serve dist/), env → build-time, remove legacy envsubst.
+- [ ] Remove legacy root index.html / graphing.html once each page is ported.
+
+**Status:** In progress — Phase 0 done; Phase 1 (React UI port) next.
 
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
