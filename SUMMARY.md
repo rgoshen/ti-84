@@ -55,3 +55,17 @@ Detached mode is the standard way to run a long-lived web server container witho
 
 **References:**
 - README.md: Running locally with Docker
+
+## [2026-06-29 17:40] Commit Summary
+
+**Change Type:** Docs
+**Scope:** TODO.md planning
+
+**Summary:**
+Added a planned-feature entry to TODO.md for a custom equation graphing calculator (type an equation, render it, stack multiple equations on the same graph until cleared). Documented the recommended approach (static site + Tailwind + lightweight plotting lib such as Function Plot, no MUI/React migration) along with risks and tradeoffs.
+
+**Rationale:**
+Capturing the roadmap decision now preserves the stack rationale (avoid MUI + Tailwind dual-styling clash; defer React migration) and gives a concrete plan to execute against when implementation begins.
+
+**References:**
+- TODO.md: Planned Feature — Custom Equation Graphing Calculator
