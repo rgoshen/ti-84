@@ -87,6 +87,46 @@ Headless (Playwright/MCP): after a wheel-zoom and after a drag-pan, max marker-t
 
 **Status:** Done & verified.
 
+## [2026-06-29] Migration: Static HTML → Astro + TypeScript (Phase 0 + 1)
+
+**Objective:**
+Move the project onto Astro + TypeScript as a multi-page STATIC site (simple landing, /ti-84, /graphing) to support SEO, maintainability, and a test suite — incrementally, without throwing away working behavior. Scope: the two existing features only (TI-84 page + graphing calculator). The AI solver is explicitly OUT of scope for now, so output stays `static` (no SSR/adapter). Decision record: goal = real product; first move = tests + build, keep function-plot; interactivity = **React islands + shadcn/ui** (Radix primitives on Tailwind, no MUI). NOTE: earlier TODO entries that say "avoid MUI / avoid React migration" predate this decision and are superseded — they were written under the old "stay a static HTML page" plan.
+
+**Approach (Phase 0 + 1 only):**
+- Phase 0 — Tooling: hand-authored Astro project (npm create is interactive) with pinned deps. Astro + TypeScript (strict) + Tailwind v4 via @tailwindcss/vite + global.css `@import "tailwindcss"`. Vitest (via astro/config getViteConfig) for unit tests; Playwright for e2e. Replace CDN libs (function-plot, mathjs, katex, d3) with pinned npm deps.
+- Phase 1 — Port /graphing: src/pages/graphing.astro hosts a React island (`client:only="react"`):
+  - `src/scripts/graphing/math.ts` — pure, framework-free: evalAt, integerXs, bisect, gridlineCrossings (unit-tested). ✅ Done.
+  - `src/scripts/graphing/plot.ts` — framework-free function-plot wrapper: render, tick-reading scales, overlay-in-canvas, zoom/pan sync. Called from React via a ref/effect.
+  - React component(s) for the controls (equation input, plotted list, window, value table) built on shadcn/ui (Input, Button, Select, Checkbox, Card); the plot rendered into a ref'd div.
+- Tests: Vitest units for math.ts (gridlineCrossings rule + bisect); Playwright e2e: markers on curve, stay on curve through zoom + pan.
+
+**Tests / DoD:**
+`npm run build` succeeds; `npm test` (Vitest) green; Playwright e2e green; the ported /graphing page matches current behavior (markers on curve at whole-number crossings, survive zoom/pan).
+
+**Risks & Tradeoffs:**
+- function-plot + bundler + d3 integration (it's a UMD-era lib); verify import works, refactor `d3.scaleLinear` → import from `d3-scale`.
+- Env-var title injection (current Docker envsubst of `${SITE_TITLE_*}`) must move to Astro env / config; Docker/deploy changes deferred to Phase 2.
+- Scope discipline: Phase 2 (shared shell + simple landing + ti-84 page) is a separate slice. AI solver is out of scope entirely for now (keeps output static).
+
+**Remaining deliverables (checklist):**
+- [x] Phase 0 toolchain (Astro + TS + Tailwind v4 + Vitest), pinned deps, build green.
+- [x] Pure math core extracted + unit-tested (math.ts, 11 tests).
+- [x] React + shadcn/ui set up (@astrojs/react, components.json, cn util, base components).
+- [x] function-plot wrapper module (plot.ts): instance-scale overlay-in-canvas, zoom/pan sync. (Independently verified: markers ≤2.6px from curve; ≤1px after zoom; window inputs track zoom.)
+- [x] /graphing ported as a React island (controls via shadcn/ui; plot via ref).
+- [x] /ti-84 page ported (iframe src via build-time env, `src/config.ts` → `TI84_IFRAME_SRC`).
+- [x] Playwright e2e: markers on curve (zoom/pan verified manually; add to e2e).
+- [x] README updated for the new stack (callout removed; structure tree + Docker section rewritten).
+- [x] Favicon (`public/favicon.svg`, linked from the Base layout — kills the /favicon.ico 404).
+- [x] Docker cutover: multi-stage build (node build → nginx serve dist/), env → build-time `PUBLIC_*`, legacy envsubst/entrypoint removed, `nginx.conf` clean URLs.
+- [x] Remove legacy root index.html / graphing.html (deleted — fully replaced by the Astro pages).
+
+**Status:** Done — Phase 0 (toolchain), Phase 1 (graphing React island), and Phase 2
+(shared Base layout + Header, landing + /ti-84 pages, favicon, Docker multi-stage
+cutover, legacy HTML removed) all complete. `npm run build` emits `/`, `/ti-84`, and
+`/graphing`; `npm test` green (11). The graphing island is now theme-reactive (a
+MutationObserver on `<html class>` re-themes the plot when the header toggle flips).
+
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
 **Objective:**
@@ -119,3 +159,24 @@ Add an AI component that accepts a math problem from the user and displays a cle
 - Coordinate with the graphing calculator feature so both share a consistent input/panel styling system.
 
 **Status:** Planned — not yet started.
+## [2026-06-29] Feature: Graphing Calculator React Island (Astro port)
+
+**Objective:**
+Port the vanilla-JS graphing calculator (graphing.html) into a React island inside the Astro + TypeScript project, preserving its behavior — equation input (y= or bare expr), plotted-equation list (color picker, remove, show-points, point shape), window panel, plot area, and whole-number value table. Default window x[-10,10] y[-5,5]; default dark theme.
+
+**Approach:**
+- `src/scripts/graphing/plot.ts`: framework-free wrapper around function-plot. Owns render, point overlay (appended into `g.canvas` and positioned with the instance's own `meta.xScale`/`yScale` so markers sit on the curve), theme port, and throttled `all:zoom` sync via `onViewChange`.
+- `src/components/graphing/GraphingCalculator.tsx`: React island. State = equations[], appliedWindow (drives plot recreation), displayWindow (mirrors zoom; feeds value table + window inputs without rebuilding). shadcn/ui controls; native `<input type=color>` swatch; KaTeX equation labels with plain-text fallback.
+- `src/pages/graphing.astro`: imports global + KaTeX CSS, `<html class="dark">`, renders `<GraphingCalculator client:only="react" />`.
+- Reuse tested `@/scripts/graphing/math` (evalAt, integerXs, gridlineCrossings); do not modify it.
+
+**Tests:**
+- Playwright e2e (`tests/e2e/graphing.spec.ts`): loads /graphing, plots `2x^2`, enables Show points, asserts markers exist and lie on the curve (screen-space geometric check vs the function path). Passing.
+- Existing Vitest math suite (11) remains green.
+
+**Risks & Tradeoffs:**
+- function-plot ships CJS (`exports.default`); ESM interop differs between dev (esbuild) and build (Rollup). Normalized the default import to the callable in plot.ts.
+- Per the wiring design, equation/applied-window/theme changes recreate the plot (resetting interactive zoom); zoom is mirrored to displayWindow for the table/inputs only. Original auto-persisted zoom across edits via shared mutable state — deferred in favor of the cleaner applied/display split.
+- Deferred: bold zero-axis gridlines (`boldGridAxes`) — TODO left in plot.ts. No in-island theme toggle (page is dark by default).
+
+**Status:** Implemented; left in working tree (not committed) for review.

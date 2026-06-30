@@ -1,0 +1,13 @@
+---
+import Base from '@/layouts/Base.astro';
+import 'katex/dist/katex.min.css';
+import { SITE_TITLE_GRAPHING } from '@/config';
+import GraphingCalculator from '@/components/graphing/GraphingCalculator.tsx';
+---
+
+<Base
+  title={SITE_TITLE_GRAPHING}
+  description="Free online graphing calculator. Instantly plot equations, stack multiple functions, zoom and pan, and read a value table — all in your browser."
+>
+  <GraphingCalculator client:only="react" />
+</Base>

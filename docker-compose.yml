@@ -1,13 +1,17 @@
 services:
   graphing-calculator:
-    build: .
+    build:
+      context: .
+      # Build-time site config is baked into the static output. Override via a
+      # .env file or the shell; changing a value requires a rebuild
+      # (`docker compose up -d --build`).
+      args:
+        PUBLIC_SITE_TITLE_TI84: ${PUBLIC_SITE_TITLE_TI84:-TI-84 Calculator}
+        PUBLIC_SITE_TITLE_GRAPHING: ${PUBLIC_SITE_TITLE_GRAPHING:-Graphing Calculator Online}
+        PUBLIC_TI84_IFRAME_SRC: ${PUBLIC_TI84_IFRAME_SRC:-https://ti84calc.com/ti84calc}
+        PUBLIC_THEME_DEFAULT: ${PUBLIC_THEME_DEFAULT:-dark}
     image: ti-84:latest
     container_name: graphing-calculator
     ports:
       - "${HOST_PORT:-8084}:80"
-    environment:
-      SITE_TITLE_TI84: ${SITE_TITLE_TI84:-TI-84 Calculator}
-      SITE_TITLE_GRAPHING: ${SITE_TITLE_GRAPHING:-Graphing Calculator Online}
-      THEME_DEFAULT: ${THEME_DEFAULT:-dark}
-      TI84_IFRAME_SRC: ${TI84_IFRAME_SRC:-https://ti84calc.com/ti84calc}
     restart: unless-stopped

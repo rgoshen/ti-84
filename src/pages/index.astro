@@ -1,0 +1,44 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING } from '@/config';
+---
+
+<Base
+  title="Online Calculators"
+  description="Free online calculators: a TI-84 style calculator and a graphing calculator that plots equations in your browser."
+>
+  <section class="py-8 text-center sm:py-12">
+    <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Online Calculators</h1>
+    <p class="mx-auto mt-3 max-w-2xl text-muted-foreground">
+      Two free, browser-based calculators — no install, no sign-up. Pick a tool to get started.
+    </p>
+  </section>
+
+  <div class="grid gap-6 sm:grid-cols-2">
+    <a
+      href="/ti-84"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_TI84}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        A familiar scientific/graphing calculator, embedded right in your browser.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the TI-84 &rarr;
+      </span>
+    </a>
+
+    <a
+      href="/graphing"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_GRAPHING}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Plot equations, stack multiple functions, mark whole-number crossings, and zoom or pan.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the graphing calculator &rarr;
+      </span>
+    </a>
+  </div>
+</Base>

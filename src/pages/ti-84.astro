@@ -1,0 +1,32 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE_TITLE_TI84, TI84_IFRAME_SRC } from '@/config';
+---
+
+<Base
+  title={SITE_TITLE_TI84}
+  description="Online TI-84 graphing calculator — a familiar scientific and graphing calculator, right in your browser."
+>
+  <div class="mx-auto max-w-3xl">
+    <h1 class="text-2xl font-semibold tracking-tight">{SITE_TITLE_TI84}</h1>
+    <p class="mt-1 text-sm text-muted-foreground">
+      A familiar scientific and graphing calculator, embedded right in your browser.
+    </p>
+
+    <div class="mt-6 overflow-hidden rounded-xl border bg-card shadow-sm">
+      <iframe
+        src={TI84_IFRAME_SRC}
+        title="TI-84 graphing calculator"
+        loading="lazy"
+        allow="fullscreen"
+        class="block w-full"
+        style="min-height: 800px;"
+      ></iframe>
+    </div>
+
+    <p class="mt-4 text-center text-sm text-muted-foreground">
+      Embedded calculator provided by
+      <a href="https://ti84calc.com" class="underline hover:text-foreground">ti84calc.com</a>.
+    </p>
+  </div>
+</Base>

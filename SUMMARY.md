@@ -327,3 +327,89 @@ Root cause: Function Plot's interactive scroll-zoom and drag-pan (bound to its `
 **References:**
 - graphing.html: renderPlot, syncOverlayToView, syncWindowInputs, plotInstance
 - TODO.md: Fix: Keep point markers on the curve through zoom/pan
+
+
+## [2026-06-29 21:24] Commit Summary
+
+**Change Type:** Feature (build/tooling)
+**Scope:** Astro + TypeScript migration — Phase 0 scaffold + tested math core
+
+**Summary:**
+Introduced an Astro 7 + TypeScript (strict) + Tailwind v4 (@tailwindcss/vite) project alongside the existing static HTML, with pinned dependency versions. Added Vitest (via astro/config getViteConfig) and a placeholder landing page. Extracted the graphing calculator's pure math into a typed, framework-free module `src/scripts/graphing/math.ts` (evalAt, integerXs, bisect, gridlineCrossings) and covered it with 11 unit tests written test-first (RED → GREEN). `npm run build` and `npm test` both pass.
+
+**Rationale:**
+Per the agreed migration (real product; incremental; tests-first; keep function-plot), Phase 0 stands up the toolchain and Phase 1 begins by isolating the correctness-critical math so it is unit-testable independent of the DOM/plot library and reusable from the upcoming React island. The math module is a faithful, typed port of the verified logic in graphing.html. Interactivity decision updated to React islands + shadcn/ui (no MUI); the old TODO.md anti-React/MUI notes predate this route and are superseded.
+
+**Tests:**
+Vitest: 11 passing — gridlineCrossings rule (integer x OR integer y, none both-fractional, on-curve, in-window, de-dup), bisect root-finding, evalAt, integerXs.
+
+**References:**
+- package.json, astro.config.mjs, tsconfig.json, vitest.config.ts, src/styles/global.css, src/pages/index.astro
+- src/scripts/graphing/math.ts, src/scripts/graphing/math.test.ts
+- TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 0 + 1)
+
+## [2026-06-29 21:52] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing calculator — React island (Astro port)
+
+**Summary:**
+Ported graphing.html into a React island. Added `src/scripts/graphing/plot.ts` (framework-free function-plot wrapper: render, point overlay, theme, throttled zoom/pan sync), `src/components/graphing/GraphingCalculator.tsx` (shadcn/ui controls, equation list, window panel, value table; KaTeX labels with plain-text fallback), `src/pages/graphing.astro` (dark, KaTeX CSS, `client:only="react"`), plus `playwright.config.ts` and `tests/e2e/graphing.spec.ts`. Reuses the tested `@/scripts/graphing/math` unchanged. `npm run build`, `npm test` (11), and the Playwright e2e all pass. Not committed — left in working tree for review.
+
+**Rationale:**
+Point-on-curve alignment is achieved by appending the overlay into function-plot's `g.canvas` and positioning markers with the instance's own `meta.xScale`/`yScale` (no tick-reading), and zoom/pan stays in sync by reading the live domain in a rAF-throttled `all:zoom` handler that redraws the overlay and reports the new view via `onViewChange` (never recreating the plot). Plot recreation is keyed to [equations, appliedWindow, dark]; the zoom-mirrored displayWindow feeds only the value table + window inputs.
+
+**Bug Fix Context (if applicable):**
+function-plot is CommonJS (`exports.default = functionPlot`); the ESM default import resolved to a namespace wrapper under Vite/esbuild dev (TypeError: functionPlot is not a function). Normalized the import to the callable (`.default ?? default`), verified working in both dev and production builds.
+
+**References:**
+- src/scripts/graphing/plot.ts, src/components/graphing/GraphingCalculator.tsx, src/pages/graphing.astro
+- playwright.config.ts, tests/e2e/graphing.spec.ts
+- TODO.md: Graphing Calculator React Island (Astro port)
+
+## [2026-06-29 22:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Astro migration Phase 2 — shared shell, pages, Docker cutover, legacy removal
+
+**Summary:**
+Completed the Astro migration. Added `src/config.ts` (build-time site config reading
+`import.meta.env.PUBLIC_*` with safe fallbacks — replaces the old Docker `envsubst`
+vars). Added a shared shell: `src/layouts/Base.astro` (full HTML doc, favicon link,
+pre-paint inline theme bootstrap via `define:vars`, `bg-background text-foreground`
+body, `<Header />` + centered `<main class="mx-auto max-w-6xl px-6 py-8">`) and
+`src/components/Header.astro` (sticky nav with Home/TI-84/Graphing, `aria-current`
+active state from `Astro.url.pathname`, sun/moon theme toggle that persists
+`localStorage.theme`). Rebuilt all three pages on Base: `index.astro` (hero + two
+cards), new `ti-84.astro` (lazy-loaded iframe from `TI84_IFRAME_SRC`), and
+`graphing.astro` (now just Base + KaTeX CSS + the island, standalone `<html>`/header
+removed). Added `public/favicon.svg` (parabola-on-axes glyph). Made the graphing
+island theme-reactive: `dark` is now state updated by a `MutationObserver` on the
+`<html>` `class` attribute, so the header toggle re-themes the plot. Docker cutover:
+multi-stage `Dockerfile` (`node:24-alpine` build → `nginx:alpine` serve `dist/`) with
+`PUBLIC_*` build args; new `nginx.conf` (clean URLs via `try_files $uri $uri/
+$uri.html`); `docker-compose.yml` switched from runtime `environment:` to
+`build.args`; deleted `docker-entrypoint.sh`. Updated `.env.example` to the `PUBLIC_*`
+build-arg contract. Removed the legacy `index.html` and `graphing.html`. Updated
+README (removed the migration callout, refreshed the structure tree, rewrote the
+Docker section), docs/README link, TODO checklist/status. `npm run build` emits `/`,
+`/ti-84`, `/graphing`; `npm test` green (11). Not committed — left in the working tree.
+
+**Rationale:**
+Build-time `PUBLIC_*` config keeps the site fully static (no entrypoint/`envsubst`
+layer) while preserving per-environment overrides via Docker build args. A single
+Base layout + Header removes the duplicated `<html>`/header that each legacy page
+carried, and centralizes the theme bootstrap so there is no light/dark flash. The
+MutationObserver makes the previously read-once `dark` flag track the live theme so
+the new header toggle actually re-themes the plot, with no change to the plot effect
+(which already depends on `dark`).
+
+**References:**
+- src/config.ts, src/layouts/Base.astro, src/components/Header.astro
+- src/pages/index.astro, src/pages/ti-84.astro, src/pages/graphing.astro
+- src/components/graphing/GraphingCalculator.tsx (theme-reactive `dark`)
+- public/favicon.svg
+- Dockerfile, nginx.conf, docker-compose.yml, .env.example (deleted docker-entrypoint.sh)
+- Deleted: index.html, graphing.html
+- README.md, docs/README.md, TODO.md
+- TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 2)
