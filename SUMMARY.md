@@ -246,3 +246,17 @@ SVG coordinate space has y increasing downward, so a d3 scale mapping yMin→top
 
 **References:**
 - graphing.html: getYScale, drawOriginAxes, makeMarker
+
+## [2026-06-29 20:45] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — points/axes alignment with Function Plot
+
+**Summary:**
+Replaced the hardcoded padding constants (padL/padR/padT/padB) in getXScale/getYScale with a new readAxisTicks() function that reads Function Plot's actual rendered x/y axis tick values and pixel positions from the SVG, then builds d3 scales from those real positions. Updated drawOriginAxes to derive its line endpoints from the scales (xScale(state.xMin/Max), yScale(state.yMin/Max)) instead of hardcoded padding. Points overlay and bold origin axes now align with Function Plot's own axes. Kept the hardcoded-padding scales only as a fallback if ticks can't be read.
+
+**Rationale:**
+The points and origin axes were offset from the real plot because Function Plot's internal margins differ from the guessed 35/20/20/35 padding. Reading the actual tick transforms from the rendered SVG makes the overlay scales match the plot exactly, including after zoom/pan and window changes.
+
+**References:**
+- graphing.html: getXScale, getYScale, readAxisTicks, drawOriginAxes

@@ -322,17 +322,19 @@
       const g = document.createElementNS(ns, 'g');
       g.setAttribute('class', 'origin-axis');
       const stroke = c.axis;
-      const width = svg.clientWidth || plotEl.clientWidth;
-      const height = 560;
-      const padT = 20, padB = 35, padL = 35, padR = 20;
+      // Derive plot bounds from the scales themselves (pixel positions of domain edges).
+      const xLeft = xScale(state.xMin);
+      const xRight = xScale(state.xMax);
+      const yTop = yScale(state.yMax);
+      const yBottom = yScale(state.yMin);
 
       // y=0 axis (horizontal), only if 0 is within the y domain
       if (state.yMin <= 0 && state.yMax >= 0) {
         const cy = yScale(0);
         const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', padL);
+        line.setAttribute('x1', xLeft);
         line.setAttribute('y1', cy);
-        line.setAttribute('x2', width - padR);
+        line.setAttribute('x2', xRight);
         line.setAttribute('y2', cy);
         line.setAttribute('stroke', stroke);
         line.setAttribute('stroke-width', '2');
@@ -343,9 +345,9 @@
         const cx = xScale(0);
         const line = document.createElementNS(ns, 'line');
         line.setAttribute('x1', cx);
-        line.setAttribute('y1', padT);
+        line.setAttribute('y1', yTop);
         line.setAttribute('x2', cx);
-        line.setAttribute('y2', height - padB);
+        line.setAttribute('y2', yBottom);
         line.setAttribute('stroke', stroke);
         line.setAttribute('stroke-width', '2');
         g.appendChild(line);
@@ -410,23 +412,65 @@
       return el;
     }
 
+    // Derive the x pixel scale from Function Plot's rendered x-axis ticks.
+    // Falls back to a hardcoded-margin scale if ticks can't be read.
     function getXScale() {
       const svg = plotEl.querySelector('svg');
       if (!svg) return null;
       const width = svg.clientWidth || plotEl.clientWidth;
+      const ticks = readAxisTicks(svg, 'x');
+      if (ticks.length >= 2) {
+        return d3.scaleLinear().domain(ticks.map(t => t.value)).range(ticks.map(t => t.pixel));
+      }
       const padL = 35, padR = 20;
-      const domain = [state.xMin, state.xMax];
-      return d3.scaleLinear().domain(domain).range([padL, width - padR]);
+      return d3.scaleLinear().domain([state.xMin, state.xMax]).range([padL, width - padR]);
     }
 
+    // Derive the y pixel scale from Function Plot's rendered y-axis ticks.
+    // SVG y grows downward, so the returned scale already maps yMax→top, yMin→bottom.
     function getYScale() {
       const svg = plotEl.querySelector('svg');
       if (!svg) return null;
+      const ticks = readAxisTicks(svg, 'y');
+      if (ticks.length >= 2) {
+        return d3.scaleLinear().domain(ticks.map(t => t.value)).range(ticks.map(t => t.pixel));
+      }
       const height = 560;
       const padT = 20, padB = 35;
-      const domain = [state.yMin, state.yMax];
-      // SVG y grows downward, so reverse the range: yMax at top, yMin at bottom.
-      return d3.scaleLinear().domain(domain).range([height - padB, padT]);
+      return d3.scaleLinear().domain([state.yMin, state.yMax]).range([height - padB, padT]);
+    }
+
+    // Read Function Plot's axis tick values and pixel positions from the rendered SVG.
+    // axis = 'x' or 'y'. Returns [{ value, pixel }, ...].
+    function readAxisTicks(svg, axis) {
+      const out = [];
+      const g = svg.querySelector('g.' + axis + '.axis');
+      if (!g) return out;
+      // The group may be translated; account for its transform.
+      const transform = g.getAttribute('transform') || '';
+      const txMatch = transform.match(/translate\(\s*([-\d.]+)[\s,]+([-\d.]+)?\s*\)/);
+      const dx = txMatch ? parseFloat(txMatch[1]) || 0 : 0;
+      const dy = txMatch ? parseFloat(txMatch[2]) || 0 : 0;
+      g.querySelectorAll('.tick').forEach((tick) => {
+        const text = tick.querySelector('text');
+        if (!text) return;
+        const value = parseFloat(text.textContent);
+        if (isNaN(value)) return;
+        const line = tick.querySelector('line');
+        let px = 0, py = 0;
+        if (axis === 'x') {
+          // x-axis ticks: line has x2=0 relative to the tick group; tick group translate gives x.
+          const t = tick.getAttribute('transform') || '';
+          const m = t.match(/translate\(\s*([-\d.]+)[\s,]+([-\d.]+)?\s*\)/);
+          px = m ? (parseFloat(m[1]) || 0) + dx : dx;
+        } else {
+          const t = tick.getAttribute('transform') || '';
+          const m = t.match(/translate\(\s*([-\d.]+)[\s,]+([-\d.]+)?\s*\)/);
+          py = m ? (parseFloat(m[2]) || 0) + dy : dy;
+        }
+        out.push({ value, pixel: axis === 'x' ? px : py });
+      });
+      return out;
     }
 
     function showError(msg) {
