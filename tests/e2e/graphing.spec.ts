@@ -79,6 +79,39 @@ async function plotWithPoints(page: Page): Promise<void> {
   await expect(page.locator('[data-testid="plot"] .points-overlay circle').first()).toBeVisible();
 }
 
+test('dark mode renders a visible grid and a bold, light-colored origin cross', async ({
+  page,
+}) => {
+  // Persist the dark choice before first paint so the Base layout boots in dark.
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await page.goto('/graphing');
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+
+  const theme = await page.evaluate(() => {
+    const svg = document.querySelector('[data-testid="plot"] svg') as SVGSVGElement;
+    const read = (sel: string) => {
+      const el = svg.querySelector(sel) as SVGElement | null;
+      if (!el) return null;
+      const cs = getComputedStyle(el);
+      const m = cs.stroke.match(/\d+/g)?.map(Number) ?? [0, 0, 0];
+      return { avgChannel: (m[0] + m[1] + m[2]) / 3, opacity: parseFloat(cs.opacity) };
+    };
+    return {
+      dark: document.documentElement.classList.contains('dark'),
+      origin: read('.x.origin'),
+      grid: read('g.x.axis .tick line'),
+    };
+  });
+
+  expect(theme.dark).toBe(true);
+  // The origin cross must be recolored off function-plot's hardcoded black and
+  // drawn boldly enough to read on the dark background.
+  expect(theme.origin?.avgChannel).toBeGreaterThan(120);
+  expect(theme.origin?.opacity).toBeGreaterThanOrEqual(0.4);
+  // Gridlines must be lifted above function-plot's near-invisible 0.1 default.
+  expect(theme.grid?.opacity).toBeGreaterThanOrEqual(0.2);
+});
+
 test('plots 2x^2 and renders point markers that lie on the curve', async ({ page }) => {
   await plotWithPoints(page);
 

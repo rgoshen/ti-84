@@ -461,3 +461,24 @@ Extracted the on-curve measurement into a `maxMarkerToCurvePx(page)` helper and 
 
 **References:**
 - tests/e2e/graphing.spec.ts, playwright.config.ts
+
+
+## [2026-06-30 12:38] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing — dark-mode plot theming (grid + bold axes)
+
+**Summary:**
+Made the dark-mode graph legible: gridlines are now clearly visible and the x=0/y=0 origin cross reads as a bold axis, matching light mode. Extracted plot colours + colour math into a new pure module `src/scripts/graphing/theme.ts` (`themeColors`, `hexToRgb`, `blendOver`, `relativeLuminance`, `lineContrast`, `lineDelta`); `ThemeColors` gained `gridOpacity` and `axisOpacity`. `applyThemeToPlot` now recolours function-plot's `.x.origin`/`.y.origin` cross and overrides both stroke and opacity on gridlines. Added a Vitest contrast suite and a dark-mode e2e guard. Light theme reproduces function-plot's defaults exactly and is unchanged.
+
+**Rationale:**
+The bug had two distinct mechanisms, both found by probing the live SVG rather than guessing: (1) the visible axis cross is function-plot's `.origin` paths, painted **solid black @ 0.2 opacity** and never themed — fine as `#ccc` on white, invisible on the dark background; (2) gridlines are pinned to `opacity: 0.1`, where colour alone can't lift a near-black background, so the dark grid sat ~9/255 from its background (fainter than light's). Fixing required theming `.origin` and raising dark opacities, not swapping hex values. Splitting the palette into a DOM-free module makes the contrast decisions unit-testable in node (no browser/jsdom) and keeps `applyThemeToPlot` as the single DOM-mutation seam.
+
+**Bug Fix Context:**
+Root cause: `applyThemeToPlot`'s selectors (`.tic path, .axis path, .axis line, .grid, text`) excluded `.origin`, and the `.grid` selector matched nothing, so the origin cross kept function-plot's hardcoded black and gridlines kept the 0.1 default opacity. Fix: dark grid → slate-400 @0.24, origin → slate-300 (`#cbd5e1`) @0.55; light unchanged. Verified: contrast unit tests go red→green, dark/light screenshots confirm the hierarchy, full Vitest (20) and Playwright (3) suites pass, production build succeeds, types clean.
+
+**References:**
+- src/scripts/graphing/theme.ts (new), src/scripts/graphing/theme.test.ts (new)
+- src/scripts/graphing/plot.ts (applyThemeToPlot, themeColors import)
+- tests/e2e/graphing.spec.ts (dark-mode rendering test)
+- TODO.md: 2026-06-30 Fix: Dark-mode plot grid + bold axes legibility
