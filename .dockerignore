@@ -1,0 +1,13 @@
+# Never copy these into the build context — node_modules in particular would
+# overwrite the linux deps installed by `npm ci` with host (darwin) binaries
+# (e.g. esbuild), breaking the in-container build.
+node_modules
+dist
+.git
+.astro
+test-results
+playwright-report
+*.log
+.env
+.env.local
+.DS_Store

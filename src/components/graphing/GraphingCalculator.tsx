@@ -96,7 +96,7 @@ export default function GraphingCalculator(): React.JSX.Element {
   const [fields, setFields] = useState<WindowFields>(() => windowToFields(DEFAULT_WINDOW));
   const [exprInput, setExprInput] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [dark] = useState(() =>
+  const [dark, setDark] = useState(() =>
     typeof document !== 'undefined'
       ? document.documentElement.classList.contains('dark')
       : true,
@@ -105,6 +105,16 @@ export default function GraphingCalculator(): React.JSX.Element {
   const plotRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<FunctionPlotInstance | null>(null);
   const nextId = useRef(0);
+
+  // Track the site theme so the plot re-themes when the header toggle flips the
+  // `.dark` class on <html>. The plot effect depends on `dark`, so updating this
+  // state re-renders the graph with the matching palette.
+  useEffect(() => {
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setDark(el.classList.contains('dark')));
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
 
   // Keep the window input fields in sync with the live (zoom-mirrored) view.
   useEffect(() => {

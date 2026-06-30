@@ -12,13 +12,9 @@ A small multi-page site with two browser-based calculators:
 - **TI-84 Calculator** — a familiar scientific/graphing calculator.
 - **Graphing Calculator** — plot equations, stack multiple functions, mark whole-number gridline crossings, and zoom/pan, all in the browser.
 
-> **⚠️ Migration in progress.** This project is moving from single-file static HTML
-> to an **Astro + TypeScript** site (React islands + shadcn/ui for the interactive
-> UI, Tailwind v4 for styling). What is done and what is pending is tracked in
-> [`TODO.md`](TODO.md). Today the toolchain, the unit-tested math core, and a
-> landing page are in place; the calculator UI port and the Docker cutover are
-> still underway. The legacy static pages (`index.html`, `graphing.html`) remain in
-> the repo until each page is ported.
+The site is built with **Astro + TypeScript** — a shared layout and header wrap three
+routes (`/` landing, `/ti-84`, `/graphing`), with the interactive graphing calculator
+rendered as a React island (shadcn/ui on Tailwind v4).
 
 ## Tech stack
 
@@ -59,26 +55,61 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 ├── vitest.config.ts            # Vitest via astro/config getViteConfig
 ├── package.json                # Pinned dependencies + scripts
 ├── src/
+│   ├── config.ts               # Build-time site config (reads PUBLIC_* env vars)
+│   ├── layouts/Base.astro      # Shared HTML shell: head, theme bootstrap, header, main
+│   ├── components/
+│   │   ├── Header.astro        # Sticky nav + theme toggle
+│   │   ├── graphing/           # GraphingCalculator React island
+│   │   └── ui/                 # shadcn/ui primitives
 │   ├── pages/                  # Routes: index (landing), ti-84, graphing
-│   ├── styles/global.css       # @import "tailwindcss"
-│   └── scripts/graphing/
-│       ├── math.ts             # Pure, framework-free math (tested)
-│       └── math.test.ts        # Vitest unit tests for the math core
-├── index.html, graphing.html   # Legacy static pages (being ported, then removed)
-├── Dockerfile, docker-compose.yml  # Deployment (multi-stage cutover pending)
+│   ├── scripts/graphing/
+│   │   ├── math.ts             # Pure, framework-free math (tested)
+│   │   ├── math.test.ts        # Vitest unit tests for the math core
+│   │   └── plot.ts             # Framework-free function-plot wrapper
+│   └── styles/global.css       # @import "tailwindcss" + theme tokens
+├── public/favicon.svg          # Site icon
+├── Dockerfile, nginx.conf      # Multi-stage build (Node build → nginx serves dist/)
+├── docker-compose.yml          # Compose service with PUBLIC_* build args
 ├── TODO.md, SUMMARY.md         # Plan and change log
 └── README.md
 ```
 
 ## Deployment (Docker)
 
-The container is being moved to a **multi-stage build** — a Node stage runs
-`npm run build`, and an `nginx:alpine` stage serves the static `dist/` output.
-Site configuration (titles, default theme, the TI-84 iframe source) moves from
-the old runtime `envsubst` approach to **build-time** Astro environment variables.
+The image is a **multi-stage build**: a `node:24-alpine` stage runs `npm ci` and
+`npm run build`, then an `nginx:alpine` stage serves the static `dist/` output
+(`nginx.conf` enables clean URLs via `try_files`, so `/ti-84` and `/graphing`
+resolve without the `.html` suffix).
 
-Until that cutover lands, the existing `Dockerfile` / `docker-compose.yml` still
-build and serve the **legacy static pages**. See [`TODO.md`](TODO.md) for status.
+Site configuration (page titles, default theme, the TI-84 iframe source) is applied
+at **build time** through `PUBLIC_*` environment variables — read by `src/config.ts`
+via `import.meta.env` and baked into the static output. This replaces the old runtime
+`envsubst` approach, so there is no entrypoint script.
+
+```bash
+# Build and run with the defaults.
+docker compose up -d --build      # serves on http://localhost:8084
+```
+
+To override the defaults, copy `.env.example` to `.env` and edit the values, then
+rebuild (the values are compiled in, so a rebuild is required for changes to apply):
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `HOST_PORT` | Host port mapped to the container's port 80. | `8084` |
+| `PUBLIC_SITE_TITLE_TI84` | Title/heading for the TI-84 page. | `TI-84 Calculator` |
+| `PUBLIC_SITE_TITLE_GRAPHING` | Title/heading for the graphing page. | `Graphing Calculator Online` |
+| `PUBLIC_TI84_IFRAME_SRC` | Source URL for the embedded TI-84 iframe. | `https://ti84calc.com/ti84calc` |
+| `PUBLIC_THEME_DEFAULT` | First-visit theme (`dark` or `light`). | `dark` |
+
+`HOST_PORT` is consumed by Compose's port mapping; the `PUBLIC_*` variables are
+passed to the build as build args. The same image can be rebuilt per environment
+with different titles, default theme, or iframe source.
 
 ## Contributing
 

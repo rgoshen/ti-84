@@ -366,3 +366,50 @@ function-plot is CommonJS (`exports.default = functionPlot`); the ESM default im
 - src/scripts/graphing/plot.ts, src/components/graphing/GraphingCalculator.tsx, src/pages/graphing.astro
 - playwright.config.ts, tests/e2e/graphing.spec.ts
 - TODO.md: Graphing Calculator React Island (Astro port)
+
+## [2026-06-29 22:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Astro migration Phase 2 — shared shell, pages, Docker cutover, legacy removal
+
+**Summary:**
+Completed the Astro migration. Added `src/config.ts` (build-time site config reading
+`import.meta.env.PUBLIC_*` with safe fallbacks — replaces the old Docker `envsubst`
+vars). Added a shared shell: `src/layouts/Base.astro` (full HTML doc, favicon link,
+pre-paint inline theme bootstrap via `define:vars`, `bg-background text-foreground`
+body, `<Header />` + centered `<main class="mx-auto max-w-6xl px-6 py-8">`) and
+`src/components/Header.astro` (sticky nav with Home/TI-84/Graphing, `aria-current`
+active state from `Astro.url.pathname`, sun/moon theme toggle that persists
+`localStorage.theme`). Rebuilt all three pages on Base: `index.astro` (hero + two
+cards), new `ti-84.astro` (lazy-loaded iframe from `TI84_IFRAME_SRC`), and
+`graphing.astro` (now just Base + KaTeX CSS + the island, standalone `<html>`/header
+removed). Added `public/favicon.svg` (parabola-on-axes glyph). Made the graphing
+island theme-reactive: `dark` is now state updated by a `MutationObserver` on the
+`<html>` `class` attribute, so the header toggle re-themes the plot. Docker cutover:
+multi-stage `Dockerfile` (`node:24-alpine` build → `nginx:alpine` serve `dist/`) with
+`PUBLIC_*` build args; new `nginx.conf` (clean URLs via `try_files $uri $uri/
+$uri.html`); `docker-compose.yml` switched from runtime `environment:` to
+`build.args`; deleted `docker-entrypoint.sh`. Updated `.env.example` to the `PUBLIC_*`
+build-arg contract. Removed the legacy `index.html` and `graphing.html`. Updated
+README (removed the migration callout, refreshed the structure tree, rewrote the
+Docker section), docs/README link, TODO checklist/status. `npm run build` emits `/`,
+`/ti-84`, `/graphing`; `npm test` green (11). Not committed — left in the working tree.
+
+**Rationale:**
+Build-time `PUBLIC_*` config keeps the site fully static (no entrypoint/`envsubst`
+layer) while preserving per-environment overrides via Docker build args. A single
+Base layout + Header removes the duplicated `<html>`/header that each legacy page
+carried, and centralizes the theme bootstrap so there is no light/dark flash. The
+MutationObserver makes the previously read-once `dark` flag track the live theme so
+the new header toggle actually re-themes the plot, with no change to the plot effect
+(which already depends on `dark`).
+
+**References:**
+- src/config.ts, src/layouts/Base.astro, src/components/Header.astro
+- src/pages/index.astro, src/pages/ti-84.astro, src/pages/graphing.astro
+- src/components/graphing/GraphingCalculator.tsx (theme-reactive `dark`)
+- public/favicon.svg
+- Dockerfile, nginx.conf, docker-compose.yml, .env.example (deleted docker-entrypoint.sh)
+- Deleted: index.html, graphing.html
+- README.md, docs/README.md, TODO.md
+- TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 2)

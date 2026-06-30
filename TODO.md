@@ -114,14 +114,18 @@ Move the project onto Astro + TypeScript as a multi-page STATIC site (simple lan
 - [x] React + shadcn/ui set up (@astrojs/react, components.json, cn util, base components).
 - [x] function-plot wrapper module (plot.ts): instance-scale overlay-in-canvas, zoom/pan sync. (Independently verified: markers ≤2.6px from curve; ≤1px after zoom; window inputs track zoom.)
 - [x] /graphing ported as a React island (controls via shadcn/ui; plot via ref).
-- [ ] /ti-84 page ported (iframe src via build-time env).
+- [x] /ti-84 page ported (iframe src via build-time env, `src/config.ts` → `TI84_IFRAME_SRC`).
 - [x] Playwright e2e: markers on curve (zoom/pan verified manually; add to e2e).
-- [ ] README updated for the new stack (done incrementally; finalize at cutover).
-- [ ] Favicon (kills the /favicon.ico 404) — add in the Phase 2 shared layout.
-- [ ] Docker cutover: multi-stage build (node build → nginx serve dist/), env → build-time, remove legacy envsubst.
-- [ ] Remove legacy root index.html / graphing.html once each page is ported.
+- [x] README updated for the new stack (callout removed; structure tree + Docker section rewritten).
+- [x] Favicon (`public/favicon.svg`, linked from the Base layout — kills the /favicon.ico 404).
+- [x] Docker cutover: multi-stage build (node build → nginx serve dist/), env → build-time `PUBLIC_*`, legacy envsubst/entrypoint removed, `nginx.conf` clean URLs.
+- [x] Remove legacy root index.html / graphing.html (deleted — fully replaced by the Astro pages).
 
-**Status:** In progress — Phase 0 done; Phase 1 (React UI port) next.
+**Status:** Done — Phase 0 (toolchain), Phase 1 (graphing React island), and Phase 2
+(shared Base layout + Header, landing + /ti-84 pages, favicon, Docker multi-stage
+cutover, legacy HTML removed) all complete. `npm run build` emits `/`, `/ti-84`, and
+`/graphing`; `npm test` green (11). The graphing island is now theme-reactive (a
+MutationObserver on `<html class>` re-themes the plot when the header toggle flips).
 
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
