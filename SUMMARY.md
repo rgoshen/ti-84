@@ -311,3 +311,19 @@ Verified headless (Playwright/MCP) for 2x², -0.5x, sin(x): every marker lies on
 **References:**
 - graphing.html: gridlineCrossings, bisect, drawPointsOverlay
 - TODO.md: Fix + Feature: Point markers on the curve at whole-number gridline crossings
+
+
+## [2026-06-29 21:10] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — keep point markers on the curve during zoom/pan
+
+**Summary:**
+Captured the Function Plot instance in `renderPlot` (as `plotInstance`) and subscribed to its `all:zoom` event. New `syncOverlayToView()` reads the live domain from `plotInstance.meta.xScale/yScale` after each interactive zoom/pan, mirrors it into `state`, updates the Window input boxes (`syncWindowInputs()`), and redraws the overlay + value table. Throttled with `requestAnimationFrame`; it does not call `renderPlot`, which would reset the user's zoom.
+
+**Bug Fix Context:**
+Root cause: Function Plot's interactive scroll-zoom and drag-pan (bound to its `rect.zoom-and-drag` via d3-zoom) redraw the curve and axes internally but never re-run our separate point overlay, and `state` was never updated to the new domain. So markers froze in place and drifted off the curve (~12px after a single wheel zoom, worse with more zoom). Subscribing to the library's own zoom event and re-syncing from its live scales keeps the two render passes in lockstep. Verified headless: marker-to-curve distance stays ≤ ~2px through zoom and pan.
+
+**References:**
+- graphing.html: renderPlot, syncOverlayToView, syncWindowInputs, plotInstance
+- TODO.md: Fix: Keep point markers on the curve through zoom/pan

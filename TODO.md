@@ -70,6 +70,23 @@ Add a separate, in-house graphing calculator that lets the user type in an equat
 
 **Status:** Done & verified in headless browser. Markers sit on the curve (≤1.03px from the rendered polyline, sub-pixel vs the 4px marker), and appear only at integer-x or integer-y gridline crossings (verified for 2x², -0.5x, sin(x); none with both coordinates fractional).
 
+## [2026-06-29] Fix: Keep point markers on the curve through zoom/pan
+
+**Objective:**
+After the alignment + gridline-crossing work, markers still drifted off the curve once the user scrolled to zoom or dragged to pan.
+
+**Approach:**
+Root cause: Function Plot owns interactive zoom/pan (a `rect.zoom-and-drag` with its own d3-zoom). It redraws the curve and axes internally but never re-runs our `drawPointsOverlay`, and our `state` never learned the new domain — so markers froze and drifted (measured ~12px after one wheel zoom). Fix: capture the Function Plot instance, subscribe to its `all:zoom` event, and on each gesture read the live domain from `instance.meta.xScale/yScale`, mirror it into `state`, sync the Window inputs, and redraw the overlay + table. Throttled with `requestAnimationFrame`; deliberately does not call `renderPlot` (which would reset the zoom).
+
+**Tests:**
+Headless (Playwright/MCP): after a wheel-zoom and after a drag-pan, max marker-to-curve distance stays ≤ ~2px (was 12px and growing); `state` and the Window input boxes track the zoomed domain.
+
+**Risks & Tradeoffs:**
+- Couples the overlay refresh to Function Plot's `all:zoom` event + `meta` scales (verified against the loaded library, not docs — context7 lacks this package). If we swap the plotting library later, this hook moves with it.
+- Markers mark whole-number crossings only; the half-unit minor gridlines Function Plot adds at high zoom are intentionally not marked (matches the stated rule). Revisit if "follow the visible gridlines" is wanted.
+
+**Status:** Done & verified.
+
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
 **Objective:**
