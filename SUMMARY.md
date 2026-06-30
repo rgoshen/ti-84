@@ -69,3 +69,17 @@ Capturing the roadmap decision now preserves the stack rationale (avoid MUI + Ta
 
 **References:**
 - TODO.md: Planned Feature — Custom Equation Graphing Calculator
+
+## [2026-06-29 17:50] Commit Summary
+
+**Change Type:** Docs
+**Scope:** TODO.md roadmap
+
+**Summary:**
+Added a planned-feature entry to TODO.md for an AI step-by-step math solver: user submits a math problem, an LLM returns structured JSON steps (expression + explanation), and the frontend renders an ordered steps panel. Documented approach (static frontend + separate API layer for key security, MathJax/LaTeX rendering, reuse theme toggle), tests (manual + backend unit tests + eval set), risks (backend dependency, cost/latency, hallucinations, key security, model choice), and dependencies (API layer decision; coordinate styling with the graphing calculator feature).
+
+**Rationale:**
+Logging the AI solver alongside the graphing calculator captures the full roadmap and the shared infrastructure decisions (avoid React/MUI, introduce a minimal API layer, keep static frontend). Preserves rationale for when implementation begins.
+
+**References:**
+- TODO.md: Planned Feature — AI Step-by-Step Math Solver
