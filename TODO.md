@@ -87,6 +87,29 @@ Headless (Playwright/MCP): after a wheel-zoom and after a drag-pan, max marker-t
 
 **Status:** Done & verified.
 
+## [2026-06-29] Migration: Static HTML → Astro + TypeScript (Phase 0 + 1)
+
+**Objective:**
+Move the project onto Astro + TypeScript as a multi-page STATIC site (simple landing, /ti-84, /graphing) to support SEO, maintainability, and a test suite — incrementally, without throwing away working behavior. Scope: the two existing features only (TI-84 page + graphing calculator). The AI solver is explicitly OUT of scope for now, so output stays `static` (no SSR/adapter). Decision record: goal = real product; first move = tests + build, keep function-plot; interactivity = **React islands + shadcn/ui** (Radix primitives on Tailwind, no MUI). NOTE: earlier TODO entries that say "avoid MUI / avoid React migration" predate this decision and are superseded — they were written under the old "stay a static HTML page" plan.
+
+**Approach (Phase 0 + 1 only):**
+- Phase 0 — Tooling: hand-authored Astro project (npm create is interactive) with pinned deps. Astro + TypeScript (strict) + Tailwind v4 via @tailwindcss/vite + global.css `@import "tailwindcss"`. Vitest (via astro/config getViteConfig) for unit tests; Playwright for e2e. Replace CDN libs (function-plot, mathjs, katex, d3) with pinned npm deps.
+- Phase 1 — Port /graphing: src/pages/graphing.astro hosts a React island (`client:only="react"`):
+  - `src/scripts/graphing/math.ts` — pure, framework-free: evalAt, integerXs, bisect, gridlineCrossings (unit-tested). ✅ Done.
+  - `src/scripts/graphing/plot.ts` — framework-free function-plot wrapper: render, tick-reading scales, overlay-in-canvas, zoom/pan sync. Called from React via a ref/effect.
+  - React component(s) for the controls (equation input, plotted list, window, value table) built on shadcn/ui (Input, Button, Select, Checkbox, Card); the plot rendered into a ref'd div.
+- Tests: Vitest units for math.ts (gridlineCrossings rule + bisect); Playwright e2e: markers on curve, stay on curve through zoom + pan.
+
+**Tests / DoD:**
+`npm run build` succeeds; `npm test` (Vitest) green; Playwright e2e green; the ported /graphing page matches current behavior (markers on curve at whole-number crossings, survive zoom/pan).
+
+**Risks & Tradeoffs:**
+- function-plot + bundler + d3 integration (it's a UMD-era lib); verify import works, refactor `d3.scaleLinear` → import from `d3-scale`.
+- Env-var title injection (current Docker envsubst of `${SITE_TITLE_*}`) must move to Astro env / config; Docker/deploy changes deferred to Phase 2.
+- Scope discipline: Phase 2 (shared shell + simple landing + ti-84 page) is a separate slice. AI solver is out of scope entirely for now (keeps output static).
+
+**Status:** In progress — Phase 0 + 1.
+
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
 **Objective:**

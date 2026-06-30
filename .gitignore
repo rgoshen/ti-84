@@ -4,3 +4,11 @@ dist/
 *.log
 .env
 .env.local
+
+# Astro
+.astro/
+
+# Playwright
+test-results/
+playwright-report/
+/playwright/.cache/

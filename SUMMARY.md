@@ -327,3 +327,23 @@ Root cause: Function Plot's interactive scroll-zoom and drag-pan (bound to its `
 **References:**
 - graphing.html: renderPlot, syncOverlayToView, syncWindowInputs, plotInstance
 - TODO.md: Fix: Keep point markers on the curve through zoom/pan
+
+
+## [2026-06-29 21:24] Commit Summary
+
+**Change Type:** Feature (build/tooling)
+**Scope:** Astro + TypeScript migration — Phase 0 scaffold + tested math core
+
+**Summary:**
+Introduced an Astro 7 + TypeScript (strict) + Tailwind v4 (@tailwindcss/vite) project alongside the existing static HTML, with pinned dependency versions. Added Vitest (via astro/config getViteConfig) and a placeholder landing page. Extracted the graphing calculator's pure math into a typed, framework-free module `src/scripts/graphing/math.ts` (evalAt, integerXs, bisect, gridlineCrossings) and covered it with 11 unit tests written test-first (RED → GREEN). `npm run build` and `npm test` both pass.
+
+**Rationale:**
+Per the agreed migration (real product; incremental; tests-first; keep function-plot), Phase 0 stands up the toolchain and Phase 1 begins by isolating the correctness-critical math so it is unit-testable independent of the DOM/plot library and reusable from the upcoming React island. The math module is a faithful, typed port of the verified logic in graphing.html. Interactivity decision updated to React islands + shadcn/ui (no MUI); the old TODO.md anti-React/MUI notes predate this route and are superseded.
+
+**Tests:**
+Vitest: 11 passing — gridlineCrossings rule (integer x OR integer y, none both-fractional, on-curve, in-window, de-dup), bisect root-finding, evalAt, integerXs.
+
+**References:**
+- package.json, astro.config.mjs, tsconfig.json, vitest.config.ts, src/styles/global.css, src/pages/index.astro
+- src/scripts/graphing/math.ts, src/scripts/graphing/math.test.ts
+- TODO.md: Migration: Static HTML → Astro + TypeScript (Phase 0 + 1)

@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online Calculators</title>
+    <meta
+      name="description"
+      content="Free online calculators: a TI-84 style calculator and a graphing calculator that plots equations in your browser."
+    />
+  </head>
+  <body class="min-h-screen bg-white text-slate-900">
+    <main class="mx-auto max-w-2xl px-6 py-16">
+      <h1 class="text-3xl font-semibold tracking-tight">Online Calculators</h1>
+      <p class="mt-2 text-slate-600">Pick a tool to get started.</p>
+      <ul class="mt-8 grid gap-4 sm:grid-cols-2">
+        <li>
+          <a
+            href="/ti-84"
+            class="block rounded-xl border border-slate-200 p-5 hover:bg-slate-50"
+          >
+            <span class="font-medium">TI-84 Calculator</span>
+            <span class="mt-1 block text-sm text-slate-500"
+              >A familiar scientific/graphing calculator.</span
+            >
+          </a>
+        </li>
+        <li>
+          <a
+            href="/graphing"
+            class="block rounded-xl border border-slate-200 p-5 hover:bg-slate-50"
+          >
+            <span class="font-medium">Graphing Calculator</span>
+            <span class="mt-1 block text-sm text-slate-500"
+              >Plot equations, stack functions, zoom and pan.</span
+            >
+          </a>
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>
