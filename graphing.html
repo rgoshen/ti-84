@@ -13,6 +13,7 @@
   </script>
   <script src="https://d3js.org/d3.v4.min.js"></script>
   <script src="https://unpkg.com/function-plot@1.23.2/dist/function-plot.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.js"></script>
   <script>
     (function () {
       const stored = localStorage.getItem('theme');
@@ -59,7 +60,7 @@
     <section aria-labelledby="calc-heading">
       <h2 id="calc-heading" class="sr-only">Graphing Calculator</h2>
 
-      <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
+      <div class="grid gap-6 lg:grid-cols-[340px_1fr]">
         <div class="space-y-4">
           <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
             <label for="eq-input" class="block text-sm font-medium">Add an equation</label>
@@ -83,7 +84,7 @@
                 Clear all
               </button>
             </div>
-            <ul id="eq-list" class="mt-3 space-y-2"></ul>
+            <ul id="eq-list" class="mt-3 space-y-3"></ul>
             <p id="eq-empty" class="mt-3 text-xs text-slate-500 dark:text-slate-400">No equations plotted yet. Add one above.</p>
           </div>
 
@@ -119,8 +120,24 @@
           </div>
         </div>
 
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-2 overflow-hidden">
-          <div id="plot" class="w-full" style="min-height: 560px;"></div>
+        <div class="space-y-4">
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-2 overflow-hidden">
+            <div id="plot" class="w-full" style="min-height: 560px;"></div>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium">Value table (whole-number x)</h3>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">y values evaluated at each integer x in the window</span>
+            </div>
+            <div class="mt-3 max-h-72 overflow-auto">
+              <table class="w-full text-xs border-collapse">
+                <thead id="table-head" class="sticky top-0 bg-white dark:bg-slate-800"></thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+            <p id="table-empty" class="mt-3 text-xs text-slate-500 dark:text-slate-400">Add an equation to see its value table.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -190,7 +207,8 @@
   </footer>
 
   <script>
-    const PALETTE = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
+    const PALETTE = ['#60a5fa', '#f87171', '#4ade80', '#fbbf24', '#a78bfa', '#22d3ee', '#f472b6', '#a3e635'];
+    const SHAPES = ['circle', 'square', 'triangle'];
 
     const state = {
       equations: [],
@@ -204,13 +222,16 @@
     const listEl = document.getElementById('eq-list');
     const emptyEl = document.getElementById('eq-empty');
     const errEl = document.getElementById('eq-error');
+    const tableHead = document.getElementById('table-head');
+    const tableBody = document.getElementById('table-body');
+    const tableEmpty = document.getElementById('table-empty');
 
     function themeColors() {
       const dark = document.documentElement.classList.contains('dark');
       return {
         bg: dark ? '#0f172a' : '#ffffff',
         grid: dark ? '#1e293b' : '#e2e8f0',
-        axis: dark ? '#475569' : '#94a3b8',
+        axis: dark ? '#64748b' : '#94a3b8',
         text: dark ? '#cbd5e1' : '#334155',
       };
     }
@@ -220,6 +241,24 @@
       if (!s) return '';
       s = s.replace(/^y\s*=\s*/i, '');
       return s;
+    }
+
+    function evalAt(expr, x) {
+      try {
+        const v = math.evaluate(expr, { x: x });
+        if (typeof v === 'number' && isFinite(v)) return v;
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function integerXs() {
+      const lo = Math.ceil(Math.min(state.xMin, state.xMax));
+      const hi = Math.floor(Math.max(state.xMin, state.xMax));
+      const xs = [];
+      for (let x = lo; x <= hi; x++) xs.push(x);
+      return xs;
     }
 
     function renderPlot() {
@@ -242,6 +281,7 @@
           })),
         });
         applyThemeToPlot(c);
+        drawPointsOverlay();
         hideError();
       } catch (e) {
         showError('Could not plot that equation. Check your syntax and try again.');
@@ -261,6 +301,90 @@
       svg.querySelectorAll('text').forEach((el) => {
         el.style.fill = c.text;
       });
+      // Force each function line to keep its color and be visible in dark mode.
+      const contents = svg.querySelectorAll('g.content');
+      contents.forEach((g, i) => {
+        const eq = state.equations[i];
+        if (!eq) return;
+        const path = g.querySelector('path');
+        if (path) {
+          path.style.stroke = eq.color;
+          path.style.strokeWidth = '2.5';
+        }
+      });
+    }
+
+    function drawPointsOverlay() {
+      const svg = plotEl.querySelector('svg');
+      if (!svg) return;
+      // Remove previous overlay
+      svg.querySelectorAll('.points-overlay').forEach((n) => n.remove());
+
+      const xScale = getXScale();
+      const yScale = getYScale();
+      if (!xScale || !yScale) return;
+
+      const xs = integerXs();
+
+      state.equations.forEach((eq) => {
+        if (!eq.showPoints) return;
+        const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        overlay.setAttribute('class', 'points-overlay');
+        xs.forEach((x) => {
+          const y = evalAt(eq.expr, x);
+          if (y === null) return;
+          const cx = xScale(x);
+          const cy = yScale(y);
+          const marker = makeMarker(eq.pointShape, cx, cy, eq.color);
+          overlay.appendChild(marker);
+        });
+        svg.appendChild(overlay);
+      });
+    }
+
+    function makeMarker(shape, cx, cy, color) {
+      const ns = 'http://www.w3.org/2000/svg';
+      const r = 4;
+      let el;
+      if (shape === 'square') {
+        el = document.createElementNS(ns, 'rect');
+        el.setAttribute('x', cx - r);
+        el.setAttribute('y', cy - r);
+        el.setAttribute('width', r * 2);
+        el.setAttribute('height', r * 2);
+      } else if (shape === 'triangle') {
+        el = document.createElementNS(ns, 'polygon');
+        const pts = [`${cx},${cy - r * 1.2}`, `${cx - r},${cy + r}`, `${cx + r},${cy + r}`];
+        el.setAttribute('points', pts.join(' '));
+      } else {
+        el = document.createElementNS(ns, 'circle');
+        el.setAttribute('cx', cx);
+        el.setAttribute('cy', cy);
+        el.setAttribute('r', r);
+      }
+      el.setAttribute('fill', color);
+      el.setAttribute('stroke', '#ffffff');
+      el.setAttribute('stroke-width', '1');
+      el.style.opacity = '0.95';
+      return el;
+    }
+
+    function getXScale() {
+      const svg = plotEl.querySelector('svg');
+      if (!svg) return null;
+      const width = svg.clientWidth || plotEl.clientWidth;
+      const padL = 35, padR = 20;
+      const domain = [state.xMin, state.xMax];
+      return d3.scaleLinear().domain(domain).range([padL, width - padR]);
+    }
+
+    function getYScale() {
+      const svg = plotEl.querySelector('svg');
+      if (!svg) return null;
+      const height = 560;
+      const padT = 20, padB = 35;
+      const domain = [state.yMin, state.yMax];
+      return d3.scaleLinear().domain(domain).range([padT, height - padB]);
     }
 
     function showError(msg) {
@@ -280,17 +404,38 @@
       }
       state.equations.forEach((eq, i) => {
         const li = document.createElement('li');
-        li.className = 'flex items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm';
+        li.className = 'rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm';
+
+        const top = document.createElement('div');
+        top.className = 'flex items-center justify-between gap-2';
 
         const left = document.createElement('div');
         left.className = 'flex items-center gap-2 min-w-0';
+
+        // Color swatch that opens the native color picker
+        const swatchWrap = document.createElement('label');
+        swatchWrap.className = 'relative inline-flex items-center cursor-pointer flex-shrink-0';
+        swatchWrap.title = 'Click to change color';
         const swatch = document.createElement('span');
-        swatch.className = 'inline-block h-3 w-3 rounded-full flex-shrink-0';
+        swatch.className = 'inline-block h-4 w-4 rounded-full border border-slate-300 dark:border-slate-600';
         swatch.style.background = eq.color;
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = eq.color;
+        colorInput.className = 'absolute inset-0 opacity-0 cursor-pointer';
+        colorInput.addEventListener('input', () => {
+          eq.color = colorInput.value;
+          swatch.style.background = eq.color;
+          renderPlot();
+        });
+        swatchWrap.appendChild(swatch);
+        swatchWrap.appendChild(colorInput);
+
         const label = document.createElement('span');
-        label.className = 'truncate font-mono';
+        label.className = 'truncate font-mono text-xs';
         label.textContent = 'y = ' + eq.expr;
-        left.appendChild(swatch);
+
+        left.appendChild(swatchWrap);
         left.appendChild(label);
 
         const remove = document.createElement('button');
@@ -301,12 +446,110 @@
           state.equations.splice(i, 1);
           renderList();
           renderPlot();
+          renderTable();
         });
 
-        li.appendChild(left);
-        li.appendChild(remove);
+        top.appendChild(left);
+        top.appendChild(remove);
+
+        // Points controls
+        const bottom = document.createElement('div');
+        bottom.className = 'mt-2 flex items-center gap-3 text-xs';
+
+        const checkLabel = document.createElement('label');
+        checkLabel.className = 'inline-flex items-center gap-1.5 cursor-pointer';
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = eq.showPoints;
+        check.className = 'h-3.5 w-3.5 rounded border-slate-300 dark:border-slate-600';
+        check.addEventListener('change', () => {
+          eq.showPoints = check.checked;
+          renderPlot();
+        });
+        const checkText = document.createElement('span');
+        checkText.textContent = 'Show points';
+        checkText.className = 'text-slate-600 dark:text-slate-300';
+        checkLabel.appendChild(check);
+        checkLabel.appendChild(checkText);
+
+        const shapeWrap = document.createElement('label');
+        shapeWrap.className = 'inline-flex items-center gap-1.5';
+        const shapeText = document.createElement('span');
+        shapeText.textContent = 'Shape:';
+        shapeText.className = 'text-slate-600 dark:text-slate-300';
+        const shapeSel = document.createElement('select');
+        shapeSel.className = 'rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1.5 py-1 text-xs';
+        SHAPES.forEach((s) => {
+          const o = document.createElement('option');
+          o.value = s;
+          o.textContent = s;
+          if (s === eq.pointShape) o.selected = true;
+          shapeSel.appendChild(o);
+        });
+        shapeSel.addEventListener('change', () => {
+          eq.pointShape = shapeSel.value;
+          renderPlot();
+        });
+        shapeWrap.appendChild(shapeText);
+        shapeWrap.appendChild(shapeSel);
+
+        bottom.appendChild(checkLabel);
+        bottom.appendChild(shapeWrap);
+
+        li.appendChild(top);
+        li.appendChild(bottom);
         listEl.appendChild(li);
       });
+    }
+
+    function renderTable() {
+      const xs = integerXs();
+      tableHead.innerHTML = '';
+      tableBody.innerHTML = '';
+
+      if (state.equations.length === 0 || xs.length === 0) {
+        tableEmpty.classList.remove('hidden');
+        return;
+      }
+      tableEmpty.classList.add('hidden');
+
+      const headRow = document.createElement('tr');
+      headRow.appendChild(th('x'));
+      state.equations.forEach((eq) => {
+        const cell = th('y = ' + eq.expr);
+        cell.style.color = eq.color;
+        headRow.appendChild(cell);
+      });
+      tableHead.appendChild(headRow);
+
+      const frag = document.createDocumentFragment();
+      xs.forEach((x, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = idx % 2 ? 'bg-slate-50 dark:bg-slate-900/40' : '';
+        tr.appendChild(td(String(x)));
+        state.equations.forEach((eq) => {
+          const y = evalAt(eq.expr, x);
+          tr.appendChild(td(y === null ? '—' : round6(y)));
+        });
+        frag.appendChild(tr);
+      });
+      tableBody.appendChild(frag);
+    }
+
+    function th(text) {
+      const el = document.createElement('th');
+      el.textContent = text;
+      el.className = 'text-left font-medium px-2 py-1.5 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap';
+      return el;
+    }
+    function td(text) {
+      const el = document.createElement('td');
+      el.textContent = text;
+      el.className = 'px-2 py-1 border-b border-slate-100 dark:border-slate-800 font-mono whitespace-nowrap';
+      return el;
+    }
+    function round6(n) {
+      return Math.round(n * 1e6) / 1e6;
     }
 
     function addEquation() {
@@ -315,11 +558,19 @@
         showError('Enter an equation first.');
         return;
       }
+      // Validate the expression evaluates without error
+      try {
+        math.evaluate(expr, { x: 1 });
+      } catch (e) {
+        showError('Invalid expression: ' + e.message);
+        return;
+      }
       const color = PALETTE[state.equations.length % PALETTE.length];
-      state.equations.push({ expr, color });
+      state.equations.push({ expr, color, showPoints: false, pointShape: 'circle' });
       input.value = '';
       renderList();
       renderPlot();
+      renderTable();
     }
 
     addBtn.addEventListener('click', addEquation);
@@ -331,6 +582,7 @@
       state.equations = [];
       renderList();
       renderPlot();
+      renderTable();
     });
 
     document.getElementById('apply-window').addEventListener('click', () => {
@@ -339,6 +591,7 @@
       state.yMin = parseFloat(document.getElementById('y-min').value);
       state.yMax = parseFloat(document.getElementById('y-max').value);
       renderPlot();
+      renderTable();
     });
 
     const toggle = document.getElementById('theme-toggle');
@@ -360,6 +613,7 @@
 
     renderList();
     renderPlot();
+    renderTable();
   </script>
 </body>
 </html>

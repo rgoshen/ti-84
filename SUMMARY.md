@@ -111,3 +111,21 @@ The previous version misinterpreted the requirement as a content page. This comm
 
 **References:**
 - TODO.md: Custom Equation Graphing Calculator (now implemented)
+
+## [2026-06-29 19:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator Online — usability improvements
+
+**Summary:**
+Four improvements to the interactive graphing calculator:
+1. Dark mode line visibility — explicitly set each function line's stroke color and width (2.5px) after Function Plot renders, so curves stay visible against the dark background.
+2. Per-equation color picker — the color swatch in the plotted-equations list is now a label wrapping a hidden native `<input type="color">`; clicking it opens the OS color picker and re-themes that equation's line, swatch, and table header live.
+3. Value table — added a table below the graph showing y values evaluated at every whole-number x in the current window (one column per plotted equation, color-coded to match the graph). Uses math.js (CDN) for safe expression evaluation (no eval).
+4. Show points with shape — each equation has a "Show points" checkbox and a shape selector (circle / square / triangle). When enabled, points are drawn on the graph at each integer x using the equation's color and chosen shape via a custom SVG overlay.
+
+**Rationale:**
+Dark mode lines were invisible because Function Plot's default styling faded against the dark SVG background; forcing stroke color per equation fixes it deterministically. Native color input gives a familiar, accessible picker with zero dependencies. The table and points features were explicitly requested and use math.js to evaluate expressions safely and consistently with the graph.
+
+**References:**
+- TODO.md: Custom Equation Graphing Calculator
