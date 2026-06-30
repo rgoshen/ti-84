@@ -222,6 +222,10 @@
       xMin: -10, xMax: 10, yMin: -5, yMax: 5,
     };
 
+    // The current Function Plot instance, captured so we can read its live scales
+    // and subscribe to zoom/pan events. Reassigned on every renderPlot().
+    let plotInstance = null;
+
     const plotEl = document.getElementById('plot');
     const input = document.getElementById('eq-input');
     const addBtn = document.getElementById('add-eq');
@@ -271,7 +275,7 @@
     function renderPlot() {
       const c = themeColors();
       try {
-        functionPlot({
+        plotInstance = functionPlot({
           target: '#plot',
           width: plotEl.clientWidth,
           height: 560,
@@ -290,9 +294,42 @@
         applyThemeToPlot(c);
         drawPointsOverlay();
         hideError();
+        // Function Plot owns interactive scroll-zoom / drag-pan; it redraws the
+        // curve and axes internally but never touches our point overlay, so the
+        // markers would freeze and drift off the curve. Re-sync on every zoom/pan.
+        plotInstance.on('all:zoom', syncOverlayToView);
       } catch (e) {
         showError('Could not plot that equation. Check your syntax and try again.');
       }
+    }
+
+    // After an interactive zoom/pan, read the live domain from Function Plot's own
+    // scales, mirror it into our state, and redraw the overlay + table + window
+    // inputs. Throttled to one redraw per animation frame (zoom fires rapidly).
+    // Deliberately does NOT call renderPlot — that would rebuild the plot and reset
+    // the user's zoom.
+    let viewSyncQueued = false;
+    function syncOverlayToView() {
+      if (viewSyncQueued) return;
+      viewSyncQueued = true;
+      requestAnimationFrame(() => {
+        viewSyncQueued = false;
+        if (!plotInstance || !plotInstance.meta || !plotInstance.meta.xScale) return;
+        const xd = plotInstance.meta.xScale.domain();
+        const yd = plotInstance.meta.yScale.domain();
+        state.xMin = xd[0]; state.xMax = xd[1];
+        state.yMin = yd[0]; state.yMax = yd[1];
+        syncWindowInputs();
+        drawPointsOverlay();
+        renderTable();
+      });
+    }
+
+    function syncWindowInputs() {
+      document.getElementById('x-min').value = round6(state.xMin);
+      document.getElementById('x-max').value = round6(state.xMax);
+      document.getElementById('y-min').value = round6(state.yMin);
+      document.getElementById('y-max').value = round6(state.yMax);
     }
 
     function applyThemeToPlot(c) {
