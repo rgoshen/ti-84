@@ -195,3 +195,17 @@ test('suppresses function-plot native crosshair tip', async ({ page }) => {
     .evaluate((el) => getComputedStyle(el).display);
   expect(display).toBe('none');
 });
+
+test('hovering a Show-points marker shows its exact (x, y)', async ({ page }) => {
+  await plotWithPoints(page); // 2x^2 with Show points -> a marker at (0, 0)
+  const dot = page
+    .locator('[data-testid="plot"] .points-overlay [data-x="0"][data-y="0"]')
+    .first();
+  await expect(dot).toBeVisible();
+  const box = await dot.boundingBox();
+  if (!box) throw new Error('origin marker has no bounding box');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const tip = page.getByRole('status');
+  await expect(tip).toBeVisible();
+  await expect(tip).toContainText('(0, 0)');
+});

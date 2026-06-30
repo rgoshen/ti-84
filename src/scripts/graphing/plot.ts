@@ -1,7 +1,14 @@
 import functionPlotDefault from 'function-plot';
 import type { FunctionPlotDatum, FunctionPlotScale } from 'function-plot';
-import { gridlineCrossings, type Window2D } from '@/scripts/graphing/math';
+import { evalAt, gridlineCrossings, type Window2D } from '@/scripts/graphing/math';
 import { themeColors, type ThemeColors } from '@/scripts/graphing/theme';
+import {
+  DOT_HIT_RADIUS_PX,
+  CURVE_HIT_RADIUS_PX,
+  GESTURE_SUPPRESS_MS,
+  nearestWithinThreshold,
+  type HoverInfo,
+} from '@/scripts/graphing/hover';
 
 // function-plot ships as CommonJS (`exports.default = functionPlot`). Depending on
 // the bundler's ESM interop (Vite/esbuild in dev vs Rollup in build), the default
@@ -30,6 +37,8 @@ export interface RenderGraphOptions {
   dark: boolean;
   /** Called after an interactive zoom/pan with the new visible domain. */
   onViewChange: (w: Window2D) => void;
+  /** Called on pointer move with the coordinate readout, or null when none. */
+  onHover?: (info: HoverInfo | null) => void;
 }
 
 /** The object returned by function-plot (a Chart instance / event emitter). */
@@ -47,6 +56,7 @@ const MARKER_RADIUS = 4;
  */
 interface NumericScale {
   (value: number): number;
+  invert(pixel: number): number;
   domain(): number[];
 }
 
@@ -167,10 +177,139 @@ function drawPointsOverlay(
     const overlay = document.createElementNS(SVG_NS, 'g');
     overlay.setAttribute('class', 'points-overlay');
     for (const { x, y } of gridlineCrossings(eq.expr, win)) {
-      overlay.appendChild(makeMarker(eq.pointShape, xScale(x), yScale(y), eq.color));
+      const marker = makeMarker(eq.pointShape, xScale(x), yScale(y), eq.color);
+      marker.setAttribute('data-x', String(x));
+      marker.setAttribute('data-y', String(y));
+      marker.setAttribute('data-color', eq.color);
+      overlay.appendChild(marker);
     }
     canvas.appendChild(overlay);
   }
+}
+
+// One hover attachment per target, and the time of the last zoom/pan per target,
+// so a rebuild tears the previous attachment down and the readout can stay hidden
+// mid-gesture. Keyed by the plot container element.
+const hoverCleanups = new WeakMap<HTMLElement, () => void>();
+const lastGestureAt = new WeakMap<HTMLElement, number>();
+
+interface AttachHoverOptions {
+  instance: FunctionPlotInstance;
+  target: HTMLElement;
+  getEquations: () => PlotEquation[];
+  onHover: (info: HoverInfo | null) => void;
+}
+
+/**
+ * Wire the floating coordinate readout. On pointer move it reports, via onHover,
+ * either the nearest discrete marker's coords (snap within DOT_HIT_RADIUS_PX) or
+ * the (x, y) on the nearest curve under the cursor (within CURVE_HIT_RADIUS_PX),
+ * else null. rAF-throttled; suppressed for GESTURE_SUPPRESS_MS after a zoom/pan.
+ * Returns a cleanup that detaches the listeners and cancels any queued frame.
+ */
+function attachHoverReadout(opts: AttachHoverOptions): () => void {
+  const { instance, target, getEquations, onHover } = opts;
+  const svg = target.querySelector('svg');
+  const rect = svg?.querySelector<SVGRectElement>('rect.zoom-and-drag');
+  const canvas = svg?.querySelector<SVGGElement>('g.canvas');
+  if (!svg || !rect || !canvas) return () => {};
+
+  let rafId: number | null = null;
+  let pending: PointerEvent | null = null;
+
+  // Convert a viewport pointer position into g.canvas-local pixels — the space
+  // the d3 scales map data into (g.canvas carries the margin transform).
+  const toLocal = (ev: PointerEvent): { x: number; y: number } | null => {
+    const ctm = canvas.getScreenCTM();
+    if (!ctm) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = ev.clientX;
+    pt.y = ev.clientY;
+    const local = pt.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  };
+
+  const process = (): void => {
+    rafId = null;
+    const ev = pending;
+    pending = null;
+    // Bail if the plot was torn down between queueing and running this frame.
+    if (!ev || !rect.isConnected) return;
+    // Stay hidden during/just after a pan or zoom gesture.
+    if (performance.now() - (lastGestureAt.get(target) ?? -Infinity) < GESTURE_SUPPRESS_MS) {
+      onHover(null);
+      return;
+    }
+    const xScale = asNumericScale(instance.meta.xScale);
+    const yScale = asNumericScale(instance.meta.yScale);
+    const local = toLocal(ev);
+    if (!xScale || !yScale || !local) {
+      onHover(null);
+      return;
+    }
+
+    // 1) Nearest discrete marker wins (snap to its stored coords).
+    let best: { x: number; y: number; color: string; dist: number } | null = null;
+    target.querySelectorAll<SVGElement>('.points-overlay [data-x]').forEach((m) => {
+      const mx = Number(m.getAttribute('data-x'));
+      const my = Number(m.getAttribute('data-y'));
+      const dist = Math.hypot(xScale(mx) - local.x, yScale(my) - local.y);
+      if (dist <= DOT_HIT_RADIUS_PX && (best === null || dist < best.dist)) {
+        best = { x: mx, y: my, color: m.getAttribute('data-color') ?? '#000000', dist };
+      }
+    });
+    if (best !== null) {
+      const b = best;
+      onHover({ x: b.x, y: b.y, clientX: ev.clientX, clientY: ev.clientY, color: b.color, onMarker: true });
+      return;
+    }
+
+    // 2) Otherwise the nearest curve at the cursor's data-x.
+    const dataX = xScale.invert(local.x);
+    const pixelYs: number[] = [];
+    const candidates: Array<{ y: number; color: string }> = [];
+    for (const eq of getEquations()) {
+      const y = evalAt(eq.expr, dataX);
+      if (y === null) continue; // undefined / asymptote
+      pixelYs.push(yScale(y));
+      candidates.push({ y, color: eq.color });
+    }
+    const idx = nearestWithinThreshold(pixelYs, local.y, CURVE_HIT_RADIUS_PX);
+    if (idx === null) {
+      onHover(null);
+      return;
+    }
+    onHover({
+      x: dataX,
+      y: candidates[idx].y,
+      clientX: ev.clientX,
+      clientY: ev.clientY,
+      color: candidates[idx].color,
+      onMarker: false,
+    });
+  };
+
+  const onMove = (ev: PointerEvent): void => {
+    pending = ev;
+    if (rafId === null) rafId = requestAnimationFrame(process);
+  };
+  const onLeave = (): void => {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = null;
+    pending = null;
+    onHover(null);
+  };
+
+  // Listen on the SVG root so events from all children (including our markers,
+  // which sit on top of rect.zoom-and-drag in z-order) bubble up here.
+  svg.addEventListener('pointermove', onMove);
+  svg.addEventListener('pointerleave', onLeave);
+
+  return () => {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    svg.removeEventListener('pointermove', onMove);
+    svg.removeEventListener('pointerleave', onLeave);
+  };
 }
 
 /**
@@ -181,7 +320,7 @@ function drawPointsOverlay(
  * and call renderGraph again to rebuild; function-plot has no explicit destroy).
  */
 export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
-  const { target, window: win, equations, dark, onViewChange } = opts;
+  const { target, window: win, equations, dark, onViewChange, onHover } = opts;
   const colors = themeColors(dark);
 
   const data: FunctionPlotDatum[] = equations.map((eq) => ({
@@ -205,6 +344,17 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
   boldZeroAxes(target);
   drawPointsOverlay(instance, target, win, equations);
 
+  hoverCleanups.get(target)?.();
+  hoverCleanups.set(
+    target,
+    attachHoverReadout({
+      instance,
+      target,
+      getEquations: () => equations,
+      onHover: onHover ?? (() => {}),
+    }),
+  );
+
   // function-plot owns interactive scroll-zoom / drag-pan; it redraws the curve and
   // axes internally but never touches our overlay. Re-sync on every zoom/pan: read the
   // NEW domain from function-plot's own scales, redraw the overlay for it, and report
@@ -212,6 +362,7 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
   // rapidly). Deliberately does NOT rebuild the plot — that would reset the zoom.
   let queued = false;
   instance.on('all:zoom', () => {
+    lastGestureAt.set(target, performance.now());
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => {
