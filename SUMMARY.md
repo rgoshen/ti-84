@@ -83,3 +83,18 @@ Logging the AI solver alongside the graphing calculator captures the full roadma
 
 **References:**
 - TODO.md: Planned Feature — AI Step-by-Step Math Solver
+
+## [2026-06-29 18:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Website — navigation + Graphing Calculator Online page
+
+**Summary:**
+Added a shared navigation menu to index.html with two options (TI-84, Graphing Calculator Online). Created graphing.html containing the provided marketing content for the Graphing Calculator Online, structured into themed sections (intro, why use, key features, how to use) with cards, lists, and ordered steps. Both pages share the light/dark theme toggle and persist theme choice via localStorage. Updated the Dockerfile to copy all *.html files so Nginx serves both pages. Updated README, docs/README, and TODO/SUMMARY accordingly.
+
+**Rationale:**
+A shared nav turns the single-page site into a small themed multi-page experience with consistent styling and theme behavior. Copying all HTML files via a glob keeps the Dockerfile simple while supporting multiple pages. The Graphing Calculator Online page is content-only for now; the interactive equation plotting feature remains planned in TODO.md.
+
+**References:**
+- TODO.md: Planned Feature — Custom Equation Graphing Calculator
+- index.html, graphing.html
