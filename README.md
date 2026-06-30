@@ -1,5 +1,7 @@
 # Online Calculators (TI-84 + Graphing)
 
+[![CI](https://github.com/rgoshen/ti-84/actions/workflows/ci.yml/badge.svg)](https://github.com/rgoshen/ti-84/actions/workflows/ci.yml)
+[![Release](https://github.com/rgoshen/ti-84/actions/workflows/release.yml/badge.svg)](https://github.com/rgoshen/ti-84/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Astro](https://img.shields.io/badge/Astro-7-BC52EE?logo=astro&logoColor=white)](https://astro.build/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -74,6 +76,18 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 └── README.md
 ```
 
+## Container image
+
+Released images are published to the GitHub Container Registry, built for
+`linux/amd64` and `linux/arm64`:
+
+```bash
+docker pull ghcr.io/rgoshen/ti-84:latest      # newest release
+docker pull ghcr.io/rgoshen/ti-84:0.2         # latest 0.2.x
+docker pull ghcr.io/rgoshen/ti-84:0.2.0       # exact version
+docker run --rm -p 8080:80 ghcr.io/rgoshen/ti-84:latest   # http://localhost:8080
+```
+
 ## Deployment (Docker)
 
 The image is a **multi-stage build**: a `node:24-alpine` stage runs `npm ci` and
@@ -110,6 +124,27 @@ docker compose up -d --build
 `HOST_PORT` is consumed by Compose's port mapping; the `PUBLIC_*` variables are
 passed to the build as build args. The same image can be rebuilt per environment
 with different titles, default theme, or iframe source.
+
+## CI/CD & releases
+
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request: typecheck
+  (`astro check`), unit tests (Vitest), build, and Playwright e2e.
+- **Releases** are automated by
+  [semantic-release](https://github.com/semantic-release/semantic-release) on
+  merge to `main`: it reads the [Conventional Commits](https://www.conventionalcommits.org/)
+  since the last release, computes the next SemVer (`feat` → minor, `fix` →
+  patch, `!`/`BREAKING CHANGE` → major), updates `CHANGELOG.md`, bumps
+  `package.json`, creates the `vX.Y.Z` tag + GitHub Release, then builds and
+  pushes the GHCR image.
+
+### One-time repository settings
+
+These are GitHub settings, not files:
+
+1. **Branch protection** (Settings → Branches → add rule for `main`): require the
+   status check **`ci / verify`** to pass before merging.
+2. **Package visibility** (after the first release, on the `ti-84` package page →
+   Package settings): set to **Public** if you want anonymous `docker pull`.
 
 ## Contributing
 

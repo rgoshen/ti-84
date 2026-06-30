@@ -215,3 +215,29 @@ Vitest unit suite for `hover.ts` covers `formatNumber` (integers, rounding, trai
 
 **Risks & Tradeoffs:**
 Depends on function-plot's internal DOM structure and scale objects (`meta.xScale/yScale`, `.inner-tip`, `.canvas` group) — guarded and verified by the comprehensive e2e suite. Touch/no-hover devices are explicitly deferred (tooltip is a progressive enhancement for v1; future "tap to read" feature would follow). The rAF throttle + gesture-suppression window trade some near-miss responsiveness for stable UX mid-zoom/pan.
+
+## [2026-06-30] Feature: CI/CD pipeline (semantic-release + GHCR)
+
+**Objective:**
+Automate testing, building, versioning, changelog generation, and Docker image publishing via a mature, Conventional Commits-driven release pipeline. Enable confident, repeatable releases with minimal manual steps.
+
+**Approach:**
+- **CI** (`.github/workflows/ci.yml`): runs on every PR — `astro check` (typecheck), `npm test` (Vitest), `npm run build`, and `npm run test:e2e` (Playwright). Fails fast if any step breaks.
+- **Reusable `_verify.yml`**: a private workflow job wrapping the CI commands as a single gate. Pulled by `ci.yml` (via `jobs.verify`) and called after successful releases to prevent race conditions (semantic-release tag → rebuild image with the new version tag).
+- **Release** (`.github/workflows/release.yml`): triggered on merge to `main`. Runs `semantic-release` which reads Conventional Commits since the last tag, bumps `package.json` + `CHANGELOG.md`, creates the `vX.Y.Z` tag + GitHub Release, then builds a multi-arch image (linux/amd64, linux/arm64) and pushes to `ghcr.io/rgoshen/ti-84:vX.Y.Z` (+ `:latest` alias). Uses `docker/metadata-action` to generate tags and `docker/build-push-action` with QEMU for cross-platform.
+- `.releaserc.json`: semantic-release config (extends `@semantic-release/github`, `@semantic-release/npm`, `@semantic-release/git`).
+- Docker push credentials: `GITHUB_TOKEN` (auto-provided by Actions; scoped to the repo).
+
+**Tests:**
+- Local: `npm test` (Vitest + Playwright) validates math, theming, hover, and zoom regression before pushing.
+- CI: every PR runs the full `ci.yml` gate; merge to `main` triggers `release.yml` which rebuilds and tests one more time via `_verify.yml` before release.
+- Manual: after first release, verify the image pulls from GHCR and runs.
+
+**Risks & Tradeoffs:**
+- Depends on Conventional Commits discipline — a malformed commit (e.g., `fix` → patch) blocks semantic-release if the rule is wrong. Mitigated by commit lint (`.commitlintrc` deferred) and the reviewed PR process.
+- Multi-arch build adds ~2–3 min per release (QEMU emulation); acceptable for a mature project.
+- Initial release requires a manual `git tag v0.1.0` or first `.releaserc` run to seed the version baseline.
+- GHCR package visibility must be toggled **Public** after the first release if anonymous `docker pull` is desired (GitHub setting, not code).
+
+**References:**
+- Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
