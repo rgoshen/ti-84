@@ -274,3 +274,40 @@ The previous approach drew new lines on top, but the request was to make the *ex
 
 **References:**
 - graphing.html: boldGridAxes, applyThemeToPlot
+
+## [2026-06-29 20:55] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — point markers off the curve
+
+**Summary:**
+Appended the `.points-overlay` group into Function Plot's `<g class="canvas">` group instead of the SVG root (`drawPointsOverlay`). Markers now share the curve's coordinate space.
+
+**Rationale:**
+Function Plot draws the curve inside `<g class="canvas" transform="translate(40,20)">`. The overlay's pixel scales (`getXScale`/`getYScale`) are derived from axis ticks measured in that canvas-local space, but the overlay was being appended to the SVG root — outside the margin — so every marker was offset from the curve by exactly the canvas margin (~1.2 x-units left, ~0.4 y-units up at the default window).
+
+**Bug Fix Context:**
+Root cause: a two-coordinate-space mismatch. Earlier alignment commits fixed the scale's *slope* (reading real ticks) but never the *origin offset*, which lives in the parent `g.canvas` transform the tick-reader doesn't traverse. Verified in a headless browser: the vertex of y=2x² aligns to dy=0 and every marker is ≤1px from the rendered curve.
+
+**References:**
+- graphing.html: drawPointsOverlay
+- TODO.md: Fix + Feature: Point markers on the curve at whole-number gridline crossings
+
+
+## [2026-06-29 20:58] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator — markers at whole-number gridline crossings
+
+**Summary:**
+Added `gridlineCrossings(expr)` and a `bisect()` root-finder, and rewired `drawPointsOverlay` to plot a marker at every point where the curve crosses a whole-number gridline within the window — integer x (direct evaluation) or integer y (solve f(x)=k by sampling f once and bisecting at sign changes). Points are de-duplicated, clipped to the window, and capped at 200 per equation. `integerXs()` is retained for the value table.
+
+**Rationale:**
+Per the requested rule, a marker should appear wherever the curve meets a whole-number line — e.g. (-1, 0.5) (integer x) and (-0.5, 1) (integer y) — but not where it meets neither (e.g. (-0.5, 0.5)). Integer-y crossings generally occur at irrational x (2x²=1 at x=±0.707), so they are found by numerical root-finding rather than enumeration. Sampling f once per equation and reusing it across all k-lines keeps the cost low.
+
+**Tests:**
+Verified headless (Playwright/MCP) for 2x², -0.5x, sin(x): every marker lies on the curve (y≈f(x)), every marker has integer x OR integer y, none have both coordinates fractional, all fall inside the window. Known limitation: tangent gridline touches (e.g. sin peaks at y=±1) are not marked because sign-change detection requires a crossing.
+
+**References:**
+- graphing.html: gridlineCrossings, bisect, drawPointsOverlay
+- TODO.md: Fix + Feature: Point markers on the curve at whole-number gridline crossings

@@ -42,6 +42,34 @@ Add a separate, in-house graphing calculator that lets the user type in an equat
 
 **Status:** Implemented in graphing.html.
 
+## [2026-06-29] Fix + Feature: Point markers on the curve at whole-number gridline crossings
+
+**Objective:**
+1. (Bug) Plotted point markers were offset from the curve. Make markers sit exactly on the curve.
+2. (Feature) Show a marker at every spot where the curve crosses a whole-number gridline — integer x OR integer y — and nowhere else. Examples: (-1, 0.5) ✓ (integer x), (-0.5, 1) ✓ (integer y), (-0.5, 0.5) ✗ (neither).
+
+**Approach:**
+- Bug: Function Plot draws the curve inside `<g class="canvas">` which carries a margin transform `translate(40,20)`. The overlay's pixel scales are derived from axis ticks measured in that canvas-local space, but markers were appended to the SVG root, so each point was offset by the margin. Fix: append the overlay into `g.canvas` so markers share the curve's coordinate space. ✅ Done & verified in-browser.
+- Feature: New `gridlineCrossings(expr)` computes, within the window:
+  - integer-x crossings: (x, f(x)) for each integer x, kept only if (x, y) is inside the window;
+  - integer-y crossings: solve f(x)=k for each integer k by sampling f finely and bisecting at sign changes;
+  - de-duplicate (a lattice point is found by both passes) and cap total markers per equation to avoid clutter on oscillating curves.
+- `drawPointsOverlay` plots the returned points instead of integer-x only. `integerXs()` stays for the value table.
+
+**Tests:**
+- No JS test harness exists for this static page; verify behaviourally with headless Playwright (MCP):
+  - every marker lies on the curve (marker y ≈ f(marker x));
+  - every marker has integer x OR integer y (none with both fractional);
+  - all markers fall inside the window;
+  - known cases: y=2x² shows (±1,2),(0,0) plus integer-y crossings (±0.707,1),(±1.22,3),…
+- Manual: toggle "Show points", change window, switch shapes/colors.
+
+**Risks & Tradeoffs:**
+- Sign-change root-finding misses tangent gridline touches (e.g. sin(x) peaks at y=±1, where the curve grazes the line without crossing); acceptable for scope — the user's examples are all transversal crossings.
+- Fine sampling (1000 pts) × integer-y lines costs CPU; mitigated by precomputing f once per equation, a density cap, and skipping the horizontal scan when extremely zoomed out.
+
+**Status:** Done & verified in headless browser. Markers sit on the curve (≤1.03px from the rendered polyline, sub-pixel vs the 4px marker), and appear only at integer-x or integer-y gridline crossings (verified for 2x², -0.5x, sin(x); none with both coordinates fractional).
+
 ## [2026-06-29] Planned Feature: AI Step-by-Step Math Solver
 
 **Objective:**
