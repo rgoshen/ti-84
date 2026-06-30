@@ -346,6 +346,14 @@
       const yScale = getYScale();
       if (!xScale || !yScale) return;
 
+      // Function Plot draws the curve inside its <g class="canvas"> group, which
+      // carries a margin transform (e.g. translate(40,20)). Our scales come from
+      // axis ticks measured in that same canvas-local space, so the markers must
+      // live inside the canvas group too. Appending to the svg root instead would
+      // offset every point from the curve by exactly the margin. Fall back to the
+      // svg root only if the canvas group can't be found.
+      const canvas = svg.querySelector('g.canvas') || svg;
+
       const xs = integerXs();
 
       state.equations.forEach((eq) => {
@@ -360,7 +368,7 @@
           const marker = makeMarker(eq.pointShape, cx, cy, eq.color);
           overlay.appendChild(marker);
         });
-        svg.appendChild(overlay);
+        canvas.appendChild(overlay);
       });
     }
 

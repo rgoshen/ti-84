@@ -274,3 +274,21 @@ The previous approach drew new lines on top, but the request was to make the *ex
 
 **References:**
 - graphing.html: boldGridAxes, applyThemeToPlot
+
+## [2026-06-29 20:55] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graphing Calculator — point markers off the curve
+
+**Summary:**
+Appended the `.points-overlay` group into Function Plot's `<g class="canvas">` group instead of the SVG root (`drawPointsOverlay`). Markers now share the curve's coordinate space.
+
+**Rationale:**
+Function Plot draws the curve inside `<g class="canvas" transform="translate(40,20)">`. The overlay's pixel scales (`getXScale`/`getYScale`) are derived from axis ticks measured in that canvas-local space, but the overlay was being appended to the SVG root — outside the margin — so every marker was offset from the curve by exactly the canvas margin (~1.2 x-units left, ~0.4 y-units up at the default window).
+
+**Bug Fix Context:**
+Root cause: a two-coordinate-space mismatch. Earlier alignment commits fixed the scale's *slope* (reading real ticks) but never the *origin offset*, which lives in the parent `g.canvas` transform the tick-reader doesn't traverse. Verified in a headless browser: the vertex of y=2x² aligns to dy=0 and every marker is ≤1px from the rendered curve.
+
+**References:**
+- graphing.html: drawPointsOverlay
+- TODO.md: Fix + Feature: Point markers on the curve at whole-number gridline crossings
