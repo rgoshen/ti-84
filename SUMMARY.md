@@ -172,3 +172,17 @@ Respect the user's explicit port choice. 8084 is the project default going forwa
 
 **References:**
 - docker-compose.yml, .env.example, README.md, CONTRIBUTING.md, docs/README.md
+
+## [2026-06-29 19:55] Commit Summary
+
+**Change Type:** Docs
+**Scope:** README — .env instructions
+
+**Summary:**
+Added a "Overriding defaults with a .env file" subsection to the README with explicit step-by-step instructions: copy .env.example to .env, edit values, run docker compose up -d (which reads .env automatically), and recreate the container for changes to apply. Added a tip about inline single-value overrides and noted that .env is gitignored.
+
+**Rationale:**
+The README referenced .env.example without explaining the copy/edit/run workflow, leaving users to guess. Explicit steps remove the ambiguity.
+
+**References:**
+- README.md: Overriding defaults with a .env file

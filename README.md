@@ -49,7 +49,7 @@ Open <http://localhost:8084> in your browser.
 
 ### Configurable environment variables
 
-Defaults are baked into `docker-compose.yml`. Override any of them by creating a `.env` file (see `.env.example`) or by exporting them in your shell before running `docker compose up`.
+Defaults are baked into `docker-compose.yml`. Override any of them by creating a `.env` file or by exporting them in your shell before running `docker compose up`.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -59,20 +59,32 @@ Defaults are baked into `docker-compose.yml`. Override any of them by creating a
 | `THEME_DEFAULT` | `dark` | Default theme for first-time visitors (`dark` or `light`) — users can still toggle, and their choice is saved in `localStorage` |
 | `TI84_IFRAME_SRC` | `https://ti84calc.com/ti84calc` | Source URL for the embedded TI-84 iframe |
 
-Example `.env`:
+### Overriding defaults with a `.env` file
 
-```env
-HOST_PORT=9090
-SITE_TITLE_TI84=My Custom TI-84
-THEME_DEFAULT=light
-TI84_IFRAME_SRC=https://example.com/calc
-```
+`.env.example` is a template listing every variable with its default value. It is safe to copy and edit. The real `.env` file is gitignored so your local overrides never get committed.
 
-Then:
+1. Copy the template:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` with your own values:
+   ```env
+   HOST_PORT=9090
+   SITE_TITLE_TI84=My Custom TI-84
+   THEME_DEFAULT=light
+   TI84_IFRAME_SRC=https://example.com/calc
+   ```
+3. Run — Docker Compose reads `.env` automatically:
+   ```bash
+   docker compose up -d
+   ```
 
-```bash
-docker compose up -d
-```
+> Tip: changes to `.env` only apply on a fresh start. If the container is already running, recreate it: `docker compose down && docker compose up -d`.
+
+You can also override a single value inline without a `.env` file:
+   ```bash
+   HOST_PORT=9090 docker compose up -d
+   ```
 
 Stop and remove the container:
 
