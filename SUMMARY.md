@@ -26,3 +26,18 @@ A professional README with badges and screenshots makes the project more discove
 **References:**
 - README.md: badges, screenshots, contributing link
 - CONTRIBUTING.md: GitHub Flow + Conventional Commits
+
+## [2026-06-29 17:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Docker instructions
+
+**Summary:**
+Updated all `docker run` commands across README.md, CONTRIBUTING.md, and docs/README.md to use `--name graphing-calculator` so the container has a predictable name instead of Docker's random generated name. Added stop/remove instructions to the README.
+
+**Rationale:**
+A named container is easier to stop, remove, and reference in scripts/logs than a random container name. Keeps the developer experience consistent and predictable.
+
+**References:**
+- README.md: Running locally with Docker
+- CONTRIBUTING.md: Getting Started
