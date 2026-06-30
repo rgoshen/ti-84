@@ -11,3 +11,18 @@ Static site with CDN Tailwind keeps the project simple and dependency-free while
 
 **References:**
 - TODO.md: 2026-06-29 TI-84 Calculator Website with Theme Toggle and Docker
+
+## [2026-06-29 17:10] Commit Summary
+
+**Change Type:** Docs
+**Scope:** README + CONTRIBUTING
+
+**Summary:**
+Enhanced README.md with status badges, screenshot placeholders (light/dark), a Contributing section, and an updated project structure. Added CONTRIBUTING.md describing the GitHub Flow workflow, commit conventions, code style, testing expectations, PR checklist, and issue reporting. Added a docs/ folder with a README explaining screenshot capture.
+
+**Rationale:**
+A professional README with badges and screenshots makes the project more discoverable and trustworthy. A dedicated CONTRIBUTING.md lowers the barrier for contributors and enforces consistent workflows and commit messages.
+
+**References:**
+- README.md: badges, screenshots, contributing link
+- CONTRIBUTING.md: GitHub Flow + Conventional Commits
