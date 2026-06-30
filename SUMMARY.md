@@ -216,3 +216,17 @@ The prior g.content selector was unreliable across Function Plot versions, leavi
 
 **References:**
 - graphing.html: applyThemeToPlot, prettyExpr, renderList, renderTable
+
+## [2026-06-29 20:20] Commit Summary
+
+**Change Type:** Revert
+**Scope:** Graphing Calculator — function-line forcing
+
+**Summary:**
+Reverted the function-line forcing logic added in the previous commit (the g.content selector, the fallback path-targeting block, and the stroke-width 3 / fill none / opacity 1 overrides). applyThemeToPlot now only themes background, axis/tic strokes, grid color, and text fill — leaving function line styling to Function Plot's defaults. KaTeX pretty-printing from the prior commit is retained.
+
+**Rationale:**
+The function-line forcing changes were not the requested fix and may have interfered with Function Plot's rendering. The actual reported issue is grid-line visibility in dark mode, which is a separate concern to be addressed next.
+
+**References:**
+- graphing.html: applyThemeToPlot

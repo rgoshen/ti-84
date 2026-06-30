@@ -308,33 +308,6 @@
       svg.querySelectorAll('text').forEach((el) => {
         el.style.fill = c.text;
       });
-      // Force each function line to keep its color and be visible in dark mode.
-      // Function Plot wraps each function in a .content group; target the path
-      // inside each one and also fall back to any path with a stroke style.
-      const contentGroups = svg.querySelectorAll('g.content');
-      contentGroups.forEach((g, i) => {
-        const eq = state.equations[i];
-        if (!eq) return;
-        const path = g.querySelector('path');
-        if (path) {
-          path.style.stroke = eq.color;
-          path.style.strokeWidth = '3';
-          path.style.fill = 'none';
-          path.style.opacity = '1';
-        }
-      });
-      // Fallback: any path that has a colored stroke but isn't an axis/grid line.
-      if (contentGroups.length === 0) {
-        svg.querySelectorAll('path').forEach((path) => {
-          const stroke = path.getAttribute('stroke') || path.style.stroke;
-          if (!stroke) return;
-          // skip axis/grid lines (grey-ish)
-          if (stroke === c.axis || stroke === c.grid) return;
-          path.style.strokeWidth = '3';
-          path.style.fill = 'none';
-          path.style.opacity = '1';
-        });
-      }
     }
 
     function drawPointsOverlay() {
