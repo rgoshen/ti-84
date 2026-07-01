@@ -29,6 +29,10 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
+          # Admin PAT so semantic-release's changelog/version commit can bypass the
+          # `main` ruleset — the default github-actions bot cannot bypass on a
+          # personal repo. See README "Release token".
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -47,7 +51,7 @@ jobs:
             @semantic-release/changelog@6.0.3
             @semantic-release/git@10.0.1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
   publish:
     name: Publish image to GHCR

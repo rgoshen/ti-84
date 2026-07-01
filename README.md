@@ -150,11 +150,21 @@ These are GitHub settings, not files:
    ```
 
    After this, the first `feat` merged to `main` releases `0.2.0` and the first
-   `fix` releases `0.1.1`.
+   `fix` releases `0.1.1`. (Already done for this repo — `v0.1.0` is pushed.)
 
-2. **Branch protection** (Settings → Branches → add rule for `main`): require the
-   status check **`ci / verify`** to pass before merging.
-3. **Package visibility** (after the first release, on the `ti-84` package page →
+2. **Release token (`RELEASE_TOKEN`)** — required so semantic-release can commit
+   `CHANGELOG.md` + the version bump back to the protected `main`. Create a
+   **fine-grained PAT** (Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens) scoped to the `ti-84` repository with **Repository
+   permissions → Contents: Read and write** (Metadata: Read is included
+   automatically), then add it as an **Actions secret named `RELEASE_TOKEN`**
+   (Settings → Secrets and variables → Actions). The release workflow then
+   authenticates as you (a repo admin), which is what lets its commit bypass the
+   ruleset. Release comments are disabled so the token needs no Issues/PR scope.
+3. **Branch protection** — configured as a repository ruleset on `main`: requires a
+   pull request and the **`ci / verify`** status check, and blocks force-push and
+   deletion (repository admins bypass). (Settings → Rules → Rulesets.)
+4. **Package visibility** (after the first release, on the `ti-84` package page →
    Package settings): set to **Public** if you want anonymous `docker pull`.
 
 ## Contributing
