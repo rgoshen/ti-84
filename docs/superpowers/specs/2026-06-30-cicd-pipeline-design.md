@@ -4,6 +4,12 @@
 - **Status:** Approved (pre-implementation)
 - **Repo:** `github.com/rgoshen/ti-84` → image `ghcr.io/rgoshen/ti-84`
 - **Branch:** `feature/cicd-pipeline`
+- **Revised 2026-06-30 (post-implementation):** dropped `@semantic-release/git`,
+  `@semantic-release/changelog`, and `@semantic-release/npm` — releases no longer
+  commit back to `main`. GitHub Releases are the changelog and the git tag is the
+  version source of truth (`package.json` is not auto-bumped). This avoids needing
+  an admin PAT to bypass `main` branch protection, which on a personal (non-org)
+  repo cannot grant the `github-actions` bot a ruleset bypass.
 
 ## Summary
 

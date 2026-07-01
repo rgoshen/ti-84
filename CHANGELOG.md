@@ -1,5 +1,8 @@
 # Changelog
 
-All notable changes to this project are documented in this file. It is generated
-automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
-from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
+Release notes are published automatically as
+[GitHub Releases](https://github.com/rgoshen/ti-84/releases) by
+[semantic-release](https://github.com/semantic-release/semantic-release) on each
+versioned release — see there for the per-version changelog. The git tag
+(`vX.Y.Z`) is the source of truth for the version and the published container
+image tags. (Internal change rationale lives in `SUMMARY.md` — a different audience.)

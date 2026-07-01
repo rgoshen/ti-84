@@ -133,9 +133,11 @@ with different titles, default theme, or iframe source.
   [semantic-release](https://github.com/semantic-release/semantic-release) on
   merge to `main`: it reads the [Conventional Commits](https://www.conventionalcommits.org/)
   since the last release, computes the next SemVer (`feat` → minor, `fix` →
-  patch, `!`/`BREAKING CHANGE` → major), updates `CHANGELOG.md`, bumps
-  `package.json`, creates the `vX.Y.Z` tag + GitHub Release, then builds and
-  pushes the GHCR image.
+  patch, `!`/`BREAKING CHANGE` → major), publishes a **GitHub Release** with the
+  `vX.Y.Z` tag (the release notes are the changelog), then builds and pushes the
+  GHCR image. The git tag is the source of truth for the version; `package.json`'s
+  version field is not auto-bumped. Release notes:
+  [GitHub Releases](https://github.com/rgoshen/ti-84/releases).
 
 ### One-time repository settings
 
@@ -150,10 +152,11 @@ These are GitHub settings, not files:
    ```
 
    After this, the first `feat` merged to `main` releases `0.2.0` and the first
-   `fix` releases `0.1.1`.
+   `fix` releases `0.1.1`. (Already done for this repo — `v0.1.0` is pushed.)
 
-2. **Branch protection** (Settings → Branches → add rule for `main`): require the
-   status check **`ci / verify`** to pass before merging.
+2. **Branch protection** — configured as a repository ruleset on `main`: requires a
+   pull request and the **`ci / verify`** status check, and blocks force-push and
+   deletion (repository admins bypass). (Settings → Rules → Rulesets.)
 3. **Package visibility** (after the first release, on the `ti-84` package page →
    Package settings): set to **Public** if you want anonymous `docker pull`.
 
