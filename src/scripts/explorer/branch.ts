@@ -92,11 +92,20 @@ export type Sweep =
   | { kind: 'approach'; a: number; side: '-' | '+' }
   | { kind: 'end'; dir: 'neg' | 'pos' };
 
+/** Ease-out (cubic): fast start, decelerating finish. */
+const easeOut = (t: number): number => 1 - (1 - t) ** 3;
+
 /**
  * The leading x of an animated limit sweep at progress t∈[0,1]. It starts at the
  * far end of the relevant branch and walks toward the target — a wall (stopping
  * at a∓epsilon) or a window edge (stopping at the edge∓epsilon) — and, like the
  * drag, is clamped so it never crosses out of that branch.
+ *
+ * The motion eases out (decelerates near the target). Because a curve blows up
+ * steeply right next to a wall, the interesting near-wall / along-the-edge
+ * segment occupies a tiny slice of x; easing out hands that slice most of the
+ * animation time, so the point visibly glides along the window edge to the
+ * asymptote instead of flicking there in the last frame.
  */
 export function sweepX(
   t: number,
@@ -105,7 +114,7 @@ export function sweepX(
   poles: number[],
   epsilon: number,
 ): number {
-  const p = clamp(t, 0, 1);
+  const p = easeOut(clamp(t, 0, 1));
   let from: number;
   let target: number;
   if (sweep.kind === 'approach') {

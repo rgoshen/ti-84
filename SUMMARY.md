@@ -654,3 +654,17 @@ Keep the docs accurate to the shipped feature — the README's Docker env table 
 
 **References:**
 - TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
+
+## [2026-07-04 19:55] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Function Explorer — limit-sweep pacing
+
+**Summary:**
+Added an ease-out (cubic) to `sweepX` so a limit animation decelerates as it nears the target. Previously the sweep moved linearly in x; because a curve blows up steeply right beside a wall, the point rode the gentle far part of the curve for almost the whole animation and only reached the window edge in the final frame, so the along-the-edge travel to the asymptote was a single invisible flick. With ease-out, the near-wall x-slice (where the point pins to the edge and glides to the wall) now occupies ~45% of the animation. New unit test pins the pacing (87 Vitest total).
+
+**Bug Fix Context:**
+Reported: "when in animation mode, when it hits the window edge it should stop [rising] but continue along the window edge until it hits the asymptote." Root cause was pacing, not geometry — the point already pinned and slid correctly (verified by frame sampling), but linear-in-x timing compressed the edge-glide from ~110ms to imperceptible. Ease-out redistributes the time to the interesting segment. Verified by re-sampling the trajectory headless: 7 of 14 frames now pinned at the edge, gliding from x≈0.39 to x≈0.04.
+
+**References:**
+- Plan slice 5 (sweepX) — follow-up refinement

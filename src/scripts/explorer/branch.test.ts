@@ -150,4 +150,14 @@ describe('sweepX — the animated limit walk (also honours the no-cross rule)', 
     expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(WIN.xMin + EPS);
     expect(sweepX(1, s, WIN, [0], EPS)).toBeLessThan(0);
   });
+
+  it('eases out — by half-time it is already most of the way to the wall (so it lingers on the edge)', () => {
+    // Approaching x = 0 from the right: from ≈ 3.98 down to +EPS. With linear
+    // pacing, sweepX(0.5) ≈ 2.0; ease-out puts it far nearer the wall, giving the
+    // steep near-wall / along-edge segment much more of the animation time.
+    const s = { kind: 'approach', a: 0, side: '+' } as const;
+    const half = sweepX(0.5, s, WIN, [0], EPS);
+    expect(half).toBeGreaterThan(0); // still on the right branch
+    expect(half).toBeLessThan(1); // well past the linear midpoint, close to the wall
+  });
 });
