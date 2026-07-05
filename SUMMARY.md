@@ -546,3 +546,21 @@ The user's headline requirement — "drag toward the wall pins at the edge and n
 **References:**
 - Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
 - Plan slices 2–3 of 11
+
+## [2026-07-04 19:27] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — asymptote & limit detection
+
+**Summary:**
+Added pure `src/scripts/explorer/limits.ts` (+ `limits.test.ts`, 10 tests, TDD): `findVerticalAsymptotes` (three candidate signals — reciprocal sign-change for odd poles, null-gap and same-sign local-|f|-peak for even poles — merged, then confirmed by a divergence probe that rejects removable/jump discontinuities), `classifyEndBehavior` (finite / posInf / negInf / unknown as x→±∞), and `classifyOneSided`. Verified: 1/x² (even, both →+∞), 1/x (odd, ∓∞), tan(x) (two walls, +∞/−∞), x² (none), sin(x)/x (removable → rejected).
+
+**Bug Fix Context:**
+Initial `blowupFactor=10` (bigMag = 10·windowHeight) missed shallow residue-1 poles like 1/x on a tall window — a pole's nearest-sample magnitude is ~1/dx (sampling-bound), not height-bound. Lowered to 3; the divergence probe, not the candidate gate, is the real false-positive filter.
+
+**Rationale:**
+`evalAt` returns null for both undefined points and non-finite results, so a pole and a domain edge are indistinguishable from one sample — the growth-probe separates them. Kept fully pure/node-tested so the heuristic thresholds are pinned by tests.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Plan slice 4 of 11
