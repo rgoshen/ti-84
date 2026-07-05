@@ -592,3 +592,17 @@ This is both the teaching payload and the accessible text (destined for an aria-
 
 **References:**
 - Plan slice 6 of 11
+
+## [2026-07-04 19:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — shared plot helpers + Slider primitive
+
+**Summary:**
+Exported the reusable low-level helpers from `src/scripts/graphing/plot.ts` (`SVG_NS`, `NumericScale`, `asNumericScale`, `applyThemeToPlot`, `boldZeroAxes`) so the explorer renderer can share them (visibility-only; `renderGraph` behaviour unchanged). Added `src/components/ui/slider.tsx` — a shadcn (new-york) `Slider` wrapper over the already-installed `radix-ui` `Slider` primitive (no new dependency), keyboard-accessible out of the box. `astro check` clean (33 files).
+
+**Rationale:**
+DRY — the explorer reuses the graphing calculator's SVG theming + scale-narrowing instead of duplicating them. The exports are non-breaking; correctness is guarded by the existing graphing unit/e2e suites plus the typecheck (and the explorer's own upcoming e2e).
+
+**References:**
+- Plan slices 7–8 of 11
