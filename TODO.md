@@ -268,4 +268,4 @@ Add a new **Explorers** section whose first entry is a **Function Explorer**: ty
 - Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
 - Source (functionality reference only): `~/Downloads/reciprocal-square-explorer.html`
 
-**Status:** In progress on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed).
+**Status:** Done on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed). Pure logic TDD'd across 6 modules; function-plot renderer + island with pointer arbitration; new Explorers section. Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing, no regressions). Verified headless (0 console errors; anti-teleport, sweeps, arbitration, dark mode).

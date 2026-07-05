@@ -640,3 +640,17 @@ Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing
 
 **References:**
 - Plan slice 11 of 11
+
+## [2026-07-04 19:50] Commit Summary
+
+**Change Type:** Docs
+**Scope:** README, TODO, Docker/env config
+
+**Summary:**
+Updated documentation for the Function Explorer: README now lists three tools (adds the Function Explorer + Explorers section), the routes, an updated project-structure tree (`components/explorer/`, `scripts/explorer/`), and two new env rows. Wired `PUBLIC_SITE_TITLE_EXPLORERS` and `PUBLIC_SITE_TITLE_FUNCTION_EXPLORER` through the Dockerfile (ARG/ENV), docker-compose build args, and `.env.example` so the documented Docker overrides are real. Marked the TODO.md feature entry Done with the verification summary.
+
+**Rationale:**
+Keep the docs accurate to the shipped feature — the README's Docker env table must match what the build actually accepts.
+
+**References:**
+- TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
