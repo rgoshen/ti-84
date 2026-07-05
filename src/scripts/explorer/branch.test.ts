@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { branchOf, pinToWindow, clampDragX, resolveX } from './branch';
+import { branchOf, pinToWindow, clampDragX, resolveX, sweepX } from './branch';
 import type { Window2D } from '@/scripts/graphing/math';
 
 const WIN: Window2D = { xMin: -4, xMax: 4, yMin: -1, yMax: 7 };
@@ -119,5 +119,35 @@ describe('resolveX — re-clamp the point when the function/window changes [G4]'
 
   it('pulls an out-of-window point back inside', () => {
     expect(resolveX(99, [], WIN, EPS)).toBeCloseTo(WIN.xMax - EPS);
+  });
+});
+
+describe('sweepX — the animated limit walk (also honours the no-cross rule)', () => {
+  it('approaches a wall from the left, stopping at a−epsilon and never crossing', () => {
+    const s = { kind: 'approach', a: 0, side: '-' } as const;
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(-EPS);
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeLessThan(0);
+    expect(sweepX(0.5, s, WIN, [0], EPS)).toBeLessThan(0); // stays on the left branch throughout
+    // starts far from the wall and walks toward it
+    expect(sweepX(0, s, WIN, [0], EPS)).toBeLessThan(sweepX(1, s, WIN, [0], EPS));
+  });
+
+  it('approaches a wall from the right, stopping at a+epsilon', () => {
+    const s = { kind: 'approach', a: 0, side: '+' } as const;
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(EPS);
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeGreaterThan(0);
+    expect(sweepX(0.5, s, WIN, [0], EPS)).toBeGreaterThan(0);
+  });
+
+  it('sweeps toward the +∞ edge (x → xMax) on the rightmost branch', () => {
+    const s = { kind: 'end', dir: 'pos' } as const;
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(WIN.xMax - EPS);
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeGreaterThan(0); // rightmost branch of a pole at 0
+  });
+
+  it('sweeps toward the −∞ edge (x → xMin) on the leftmost branch', () => {
+    const s = { kind: 'end', dir: 'neg' } as const;
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(WIN.xMin + EPS);
+    expect(sweepX(1, s, WIN, [0], EPS)).toBeLessThan(0);
   });
 });

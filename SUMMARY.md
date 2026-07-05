@@ -564,3 +564,17 @@ Initial `blowupFactor=10` (bigMag = 10·windowHeight) missed shallow residue-1 p
 **References:**
 - Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
 - Plan slice 4 of 11
+
+## [2026-07-04 19:29] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — limit-sweep path
+
+**Summary:**
+Added `sweepX(t, sweep, w, poles, epsilon)` + the `Sweep` type to `branch.ts` (+4 tests, 28 total). Given animation progress t∈[0,1], returns the leading x that walks across the relevant branch toward its target — a wall (`approach`, stopping at a∓epsilon) or a window edge (`end`, x→±∞) — routed through the same `clampDragX` so the walk can never cross a wall out of its branch.
+
+**Rationale:**
+Reusing `clampDragX` for the animation (not just the drag) means the "never cross a wall" guarantee holds for the limit sweeps too, from one tested source.
+
+**References:**
+- Plan slice 5 of 11

@@ -87,6 +87,53 @@ export function resolveX(x: number, poles: number[], w: Window2D, epsilon: numbe
   return clampDragX(nx, nx, poles, w, epsilon);
 }
 
+/** An animated limit walk: toward a wall from one side, or out to an x-edge. */
+export type Sweep =
+  | { kind: 'approach'; a: number; side: '-' | '+' }
+  | { kind: 'end'; dir: 'neg' | 'pos' };
+
+/**
+ * The leading x of an animated limit sweep at progress t∈[0,1]. It starts at the
+ * far end of the relevant branch and walks toward the target — a wall (stopping
+ * at a∓epsilon) or a window edge (stopping at the edge∓epsilon) — and, like the
+ * drag, is clamped so it never crosses out of that branch.
+ */
+export function sweepX(
+  t: number,
+  sweep: Sweep,
+  w: Window2D,
+  poles: number[],
+  epsilon: number,
+): number {
+  const p = clamp(t, 0, 1);
+  let from: number;
+  let target: number;
+  if (sweep.kind === 'approach') {
+    const probe = sweep.side === '-' ? sweep.a - epsilon : sweep.a + epsilon;
+    const { lo, hi } = branchOf(probe, poles, w);
+    if (sweep.side === '-') {
+      from = lo + epsilon; // far (left) end of the branch whose right wall is a
+      target = sweep.a - epsilon;
+    } else {
+      from = hi - epsilon; // far (right) end of the branch whose left wall is a
+      target = sweep.a + epsilon;
+    }
+  } else {
+    const probe = sweep.dir === 'pos' ? w.xMax - epsilon : w.xMin + epsilon;
+    const { lo, hi } = branchOf(probe, poles, w);
+    if (sweep.dir === 'pos') {
+      from = lo + epsilon;
+      target = hi - epsilon; // hi === xMax on the rightmost branch
+    } else {
+      from = hi - epsilon;
+      target = lo + epsilon; // lo === xMin on the leftmost branch
+    }
+  }
+  const lead = from + p * (target - from);
+  // Clamp within the target's branch so the walk can never cross a wall.
+  return clampDragX(lead, target, poles, w, epsilon);
+}
+
 /** Where the plotted point lands vertically once clamped to the window. */
 export type PinStatus = 'onscreen' | 'top' | 'bottom' | 'undefined';
 
