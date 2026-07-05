@@ -1,0 +1,20 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE_TITLE_FUNCTION_EXPLORER } from '@/config';
+import FunctionExplorer from '@/components/explorer/FunctionExplorer.tsx';
+---
+
+<Base
+  title={SITE_TITLE_FUNCTION_EXPLORER}
+  description="Explore any function's limits and asymptotes: drag a point along the curve, animate limits toward vertical asymptotes and ±∞, and read the behaviour in arrow notation."
+>
+  <section class="py-6">
+    <h1 class="text-2xl font-semibold tracking-tight">{SITE_TITLE_FUNCTION_EXPLORER}</h1>
+    <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
+      Type a function, then drag the point along the curve or press a limit button. Watch the
+      arrow-notation statement change as the curve approaches a wall (vertical asymptote) or heads
+      out to &plusmn;&infin;. Near a wall the point pins to the window edge instead of clipping.
+    </p>
+  </section>
+  <FunctionExplorer client:only="react" />
+</Base>

@@ -1,20 +1,20 @@
 ---
 import Base from '@/layouts/Base.astro';
-import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING } from '@/config';
+import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING, SITE_TITLE_FUNCTION_EXPLORER } from '@/config';
 ---
 
 <Base
   title="Online Calculators"
-  description="Free online calculators: a TI-84 style calculator and a graphing calculator that plots equations in your browser."
+  description="Free, browser-based math tools: a TI-84 style calculator, a graphing calculator, and an interactive function limit & asymptote explorer."
 >
   <section class="py-8 text-center sm:py-12">
-    <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Online Calculators</h1>
+    <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Online Math Tools</h1>
     <p class="mx-auto mt-3 max-w-2xl text-muted-foreground">
-      Two free, browser-based calculators — no install, no sign-up. Pick a tool to get started.
+      Free, browser-based tools — no install, no sign-up. Pick one to get started.
     </p>
   </section>
 
-  <div class="grid gap-6 sm:grid-cols-2">
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     <a
       href="/ti-84"
       class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
@@ -38,6 +38,19 @@ import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING } from '@/config';
       </p>
       <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
         Open the graphing calculator &rarr;
+      </span>
+    </a>
+
+    <a
+      href="/explorers/function"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_FUNCTION_EXPLORER}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Drag a point along any function to see its limits, arrow notation, and asymptotes come alive.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the Function Explorer &rarr;
       </span>
     </a>
   </div>

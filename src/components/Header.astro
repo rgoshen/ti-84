@@ -6,6 +6,7 @@ const links = [
   { href: '/', label: 'Home' },
   { href: '/ti-84', label: 'TI-84' },
   { href: '/graphing', label: 'Graphing' },
+  { href: '/explorers', label: 'Explorers' },
 ] as const;
 
 // Normalize a trailing slash so "/ti-84" and "/ti-84/" match the same nav link.
@@ -13,7 +14,14 @@ const normalize = (path: string): string =>
   path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
 
 const current = normalize(Astro.url.pathname);
-const isActive = (href: string): boolean => normalize(href) === current;
+// A link is active on its own page and (for section links) on any child route,
+// so "/explorers" highlights on "/explorers/function". "/" is excluded from the
+// child match so it doesn't light up everywhere.
+const isActive = (href: string): boolean => {
+  const target = normalize(href);
+  if (current === target) return true;
+  return target !== '/' && current.startsWith(`${target}/`);
+};
 ---
 
 <header class="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
