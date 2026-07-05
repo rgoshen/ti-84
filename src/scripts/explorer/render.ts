@@ -220,7 +220,10 @@ export function renderExplorer(opts: RenderExplorerOptions): ExplorerHandle {
   const colors = themeColors(dark);
   const eColors = explorerColors(dark);
 
-  const data: FunctionPlotDatum[] = [{ fn: expr, color: eColors.curve, graphType: 'polyline' }];
+  // No default function — with an empty expression the plot shows only the axes.
+  const data: FunctionPlotDatum[] = expr
+    ? [{ fn: expr, color: eColors.curve, graphType: 'polyline' }]
+    : [];
   const instance = functionPlot({
     target,
     width: target.clientWidth,

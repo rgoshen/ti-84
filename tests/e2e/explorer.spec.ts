@@ -16,45 +16,66 @@ async function pointCenter(page: Page): Promise<{ x: number; y: number }> {
 const dataX = async (page: Page): Promise<number> =>
   Number(await page.locator(POINT).getAttribute('data-x'));
 
-async function gotoExplorer(page: Page): Promise<void> {
-  await page.goto('/explorers/function');
-  await expect(page.locator(`${PLOT} svg`)).toBeVisible();
+async function plot(page: Page, fn: string): Promise<void> {
+  await page.locator('#fx-input').fill(fn);
+  await page.getByRole('button', { name: 'Plot' }).click();
   await expect(page.locator(POINT)).toBeVisible();
 }
 
-test('loads the default 1/x^2 with auto-detected limit controls', async ({ page }) => {
-  await gotoExplorer(page);
+async function gotoExplorer(page: Page, fn = '1/x^2'): Promise<void> {
+  await page.goto('/explorers/function');
+  await expect(page.locator(`${PLOT} svg`)).toBeVisible();
+  await plot(page, fn);
+}
+
+test('starts with no function and no point until one is plotted', async ({ page }) => {
+  await page.goto('/explorers/function');
+  await expect(page.locator(`${PLOT} svg`)).toBeVisible();
+  await expect(page.locator(POINT)).toHaveCount(0); // no default function
+  await expect(page.getByText('Enter a function to begin')).toBeVisible();
+
+  await plot(page, '1/x^2');
   for (const name of ['x → 0⁻', 'x → 0⁺', 'x → −∞', 'x → ∞']) {
     await expect(page.getByRole('button', { name })).toBeVisible();
   }
 });
 
-test('THE BUG FIX: dragging the point toward the wall pins at the edge and never crosses branches', async ({
+test('THE RULE: dragging toward the wall stops at the window edge — never slides to the wall or crosses branches', async ({
   page,
 }) => {
-  await gotoExplorer(page);
+  await gotoExplorer(page); // 1/x^2 exits the top (y=7) at x ≈ 0.378
   expect(await dataX(page)).toBeGreaterThan(0); // starts on the right branch (x = 1)
 
   const start = await pointCenter(page);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
-  // Drag far past the wall at x = 0 into where the left branch would be.
   await page.mouse.move(start.x - 400, start.y, { steps: 25 });
   await page.mouse.up();
 
   const x = await dataX(page);
-  expect(x).toBeGreaterThanOrEqual(0); // NEVER teleported to the left branch
-  expect(x).toBeLessThan(0.2); // did ride right up to the wall
-  await expect(page.locator(POINT)).toHaveAttribute('data-pin', 'top'); // pinned, not clipped
+  expect(x).toBeGreaterThan(0.2); // stopped at the edge crossing, NOT at the wall (~0.04)
+  expect(x).toBeLessThan(0.55);
+  expect(x).toBeGreaterThan(0); // never teleported to the left branch
+
+  // The point sits at the top edge but stays inside the plot (not clipped off-canvas).
+  const inside = await page.evaluate(
+    ({ pointSel, plotSel }) => {
+      const c = document.querySelector(pointSel)!.getBoundingClientRect();
+      const p = document.querySelector(`${plotSel} svg`)!.getBoundingClientRect();
+      return c.y >= p.y - 2 && c.y <= p.y + p.height;
+    },
+    { pointSel: POINT, plotSel: PLOT },
+  );
+  expect(inside).toBe(true);
 });
 
-test('a limit sweep animates and stops on the correct side of the wall', async ({ page }) => {
+test('a limit sweep stops at the window edge, not at the asymptote', async ({ page }) => {
   await gotoExplorer(page);
   await page.getByRole('button', { name: 'x → 0⁺' }).click();
   await page.waitForTimeout(1700);
   const x = await dataX(page);
-  expect(x).toBeGreaterThan(0);
-  expect(x).toBeLessThan(0.2);
+  expect(x).toBeGreaterThan(0.2); // stopped at the edge (~0.378)
+  expect(x).toBeLessThan(0.55);
   await expect(page.getByRole('button', { name: 'x → 0⁺' })).toHaveAttribute('aria-pressed', 'true');
 });
 
@@ -87,16 +108,11 @@ test('pointer arbitration: dragging the point moves it without panning; dragging
 test('asymptote detection follows the function: tan(x) has many walls, x^2 has none', async ({
   page,
 }) => {
-  await gotoExplorer(page);
-
-  await page.locator('#fx-input').fill('tan(x)');
-  await page.getByRole('button', { name: 'Plot' }).click();
+  await gotoExplorer(page, 'tan(x)');
   await expect(page.getByRole('button', { name: 'x → 1.571⁻' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'x → -1.571⁺' })).toBeVisible();
 
-  await page.locator('#fx-input').fill('x^2');
-  await page.getByRole('button', { name: 'Plot' }).click();
-  // Only the two end-behaviour sweeps remain (no wall buttons).
+  await plot(page, 'x^2');
   await expect(page.getByRole('button', { name: /→ 0/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'x → ∞' })).toBeVisible();
 });
@@ -106,7 +122,6 @@ test('accessibility: a live status region carries the arrow text and the slider 
 }) => {
   await gotoExplorer(page);
 
-  // Drag to a wall so the readout is a limit statement, then let it settle.
   const start = await pointCenter(page);
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
@@ -114,7 +129,6 @@ test('accessibility: a live status region carries the arrow text and the slider 
   await page.mouse.up();
   await expect(page.locator('[role="status"]')).toContainText('f(x) → ∞', { timeout: 2000 });
 
-  // The slider is the keyboard equivalent of dragging the point.
   const before = await dataX(page);
   await page.locator('[role="slider"]').focus();
   await page.keyboard.press('ArrowRight');

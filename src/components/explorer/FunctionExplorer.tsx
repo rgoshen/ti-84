@@ -11,7 +11,14 @@ import {
   type ExplorerHandle,
   type OverlayScene,
 } from '@/scripts/explorer/render';
-import { clampDragX, resolveX, sweepX, pinToWindow, type Sweep } from '@/scripts/explorer/branch';
+import { pinToWindow } from '@/scripts/explorer/branch';
+import {
+  clampToVisible,
+  resolveVisibleX,
+  sweepEndpoints,
+  type Sweep,
+  type SweepPath,
+} from '@/scripts/explorer/visible';
 import { findVerticalAsymptotes, classifyEndBehavior } from '@/scripts/explorer/limits';
 import { describeReadout } from '@/scripts/explorer/notation';
 import { Button } from '@/components/ui/button';
@@ -21,12 +28,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Card } from '@/components/ui/card';
 
-// Tunables, in one place [G8].
+// Tunables, in one place.
 const DEFAULT_WINDOW: Window2D = { xMin: -4, xMax: 4, yMin: -1, yMax: 7 };
-const WALL_FRAC_OF_WIDTH = 0.005; // [G1] epsilon = this * window width
-const POINT_HIT_RADIUS_PX = 16; // grab radius for the draggable point [G3]
+const POINT_HIT_RADIUS_PX = 16; // grab radius for the draggable point
 const SWEEP_MS = 1400; // limit-sweep animation duration
-const READOUT_SETTLE_MS = 250; // coalesce aria-live announcements [G7]
+const READOUT_SETTLE_MS = 250; // coalesce aria-live announcements
 
 type WindowFields = Record<keyof Window2D, string>;
 
@@ -46,16 +52,16 @@ const prefersReducedMotion = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 const sweepEq = (a: Sweep | null, b: Sweep): boolean => {
-  if (a === null) return false;
-  if (a.kind !== b.kind) return false;
+  if (a === null || a.kind !== b.kind) return false;
   if (a.kind === 'approach' && b.kind === 'approach') return a.a === b.a && a.side === b.side;
   if (a.kind === 'end' && b.kind === 'end') return a.dir === b.dir;
   return false;
 };
 
 export default function FunctionExplorer(): React.JSX.Element {
-  const [expr, setExpr] = useState('1/x^2');
-  const [exprInput, setExprInput] = useState('1/x^2');
+  // No default function — the explorer starts empty until the user plots one.
+  const [expr, setExpr] = useState('');
+  const [exprInput, setExprInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [appliedWindow, setAppliedWindow] = useState<Window2D>(DEFAULT_WINDOW);
   const [displayWindow, setDisplayWindow] = useState<Window2D>(DEFAULT_WINDOW);
@@ -69,18 +75,20 @@ export default function FunctionExplorer(): React.JSX.Element {
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true,
   );
 
+  const hasFunction = expr.trim().length > 0;
+
   const plotRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<ExplorerHandle | null>(null);
   const rafRef = useRef<number | null>(null);
+  const sweepPathRef = useRef<SweepPath | null>(null);
 
-  // Derived limit structure, recomputed only when the function or the visible window changes.
   const asymptotes = useMemo(() => findVerticalAsymptotes(expr, displayWindow), [expr, displayWindow]);
   const endNeg = useMemo(() => classifyEndBehavior(expr, 'neg'), [expr]);
   const endPos = useMemo(() => classifyEndBehavior(expr, 'pos'), [expr]);
   const poles = useMemo(() => asymptotes.map((a) => a.x), [asymptotes]);
-  const epsilon = (displayWindow.xMax - displayWindow.xMin) * WALL_FRAC_OF_WIDTH;
 
   const sweepButtons = useMemo(() => {
+    if (!hasFunction) return [];
     const list: Array<{ label: string; sweep: Sweep }> = [];
     for (const a of asymptotes) {
       list.push({ label: `x → ${formatNumber(a.x)}⁻`, sweep: { kind: 'approach', a: a.x, side: '-' } });
@@ -89,11 +97,16 @@ export default function FunctionExplorer(): React.JSX.Element {
     list.push({ label: 'x → −∞', sweep: { kind: 'end', dir: 'neg' } });
     list.push({ label: 'x → ∞', sweep: { kind: 'end', dir: 'pos' } });
     return list;
-  }, [asymptotes]);
+  }, [asymptotes, hasFunction]);
 
-  const fx = evalAt(expr, x);
+  const fx = hasFunction ? evalAt(expr, x) : null;
   const pin = pinToWindow(fx, displayWindow).status;
-  const readout = describeReadout({ x, fx, pin, win: displayWindow, asymptotes, endNeg, endPos });
+  const readout = hasFunction
+    ? describeReadout({ x, fx, pin, win: displayWindow, asymptotes, endNeg, endPos })
+    : {
+        headline: 'Enter a function to begin',
+        note: 'Type a function above (e.g. 1/x^2, tan(x), 1/(x-2)) and press Plot.',
+      };
 
   // Latest scene for the renderer + latest values for the drag/sweep closures.
   const sceneRef = useRef<OverlayScene>(undefined as unknown as OverlayScene);
@@ -106,7 +119,7 @@ export default function FunctionExplorer(): React.JSX.Element {
     endPos,
     showWall,
     showFloor,
-    sweepTrail: sweep ? { fromX: sweepX(0, sweep, displayWindow, poles, epsilon), leadX: x } : null,
+    sweepTrail: sweep && sweepPathRef.current ? { fromX: sweepPathRef.current.from, leadX: x } : null,
   };
   const xRef = useRef(x);
   xRef.current = x;
@@ -116,38 +129,37 @@ export default function FunctionExplorer(): React.JSX.Element {
   polesRef.current = poles;
   const winRef = useRef(displayWindow);
   winRef.current = displayWindow;
-  const epsRef = useRef(epsilon);
-  epsRef.current = epsilon;
 
   const stopSweep = (): void => {
     if (rafRef.current !== null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    sweepPathRef.current = null;
     setSweep(null);
   };
 
   const startSweep = (s: Sweep): void => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    const path = sweepEndpoints(s, exprRef.current, winRef.current, polesRef.current);
+    if (!path) return; // nothing visible on that branch
+    sweepPathRef.current = path;
     setSweep(s);
-    const win = winRef.current;
-    const pol = polesRef.current;
-    const eps = epsRef.current;
     if (prefersReducedMotion()) {
-      setX(sweepX(1, s, win, pol, eps));
+      setX(path.to);
       rafRef.current = null;
       return;
     }
     const start = performance.now();
     const step = (now: number): void => {
       const t = Math.min(1, (now - start) / SWEEP_MS);
-      setX(sweepX(t, s, win, pol, eps));
+      setX(path.from + t * (path.to - path.from));
       rafRef.current = t < 1 ? requestAnimationFrame(step) : null;
     };
     rafRef.current = requestAnimationFrame(step);
   };
 
-  // Track the site theme (re-themes the plot when the header toggle flips <html class>).
+  // Track the site theme so the plot re-themes when the header toggle flips <html class>.
   useEffect(() => {
     const el = document.documentElement;
     const obs = new MutationObserver(() => setDark(el.classList.contains('dark')));
@@ -155,39 +167,42 @@ export default function FunctionExplorer(): React.JSX.Element {
     return () => obs.disconnect();
   }, []);
 
-  // Mirror the live (zoom-updated) window into the input fields.
   useEffect(() => {
     setFields(windowToFields(displayWindow));
   }, [displayWindow]);
 
   // Build / rebuild the plot and (re)attach pointer arbitration. displayWindow is
-  // deliberately NOT a dependency, so interactive zoom/pan re-syncs the overlay
-  // without resetting the view (mirrors GraphingCalculator).
+  // NOT a dependency, so interactive zoom/pan re-syncs the overlay without a rebuild.
   useEffect(() => {
     const target = plotRef.current;
     if (!target) return;
     let disposed = false;
     let cleanupDrag: (() => void) | null = null;
 
-    // Pointer arbitration [G3]: a pointerdown ON the point (capture phase) grabs it
-    // and blocks function-plot's pan; a pointerdown elsewhere falls through to pan.
+    // Pointer arbitration: a pointerdown ON the point (capture phase) grabs it and
+    // blocks function-plot's pan; a pointerdown elsewhere falls through to pan.
     const attachDrag = (): (() => void) | null => {
       const handle = handleRef.current;
       const svg = target.querySelector('svg');
       if (!handle || !svg) return null;
       let dragging = false;
 
-      const moveTo = (e: PointerEvent): void => {
-        const pd = pointerToData(handle.instance, target, e.clientX, e.clientY);
-        if (!pd) return;
+      const cancelActiveSweep = (): void => {
         if (rafRef.current !== null) {
           cancelAnimationFrame(rafRef.current);
           rafRef.current = null;
         }
+        sweepPathRef.current = null;
         setSweep(null);
-        setX(clampDragX(pd.dataX, xRef.current, polesRef.current, winRef.current, epsRef.current));
+      };
+      const moveTo = (e: PointerEvent): void => {
+        const pd = pointerToData(handle.instance, target, e.clientX, e.clientY);
+        if (!pd) return;
+        cancelActiveSweep();
+        setX(clampToVisible(pd.dataX, xRef.current, exprRef.current, winRef.current, polesRef.current));
       };
       const onDown = (e: PointerEvent): void => {
+        if (!exprRef.current) return; // nothing to drag until a function is plotted
         const pd = pointerToData(handle.instance, target, e.clientX, e.clientY);
         const fxv = evalAt(exprRef.current, xRef.current);
         const pinnedY = pinToWindow(fxv, winRef.current).drawY;
@@ -235,11 +250,11 @@ export default function FunctionExplorer(): React.JSX.Element {
           getScene: () => sceneRef.current,
           onViewChange: (w) => {
             if (disposed) return;
-            // A user zoom/pan cancels any running sweep [G5] and re-syncs the view.
             if (rafRef.current !== null) {
               cancelAnimationFrame(rafRef.current);
               rafRef.current = null;
             }
+            sweepPathRef.current = null;
             setSweep(null);
             setDisplayWindow(w);
           },
@@ -275,14 +290,13 @@ export default function FunctionExplorer(): React.JSX.Element {
     handleRef.current?.redraw();
   }, [x, sweep, showWall, showFloor, asymptotes, displayWindow, endNeg, endPos, dark]);
 
-  // [G4] Re-seat the point off any new pole / out-of-branch when expr or window changes.
+  // Re-seat the point onto the visible curve when the function or window changes.
   useEffect(() => {
-    setX((prev) => resolveX(prev, poles, displayWindow, epsilon));
-    // poles/epsilon derive from expr+displayWindow, so those two deps suffice.
+    if (!hasFunction) return;
+    setX((prev) => resolveVisibleX(expr, prev, displayWindow, poles));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expr, displayWindow]);
 
-  // Cancel any in-flight animation on unmount.
   useEffect(
     () => () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -290,7 +304,7 @@ export default function FunctionExplorer(): React.JSX.Element {
     [],
   );
 
-  // Coalesced screen-reader announcement — settles after interaction stops [G7].
+  // Coalesced screen-reader announcement — settles after interaction stops.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
     const id = setTimeout(() => setAnnounced(`${readout.headline}. ${readout.note}`), READOUT_SETTLE_MS);
@@ -341,10 +355,19 @@ export default function FunctionExplorer(): React.JSX.Element {
 
   const onSlider = (v: number): void => {
     stopSweep();
-    setX(clampDragX(v, xRef.current, poles, displayWindow, epsilon));
+    setX(clampToVisible(v, xRef.current, expr, displayWindow, poles));
   };
 
-  const step = (displayWindow.xMax - displayWindow.xMin) / 1000;
+  const sliderStep = (displayWindow.xMax - displayWindow.xMin) / 1000;
+
+  const fxDisplay =
+    !hasFunction || pin === 'undefined' || fx === null
+      ? '—'
+      : pin === 'top'
+        ? '→ ∞'
+        : pin === 'bottom'
+          ? '→ −∞'
+          : formatNumber(fx);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -363,7 +386,7 @@ export default function FunctionExplorer(): React.JSX.Element {
               type="text"
               inputMode="text"
               autoComplete="off"
-              placeholder="1/x^2"
+              placeholder="Enter a function, e.g. 1/x^2"
               value={exprInput}
               onChange={(e) => setExprInput(e.target.value)}
               onKeyDown={(e) => {
@@ -384,14 +407,15 @@ export default function FunctionExplorer(): React.JSX.Element {
         <Card className="gap-3 p-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="x-slider">x</Label>
-            <span className="font-mono text-sm tabular-nums">{formatNumber(x)}</span>
+            <span className="font-mono text-sm tabular-nums">{hasFunction ? formatNumber(x) : '—'}</span>
           </div>
           <Slider
             id="x-slider"
             aria-label="x value"
+            disabled={!hasFunction}
             min={displayWindow.xMin}
             max={displayWindow.xMax}
-            step={step}
+            step={sliderStep}
             value={[x]}
             onValueChange={([v]) => onSlider(v)}
           />
@@ -401,39 +425,34 @@ export default function FunctionExplorer(): React.JSX.Element {
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
             <span>
-              x = <span className="font-mono text-foreground tabular-nums">{formatNumber(x)}</span>
+              x = <span className="font-mono text-foreground tabular-nums">{hasFunction ? formatNumber(x) : '—'}</span>
             </span>
             <span>
-              f(x) ={' '}
-              <span className="font-mono text-foreground tabular-nums">
-                {pin === 'undefined' || fx === null
-                  ? 'undefined'
-                  : pin === 'top'
-                    ? '→ ∞'
-                    : pin === 'bottom'
-                      ? '→ −∞'
-                      : formatNumber(fx)}
-              </span>
+              f(x) = <span className="font-mono text-foreground tabular-nums">{fxDisplay}</span>
             </span>
           </div>
         </Card>
 
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Animate a limit</h3>
-          <div className="flex flex-wrap gap-2">
-            {sweepButtons.map((b) => (
-              <Button
-                key={b.label}
-                type="button"
-                size="sm"
-                variant={sweepEq(sweep, b.sweep) ? 'default' : 'outline'}
-                aria-pressed={sweepEq(sweep, b.sweep)}
-                onClick={() => startSweep(b.sweep)}
-              >
-                {b.label}
-              </Button>
-            ))}
-          </div>
+          {hasFunction ? (
+            <div className="flex flex-wrap gap-2">
+              {sweepButtons.map((b) => (
+                <Button
+                  key={b.label}
+                  type="button"
+                  size="sm"
+                  variant={sweepEq(sweep, b.sweep) ? 'default' : 'outline'}
+                  aria-pressed={sweepEq(sweep, b.sweep)}
+                  onClick={() => startSweep(b.sweep)}
+                >
+                  {b.label}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Plot a function to animate its limits.</p>
+          )}
         </Card>
 
         <Card className="gap-3 p-4">
@@ -489,7 +508,7 @@ export default function FunctionExplorer(): React.JSX.Element {
             ref={plotRef}
             data-testid="explorer-plot"
             role="img"
-            aria-label={`Interactive graph of y = ${expr}`}
+            aria-label={hasFunction ? `Interactive graph of y = ${expr}` : 'Empty graph — no function plotted yet'}
             className="w-full"
             style={{ minHeight: 480 }}
           />

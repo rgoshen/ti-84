@@ -4,6 +4,10 @@
 **Status:** Approved — implementing on `feature/function-explorer`
 **Full plan:** `~/.claude/plans/humble-zooming-kahan.md` (two spec-gap-auditor passes; gaps G1–G11 closed)
 
+> **Revised 2026-07-04 (post-implementation, per user feedback):**
+> - **No default function.** The explorer starts empty; the user must plot a function.
+> - **Interaction model changed to "visible range."** The point rides only the *on-screen* part of the curve and **stops at the window edge** where the curve exits (or a window x-edge) — it does not pin-and-slide along the edge, and never reaches/crosses a wall (a pole sends the curve off-screen first). This replaces the wall-standoff `clampDragX`/`sweepX`/`resolveX` (and the `epsilon`/G1 concept) with `src/scripts/explorer/visible.ts` (`visibleRange`, `clampToVisible`, `sweepEndpoints`, `resolveVisibleX`). `branch.ts` keeps only the pure `branchOf` + `pinToWindow`. Sweeps animate linearly to the edge (no ease-out).
+
 ## Context
 
 `~/Downloads/reciprocal-square-explorer.html` is a standalone canvas tool that teaches limits / arrow-notation for f(x)=1/x². We want that *functionality* — generalised to **any user-entered function** — inside the Astro app, built with the **same rendering stack as the existing graphing calculator** (`function-plot` SVG + D3, not raw canvas). It becomes the first entry in a new **Explorers** section.

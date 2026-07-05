@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { branchOf, pinToWindow, clampDragX, resolveX, sweepX } from './branch';
+import { branchOf, pinToWindow } from './branch';
 import type { Window2D } from '@/scripts/graphing/math';
 
 const WIN: Window2D = { xMin: -4, xMax: 4, yMin: -1, yMax: 7 };
-const EPS = 0.02;
 
 describe('branchOf — the open interval between neighbouring walls / window edges', () => {
   it('bounds the right branch of a single pole by the pole and the x-edge', () => {
@@ -35,7 +34,7 @@ describe('branchOf — the open interval between neighbouring walls / window edg
   });
 });
 
-describe('pinToWindow — the off-page clamp (the anti-clip rule)', () => {
+describe('pinToWindow — the drawing-time window clamp', () => {
   it('leaves an on-screen value untouched', () => {
     expect(pinToWindow(1, WIN)).toEqual({ drawY: 1, status: 'onscreen' });
   });
@@ -48,116 +47,13 @@ describe('pinToWindow — the off-page clamp (the anti-clip rule)', () => {
     expect(pinToWindow(-100, WIN)).toEqual({ drawY: -1, status: 'bottom' });
   });
 
-  it('treats +Infinity as the top edge', () => {
-    expect(pinToWindow(Infinity, WIN)).toEqual({ drawY: 7, status: 'top' });
+  it('treats +Infinity as the top edge and -Infinity as the bottom', () => {
+    expect(pinToWindow(Infinity, WIN).status).toBe('top');
+    expect(pinToWindow(-Infinity, WIN).status).toBe('bottom');
   });
 
-  it('treats -Infinity as the bottom edge', () => {
-    expect(pinToWindow(-Infinity, WIN)).toEqual({ drawY: -1, status: 'bottom' });
-  });
-
-  it('reports an undefined value (null) as undefined', () => {
+  it('reports null / NaN as undefined', () => {
     expect(pinToWindow(null, WIN).status).toBe('undefined');
-  });
-
-  it('reports NaN as undefined', () => {
     expect(pinToWindow(NaN, WIN).status).toBe('undefined');
-  });
-});
-
-describe('clampDragX — THE BUG FIX: a drag can never cross a wall', () => {
-  it('dragging left from the right branch toward the wall stops at the wall, never crossing', () => {
-    // point on the right branch of a pole at 0; user drags far left (past the wall)
-    const x = clampDragX(-3, 1, [0], WIN, EPS);
-    expect(x).toBeCloseTo(EPS); // stops just right of the wall
-    expect(x).toBeGreaterThan(0); // NEVER teleports to the left branch
-  });
-
-  it('dragging right from the left branch stops just left of the wall', () => {
-    const x = clampDragX(3, -1, [0], WIN, EPS);
-    expect(x).toBeCloseTo(-EPS);
-    expect(x).toBeLessThan(0);
-  });
-
-  it('confines a middle branch between both walls', () => {
-    expect(clampDragX(5, 0, [-2, 2], WIN, EPS)).toBeCloseTo(2 - EPS);
-    expect(clampDragX(-5, 0, [-2, 2], WIN, EPS)).toBeCloseTo(-2 + EPS);
-  });
-
-  it('with no poles, clamps only to the window edges', () => {
-    expect(clampDragX(99, 0, [], WIN, EPS)).toBeCloseTo(WIN.xMax - EPS);
-    expect(clampDragX(-99, 0, [], WIN, EPS)).toBeCloseTo(WIN.xMin + EPS);
-  });
-
-  it('passes an in-branch target through unchanged', () => {
-    expect(clampDragX(2, 1, [0], WIN, EPS)).toBe(2);
-  });
-
-  it('[G11] returns the midpoint for a branch narrower than 2·epsilon', () => {
-    // two poles closer together than the standoff (e.g. tan(x) zoomed out)
-    expect(clampDragX(1.0, 1.0, [0.99, 1.01], WIN, EPS)).toBeCloseTo(1.0);
-    expect(clampDragX(5, 1.0, [0.99, 1.01], WIN, EPS)).toBeCloseTo(1.0);
-  });
-});
-
-describe('resolveX — re-clamp the point when the function/window changes [G4]', () => {
-  it('nudges a point sitting exactly on a new pole off the wall', () => {
-    // e.g. switching x^2 (point at x=0) -> 1/x (pole now at 0)
-    const x = resolveX(0, [0], WIN, EPS);
-    expect(x).not.toBe(0);
-    expect(Math.abs(x)).toBeGreaterThanOrEqual(EPS - 1e-9);
-  });
-
-  it('nudges a point within epsilon of a wall to the same side it was on', () => {
-    expect(resolveX(-0.01, [0], WIN, EPS)).toBeCloseTo(-EPS);
-    expect(resolveX(0.01, [0], WIN, EPS)).toBeCloseTo(EPS);
-  });
-
-  it('leaves an already-valid point where it is', () => {
-    expect(resolveX(3, [0], WIN, EPS)).toBe(3);
-  });
-
-  it('pulls an out-of-window point back inside', () => {
-    expect(resolveX(99, [], WIN, EPS)).toBeCloseTo(WIN.xMax - EPS);
-  });
-});
-
-describe('sweepX — the animated limit walk (also honours the no-cross rule)', () => {
-  it('approaches a wall from the left, stopping at a−epsilon and never crossing', () => {
-    const s = { kind: 'approach', a: 0, side: '-' } as const;
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(-EPS);
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeLessThan(0);
-    expect(sweepX(0.5, s, WIN, [0], EPS)).toBeLessThan(0); // stays on the left branch throughout
-    // starts far from the wall and walks toward it
-    expect(sweepX(0, s, WIN, [0], EPS)).toBeLessThan(sweepX(1, s, WIN, [0], EPS));
-  });
-
-  it('approaches a wall from the right, stopping at a+epsilon', () => {
-    const s = { kind: 'approach', a: 0, side: '+' } as const;
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(EPS);
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeGreaterThan(0);
-    expect(sweepX(0.5, s, WIN, [0], EPS)).toBeGreaterThan(0);
-  });
-
-  it('sweeps toward the +∞ edge (x → xMax) on the rightmost branch', () => {
-    const s = { kind: 'end', dir: 'pos' } as const;
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(WIN.xMax - EPS);
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeGreaterThan(0); // rightmost branch of a pole at 0
-  });
-
-  it('sweeps toward the −∞ edge (x → xMin) on the leftmost branch', () => {
-    const s = { kind: 'end', dir: 'neg' } as const;
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeCloseTo(WIN.xMin + EPS);
-    expect(sweepX(1, s, WIN, [0], EPS)).toBeLessThan(0);
-  });
-
-  it('eases out — by half-time it is already most of the way to the wall (so it lingers on the edge)', () => {
-    // Approaching x = 0 from the right: from ≈ 3.98 down to +EPS. With linear
-    // pacing, sweepX(0.5) ≈ 2.0; ease-out puts it far nearer the wall, giving the
-    // steep near-wall / along-edge segment much more of the animation time.
-    const s = { kind: 'approach', a: 0, side: '+' } as const;
-    const half = sweepX(0.5, s, WIN, [0], EPS);
-    expect(half).toBeGreaterThan(0); // still on the right branch
-    expect(half).toBeLessThan(1); // well past the linear midpoint, close to the wall
   });
 });
