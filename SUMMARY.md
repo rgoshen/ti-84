@@ -515,3 +515,19 @@ A mature, automated release pipeline reduces manual effort and human error, and 
 **References:**
 - Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
 - TODO.md: 2026-06-30 Feature: CI/CD pipeline (semantic-release + GHCR)
+
+## [2026-07-04 19:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — theme palette
+
+**Summary:**
+Added `explorerColors(dark)` + the `ExplorerColors` interface to `src/scripts/graphing/theme.ts` — the overlay palette (curve, wall, floor, arrow, point, pointStroke) for the new Function Explorer, with a dark (bright chart hues on near-black) and light (original reciprocal-square palette on white) variant. Extended `theme.test.ts` (TDD, red→green): curve/wall/floor/arrow each clear 3:1 non-text contrast (WCAG 1.4.11) against the plot background in both themes, the point is visible against the background, and its halo separates it from the curve. Also scaffolded the feature docs: TODO.md entry and `docs/superpowers/specs/2026-07-04-function-explorer-design.md`.
+
+**Rationale:**
+Palette + contrast math lives in the single already-tested `theme.ts` module (its stated charter) rather than a new file, so all colour decisions stay in one WCAG-validated place. Full-opacity overlay marks are held to the 3:1 non-text threshold in both themes so the explorer is legible in dark mode — the app's known weak spot.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
+- Plan slice 1 of 11

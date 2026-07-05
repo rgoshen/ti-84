@@ -241,3 +241,31 @@ Automate testing, building, versioning, changelog generation, and Docker image p
 
 **References:**
 - Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
+
+## [2026-07-04] Feature: Function Explorer (limits & asymptotes)
+
+**Objective:**
+Add a new **Explorers** section whose first entry is a **Function Explorer**: type any function and explore its limit / asymptote behaviour interactively — drag a point along the curve, an x-slider, a live arrow-notation readout (`x → a⁻, f(x) → ∞`), animated limit sweeps toward auto-detected vertical asymptotes and `x→±∞`, and wall/floor/grid toggles. Generalises the standalone `reciprocal-square-explorer.html` (f(x)=1/x²) to any user expression, built on the app's existing **function-plot (SVG)** stack (not raw canvas). Core fix vs the original: the dragged point **pins at the window edge and never teleports across a vertical asymptote to the other branch**.
+
+**Approach:**
+- Pure, node-tested modules under `src/scripts/explorer/`: `limits.ts` (vertical-asymptote detection + end-behaviour classification), `branch.ts` (`branchOf`, `clampDragX` — the anti-teleport fix, `pinToWindow`, `sweepX`, `resolveX`), `notation.ts` (arrow-notation readout). Reuse `@/scripts/graphing/math` (`evalAt`, `bisect`).
+- Extend `graphing/theme.ts` with `explorerColors(dark)` (WCAG-validated in both themes); export shared `plot.ts` helpers (`applyThemeToPlot`, `boldZeroAxes`, `asNumericScale`) for reuse.
+- `src/scripts/explorer/render.ts`: function-plot wrapper (`disableZoom:false`) with a persistent SVG overlay in `g.canvas` (draggable point, sweep trail+arrowhead, dashed walls/floors) positioned via `instance.meta.xScale/yScale`, plus `on('all:zoom')` re-sync.
+- `src/components/explorer/FunctionExplorer.tsx`: React island mirroring `GraphingCalculator` patterns (MutationObserver theme sync, `appliedWindow`/`displayWindow` split, mathjs validation). Pointer arbitration (drag-on-point moves the point, drag-elsewhere pans, wheel zooms); decoupled rAF sweep loop; shadcn `Slider` (new `src/components/ui/slider.tsx` over `radix-ui` — no new dep); coalesced `aria-live` readout.
+- Explorers section: `src/pages/explorers/index.astro` (hub) + `function.astro`; Header 'Explorers' nav link (+ child-route active state); home landing card; config titles. `epsilon = 0.5%·(xMax−xMin)`, recomputed on window/zoom change.
+
+**Tests:**
+- Vitest (TDD-first, per slice): `limits.test.ts` (odd/even/multiple/no asymptote; `sin(x)/x` removable rejected; per-side end-behaviour), `branch.test.ts` (`clampDragX` never crosses a wall; degenerate narrow branch → midpoint; `resolveX` off-pole re-clamp; pin top/bottom/undefined; `sweepX` stops at wall/edge), `notation.test.ts` (wall/edge/value precedence, bands, tie-break), `theme.test.ts` extended (explorer palette ≥3:1 both themes).
+- Playwright e2e (`tests/e2e/explorer.spec.ts`): default `1/x^2` renders; slider near 0 → `x→0⁺, f(x)→∞`; anti-teleport (drag never jumps branch); edge-pin at top inset; auto-detected sweep buttons + stop-at-wall; `tan(x)` many walls / `x^2` none; drag-vs-pan arbitration; wheel-zoom re-detects; dark boot+toggle; nav `aria-current`; `role="status"` readout + keyboard slider.
+
+**Risks & Tradeoffs:**
+- Heuristic asymptote detection can alias on oscillating functions (`sin(1/x)`); degrade gracefully (cap count; a missed pole just omits a button — drag/pin still work). Removable discontinuities rejected via a divergence probe.
+- Pointer arbitration must cooperate with function-plot's internal d3-drag; prototyped first (spike) with a `disableZoom`-toggle fallback.
+- Exporting helpers from `plot.ts` is visibility-only; guarded by existing graphing suites + a re-export smoke test.
+- Shared `Header` `isActive` change (child-route match) guarded by an e2e assertion so existing links don't double-highlight.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Source (functionality reference only): `~/Downloads/reciprocal-square-explorer.html`
+
+**Status:** In progress on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed).

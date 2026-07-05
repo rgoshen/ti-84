@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   themeColors,
+  explorerColors,
   hexToRgb,
   blendOver,
   lineContrast,
@@ -69,4 +70,34 @@ describe('dark mode is at least as legible as light (the reported asymmetry)', (
       lineContrast(light.axis, light.axisOpacity, light.bg),
     );
   });
+});
+
+describe('explorer palette legibility (Function Explorer)', () => {
+  // Non-text graphical elements must clear WCAG 1.4.11 (3:1) against the plot
+  // background. Unlike the low-opacity gridlines, these overlay marks are drawn
+  // at full opacity, so contrast is measured at opacity 1.
+  const NON_TEXT_MIN_CONTRAST = 3.0;
+  const MARK_KEYS = ['curve', 'wall', 'floor', 'arrow'] as const;
+
+  for (const dark of [true, false] as const) {
+    const label = dark ? 'dark' : 'light';
+    const c = explorerColors(dark);
+    const bg = themeColors(dark).bg;
+
+    for (const key of MARK_KEYS) {
+      it(`${label}: ${key} clears 3:1 non-text contrast against the background`, () => {
+        expect(lineContrast(c[key], 1, bg)).toBeGreaterThanOrEqual(NON_TEXT_MIN_CONTRAST);
+      });
+    }
+
+    it(`${label}: the draggable point is clearly visible against the background`, () => {
+      expect(lineContrast(c.point, 1, bg)).toBeGreaterThanOrEqual(NON_TEXT_MIN_CONTRAST);
+    });
+
+    it(`${label}: the point's halo separates it from the curve it rides`, () => {
+      // The point sits on the curve; its stroke ring must contrast with the
+      // curve colour so the dot's outline reads.
+      expect(lineContrast(c.pointStroke, 1, c.curve)).toBeGreaterThanOrEqual(1.5);
+    });
+  }
 });
