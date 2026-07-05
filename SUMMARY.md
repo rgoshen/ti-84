@@ -623,3 +623,20 @@ Built (5 pages) and driven headless: 0 console errors; point renders and pins; `
 
 **References:**
 - Plan slices 9–10 of 11
+
+## [2026-07-04 19:47] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — end-to-end tests
+
+**Summary:**
+Added `tests/e2e/explorer.spec.ts` (7 Playwright tests): default `1/x^2` renders with the four auto-detected limit buttons; **the anti-teleport bug fix via a real mouse drag** (grab the point, drag 400px past the wall — reported x stays ≥ 0, never jumps branch, and pins to the top edge); a limit sweep animates and stops on the correct side; **pointer arbitration** (a drag on the point moves it without panning, a drag on the background pans the window); asymptote detection follows the function (`tan(x)` → per-side wall buttons, `x^2` → none); the aria-live status region carries the arrow text and the slider is keyboard-operable; and the Explorers nav link is `aria-current` on the explorer page.
+
+**Rationale:**
+Playwright's real pointer events exercise the capture-phase arbitration and `setPointerCapture` path that a synthetic `dispatchEvent` can't — so the drag-vs-pan and anti-teleport guarantees are verified against the actual library, not a mock.
+
+**Verification:**
+Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing); the shared `Header.isActive` change did not regress existing nav/e2e.
+
+**References:**
+- Plan slice 11 of 11
