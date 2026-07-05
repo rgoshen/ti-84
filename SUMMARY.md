@@ -531,3 +531,18 @@ Palette + contrast math lives in the single already-tested `theme.ts` module (it
 - Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
 - TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
 - Plan slice 1 of 11
+
+## [2026-07-04 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — branch geometry (anti-teleport fix)
+
+**Summary:**
+Added pure, node-tested `src/scripts/explorer/branch.ts` (+ `branch.test.ts`, 24 tests, TDD): `branchOf` (the open interval between neighbouring walls/window edges), `pinToWindow` (the off-page clamp reporting top/bottom/undefined status), `clampDragX` (**the core bug fix** — a drag stays inside the branch it's on and can never cross a vertical asymptote to the other side; a branch narrower than 2·epsilon collapses to its midpoint [G11]), and `resolveX` (re-seats the point off a new pole / back in-window when the function or window changes [G4]). All in data coordinates on `poles: number[]`, decoupled from asymptote detection.
+
+**Rationale:**
+The user's headline requirement — "drag toward the wall pins at the edge and never teleports to the other branch" — is isolated into a single pure function (`clampDragX`) reused by the drag, slider, and animation sweeps, so it's fixed in exactly one tested place. Branch logic needs only wall x-positions, not their blow-up signs, so it takes `number[]` and stays independent of `limits.ts`.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Plan slices 2–3 of 11
