@@ -578,3 +578,17 @@ Reusing `clampDragX` for the animation (not just the drag) means the "never cros
 
 **References:**
 - Plan slice 5 of 11
+
+## [2026-07-04 19:31] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — arrow-notation readout
+
+**Summary:**
+Added pure `src/scripts/explorer/notation.ts` (+ `notation.test.ts`, 8 tests, TDD): `describeReadout(ReadoutInput)` and the `formatApproach`/`formatInfinity`/`formatLimitValue`/`toSuperscript` formatters. Precedence: nearest wall within the wall band (one-sided arrow from its blow-up sign, tie-break smaller x) → x-edge end-behaviour message → plain `f(x)=value`. A pinned-off-screen point renders `→ ∞`/`→ −∞` instead of a clipped number; an `unknown` tail gets a neutral "keeps oscillating" note, not a false arrow. Reuses `formatNumber` from `hover.ts`.
+
+**Rationale:**
+This is both the teaching payload and the accessible text (destined for an aria-live region), so it's a pure function with the display precedence pinned by tests — the DOM layer just renders its two strings. Full unit suite now 86 green.
+
+**References:**
+- Plan slice 6 of 11
