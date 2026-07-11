@@ -834,3 +834,21 @@ Brainstormed (2 clickable decisions), then audited with **spec-gap-auditor** bef
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (gaps G1–G7)
 - Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md (5 tasks; Task 5 is a mandatory visual + perf gate)
+
+## [2026-07-11 16:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Both Explorers — points toggle & value table
+
+**Summary:**
+Brought the graphing calculator's two missing features into **both** explorers. **Show points** marks every whole-number gridline crossing on the curve (reusing `gridlineCrossings`); a **value table** under each plot lists every integer x in the current window (`integerXs`) with `—` where the function is undefined. The Function Explorer gets one `f(x)` column; the **Transformation Explorer covers both curves** — markers on the parent (`ghost`) and the transformed (`curve`), and columns `x | f(x) | g(x)`, so the transformation reads numerically as well as visually. Points default off; on/off toggle only (no shape picker — the explorers have a fixed 1–2 curves already separated by colour and solid-vs-dashed). Exported `plot.ts`'s private `makeMarker` and added one shared, purely-presentational `ValueTable` component.
+
+**Rationale:**
+Follows the codebase's "islands decide, renderers draw" rule: the islands compute and **memoise** the crossings and table values and pass precomputed data down, so neither the renderers nor `ValueTable` ever call `evalAt` (which re-parses its expression on every call). That single decision is what keeps a slider drag cheap. "Show parent" governs the **plot only** — the `f(x)` column always shows, because the table is data, not decoration.
+
+**Verification (all measured, not assumed):**
+36 Playwright e2e (4 new, no regressions), 103 Vitest, `astro check` 0 errors, build clean. **Perf gate:** a real-cursor drag of the `a` slider with points ON sustained **121 fps** over 1.1 s (134 frames) — smooth. **Zoom:** settles (marker count stable across 700 ms) and recomputes crossings for the new window — no render loop. **Visual:** screenshotted both explorers with points on; markers sit on the curves in the right colours, the draggable point stays distinct, and the tables render correct values (`1/x^2` → `—` at x=0, `0.25` at x=±2; with k=−3, g = f − 3 across every row).
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (G1–G7 closed)
+- Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md

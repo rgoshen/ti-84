@@ -286,6 +286,22 @@ Parent-series dashing depends on function-plot's `g.graph` datum order (verified
 
 **Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (gaps G1–G9 closed) → 9-task TDD plan executed subagent-driven with per-task review. Final: 9/9 transformation e2e, 24/24 full e2e, 102/102 Vitest, astro check clean, build emits 6 pages.
 
+## [2026-07-11] Feature: Points toggle & value table in both Explorers
+
+**Objective:**
+Give both Explorers the two features the Graphing Calculator already had: a **Show points** toggle (markers at every whole-number gridline crossing) and a **value table** (one row per integer x in the current window). In the Transformation Explorer both curves are covered — markers on the parent and the transformed, and table columns `x | f(x) | g(x)` — so a transformation can be read numerically, not just seen.
+
+**Approach:**
+Reuse `gridlineCrossings` / `integerXs` / `evalAt`; export `plot.ts`'s private `makeMarker` so both explorers draw identical circle markers; add one shared, purely-presentational `ValueTable` component (real `<table>`, `scope="col"` headers). Islands compute and memoise the crossings + table values and pass **precomputed** data down — renderers and the table contain no math, which keeps `evalAt` (it re-parses on every call) out of the render path. Points default off; on/off toggle only. "Show parent" hides the parent's curve and markers but **not** its table column.
+
+**Tests:**
+4 new Playwright e2e: Function Explorer (checkbox disabled + empty table with no function; markers appear on toggle; `1/x^2` at x=2 → 0.25; `scope="col"` headers) and Transformation Explorer (markers on both curves; hiding the parent drops its markers but keeps its column; k=+2 → every g(x) = f(x) + 2). Plus a measured perf gate and a visual check.
+
+**Risks & Tradeoffs:**
+`evalAt` re-parses per call, so recomputing crossings during a slider drag was the main risk — mitigated by memoising in the island and measured at **121 fps** during a real drag with points on. Table rows are uncapped (mirrors graph); container scrolls. The graphing calculator was deliberately NOT refactored onto the shared `ValueTable` (shipped code, out of scope) — optional follow-up.
+
+**Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (G1–G7 closed) → 5-task plan → implemented, with the visual + perf gate passed. 36 e2e, 103 Vitest, astro check clean.
+
 ## [2026-07-11] Fix: Accessible name missing on shadcn Slider thumbs
 
 **Objective:**
