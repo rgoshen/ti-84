@@ -718,3 +718,25 @@ Grounded the plan in verified codebase facts: function-plot classes each series 
 **References:**
 - Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md
 - Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
+
+## [2026-07-11 15:00] Commit Summary
+
+**Change Type:** Test
+**Scope:** Transformation Explorer — end-to-end coverage (Task 8 of the implementation plan)
+
+**Summary:**
+Added `tests/e2e/transformation.spec.ts` (9 Playwright tests) covering the Transformation Explorer against the production build: default dashed-parent/solid-child render, slider-driven readout updates, reflect-toggle sign flip + `aria-pressed`, reset-to-identity, parent switching + reframing, custom `f(x)` plotting, the `b = 0` degenerate-collapse message, Explorers nav `aria-current`, and dark mode. Several `getByText(...)` assertions from the brief were scoped to `page.locator('li').filter({ hasText })` — the readout text is duplicated by a debounced `role="status"` live-region echo (and, for the identity message, also by the intro paragraph and picker label), which otherwise trips Playwright's strict-mode multi-match or races the 250ms debounce.
+
+**Rationale:**
+Kept every assertion accessible-name-first per the brief (`getByRole('slider', { name: ... })`, `getByRole('button', { name: ... })`) rather than falling back to CSS/id selectors, since that is what actually proves the controls are usable by assistive technology — the whole point of the gate.
+
+**Bug Fix Context (if applicable):**
+Not a fix — a finding. 2 of 9 tests ("moving a slider updates the readout", "b = 0 explains the collapse") fail (fast, 10s) because `getByRole('slider', { name })` never matches: `src/components/ui/slider.tsx` spreads `aria-label`/`id` onto `SliderPrimitive.Root` (a plain, roleless `<span>`), not `SliderPrimitive.Thumb` (the element that actually carries `role="slider"`). ARIA does not propagate `aria-label` from an ancestor to a descendant role, so every slider thumb in the app — this component's a/b/h/k here, and the Function Explorer's "x value" slider — has **no accessible name**, a WCAG 2.1 SC 4.1.2 (Name, Role, Value) failure. Verified with a throwaway diagnostic spec that the underlying *functional* behavior is correct (arrow keys do move the value and update the readout) — only the accessible name is missing. Left the two tests red on purpose per the task's explicit instruction not to weaken assertions to force a green run; tracked as a new TODO.md entry for follow-up.
+
+**Verification:**
+`npm run test:e2e -- transformation`: 7 passed, 2 failed (deterministic across 3 repeat runs — not flaky). Full `npm run test:e2e`: 22 passed, 2 failed, no regressions in `explorer.spec.ts`/`graphing.spec.ts`. `npm test`: 102 Vitest passed. `npm run astro -- check`: 0 errors/warnings. `npm run build`: 6 pages.
+
+**References:**
+- TODO.md: Fix — Accessible name missing on shadcn Slider thumbs
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Task 8)
+- Report: .superpowers/sdd/task-8-report.md

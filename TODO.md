@@ -269,3 +269,17 @@ Add a new **Explorers** section whose first entry is a **Function Explorer**: ty
 - Source (functionality reference only): `~/Downloads/reciprocal-square-explorer.html`
 
 **Status:** Done on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed). Pure logic TDD'd across 6 modules; function-plot renderer + island with pointer arbitration; new Explorers section. Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing, no regressions). Verified headless (0 console errors; anti-teleport, sweeps, arbitration, dark mode).
+
+## [2026-07-11] Fix: Accessible name missing on shadcn Slider thumbs
+
+**Objective:**
+`src/components/ui/slider.tsx` spreads `{...props}` (including `aria-label`, `id`) onto `SliderPrimitive.Root`, a plain `<span>` with no ARIA role. The actual interactive element — `SliderPrimitive.Thumb`, which carries `role="slider"` — receives no accessible name. This is a WCAG 2.1 SC 4.1.2 (Name, Role, Value) failure: every slider in the app (Transformation Explorer's a/b/h/k, Function Explorer's "x value") is unlabelled for assistive technology and fails `getByRole('slider', { name })` queries. Discovered while writing `tests/e2e/transformation.spec.ts` (Task 8 of the Transformation Explorer plan) — see `.superpowers/sdd/task-8-report.md` for the full diagnosis, including confirmation that the underlying slider *functionality* (value changes, readout updates) is correct and unaffected.
+
+**Approach:**
+Forward `aria-label`/`aria-labelledby` (and any other `Thumb`-relevant ARIA props) from the `Slider` wrapper's props onto `SliderPrimitive.Thumb` instead of (or in addition to) `Root`. For a single-thumb slider a plain `aria-label` prop threaded to the one `Thumb` is sufficient; Radix's docs pattern for multi-thumb sliders takes an array of labels — not needed here since every current usage is single-thumb. Needs manual verification (or an e2e assertion) that both `FunctionExplorer.tsx`'s "x value" slider and `TransformationExplorer.tsx`'s a/b/h/k sliders still resolve by name after the change.
+
+**Tests:**
+Re-enable the two currently-red assertions in `tests/e2e/transformation.spec.ts` (`getByRole('slider', { name: /k — vertical shift/i })`, `getByRole('slider', { name: /b — horizontal stretch/i })`) as the acceptance check — no new test file needed. Also add an equivalent named-role query to `tests/e2e/explorer.spec.ts` for the Function Explorer's slider (currently queried by bare `[role="slider"]`, which never caught this).
+
+**Risks & Tradeoffs:**
+`slider.tsx` is a shared primitive used by both explorers — verify the visual/`data-slot` styling hooks (`slider-thumb` class, focus ring) are unaffected by moving the prop. Low risk, single-file change, but touches every existing slider consumer.
