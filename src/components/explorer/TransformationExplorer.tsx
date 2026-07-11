@@ -2,10 +2,12 @@ import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { evaluate } from 'mathjs';
 
-import type { Window2D } from '@/scripts/graphing/math';
+import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
-import { describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
+import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
 import { PARENTS, parentById } from '@/scripts/explorer/parents';
+import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +43,7 @@ export default function TransformationExplorer(): React.JSX.Element {
   const [fields, setFields] = useState<WindowFields>(() => windowToFields(PARENTS[0].window));
   const [showParent, setShowParent] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showPoints, setShowPoints] = useState(false);
   const [dark, setDark] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true,
   );
@@ -50,6 +53,40 @@ export default function TransformationExplorer(): React.JSX.Element {
   const viewRef = useRef<Window2D>(appliedWindow); // latest view (preserves zoom on coeff change)
 
   const readout = useMemo(() => describeTransform(coeffs, parentLabel), [coeffs, parentLabel]);
+
+  // Points + table data are computed HERE and passed down precomputed: `evalAt` re-parses its
+  // expression on every call, so it must stay out of the renderer's and the table's render path.
+  const eColors = useMemo(() => explorerColors(dark), [dark]);
+  const composed = useMemo(() => (baseExpr ? composeExpr(baseExpr, coeffs) : ''), [baseExpr, coeffs]);
+
+  // Parent MARKERS follow `showParent`; the parent COLUMN below deliberately does not.
+  const parentPoints = useMemo(
+    () => (showPoints && showParent && baseExpr ? gridlineCrossings(baseExpr, displayWindow) : []),
+    [showPoints, showParent, baseExpr, displayWindow],
+  );
+  const transformedPoints = useMemo(
+    () => (showPoints && composed ? gridlineCrossings(composed, displayWindow) : []),
+    [showPoints, composed, displayWindow],
+  );
+
+  const tableXs = useMemo(() => integerXs(displayWindow), [displayWindow]);
+  const tableColumns = useMemo<ValueColumn[]>(
+    () => [
+      {
+        key: 'fx',
+        header: `f(x) = ${parentLabel}`,
+        color: eColors.ghost,
+        values: tableXs.map((x) => evalAt(baseExpr, x)),
+      },
+      {
+        key: 'gx',
+        header: 'g(x)',
+        color: eColors.curve,
+        values: tableXs.map((x) => evalAt(composed, x)),
+      },
+    ],
+    [tableXs, baseExpr, composed, eColors, parentLabel],
+  );
 
   const setCoeff = (key: keyof Coeffs, value: number): void =>
     setCoeffs((prev) => ({ ...prev, [key]: value }));
@@ -118,6 +155,8 @@ export default function TransformationExplorer(): React.JSX.Element {
         baseExpr,
         coeffs,
         showParent,
+        parentPoints,
+        transformedPoints,
         dark,
         grid: showGrid,
         onViewChange: (w) => { viewRef.current = w; setDisplayWindow(w); },
@@ -126,7 +165,7 @@ export default function TransformationExplorer(): React.JSX.Element {
     } catch {
       setError('Could not plot that function. Check the syntax and try again.');
     }
-  }, [baseExpr, coeffs, showParent, dark, showGrid]);
+  }, [baseExpr, coeffs, showParent, parentPoints, transformedPoints, dark, showGrid]);
 
   // Redraw on any change. appliedWindow is a dep (a fresh window resets the view)
   // but displayWindow is NOT, so interactive zoom doesn't retrigger a rebuild.
@@ -257,11 +296,15 @@ export default function TransformationExplorer(): React.JSX.Element {
               <Checkbox checked={showGrid} onCheckedChange={(v) => setShowGrid(v === true)} />
               <span className="text-muted-foreground">Show grid</span>
             </label>
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <Checkbox checked={showPoints} onCheckedChange={(v) => setShowPoints(v === true)} />
+              <span className="text-muted-foreground">Show points (whole-number crossings)</span>
+            </label>
           </div>
         </Card>
       </div>
 
-      <div>
+      <div className="space-y-4">
         <Card className="overflow-hidden p-2">
           <div
             ref={plotRef}
@@ -272,6 +315,14 @@ export default function TransformationExplorer(): React.JSX.Element {
             style={{ minHeight: 480 }}
           />
         </Card>
+
+        <ValueTable
+          xs={tableXs}
+          columns={tableColumns}
+          note="f(x) and g(x) at each integer x in the window"
+          emptyMessage="No whole-number x values in this window."
+        />
+
         <div className="sr-only" role="status" aria-live="polite">{announced}</div>
       </div>
     </div>

@@ -9,12 +9,14 @@
  */
 import functionPlotDefault from 'function-plot';
 import type { FunctionPlotDatum } from 'function-plot';
-import type { Window2D } from '@/scripts/graphing/math';
-import { themeColors, explorerColors } from '@/scripts/graphing/theme';
+import type { Window2D, Point } from '@/scripts/graphing/math';
+import { themeColors, explorerColors, type ExplorerColors } from '@/scripts/graphing/theme';
 import {
   applyThemeToPlot,
   boldZeroAxes,
   asNumericScale,
+  makeMarker,
+  SVG_NS,
   type FunctionPlotInstance,
 } from '@/scripts/graphing/plot';
 import { composeExpr, type Coeffs } from './transform';
@@ -31,6 +33,9 @@ export interface TransformRenderOptions {
   baseExpr: string;
   coeffs: Coeffs;
   showParent: boolean;
+  /** Precomputed crossings; empty when the toggle is off. Parent markers obey `showParent`. */
+  parentPoints: Point[];
+  transformedPoints: Point[];
   dark: boolean;
   grid: boolean;
   onViewChange: (w: Window2D) => void;
@@ -49,8 +54,54 @@ function dashParent(target: HTMLElement, showParent: boolean): void {
   });
 }
 
+/**
+ * Whole-number gridline crossings for both curves. Cleared and rebuilt on every call, so
+ * repeated renders never stack duplicates. The class is `.transform-points`, which cannot
+ * collide with `dashParent`'s `g.graph` selector. Does no math — the island precomputes.
+ */
+function drawPoints(
+  target: HTMLElement,
+  instance: FunctionPlotInstance,
+  parentPoints: Point[],
+  transformedPoints: Point[],
+  eColors: ExplorerColors,
+): void {
+  const svg = target.querySelector('svg');
+  const xScale = asNumericScale(instance.meta.xScale);
+  const yScale = asNumericScale(instance.meta.yScale);
+  if (!svg || !xScale || !yScale) return;
+  const canvas = svg.querySelector('g.canvas') ?? svg;
+
+  canvas.querySelectorAll('.transform-points').forEach((n) => n.remove());
+  if (parentPoints.length === 0 && transformedPoints.length === 0) return;
+
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', 'transform-points');
+  const add = (pts: Point[], color: string, kind: string): void => {
+    for (const p of pts) {
+      const marker = makeMarker('circle', xScale(p.x), yScale(p.y), color);
+      marker.setAttribute('data-testid', `crossing-marker-${kind}`);
+      g.appendChild(marker);
+    }
+  };
+  add(parentPoints, eColors.ghost, 'parent');
+  add(transformedPoints, eColors.curve, 'transformed');
+  canvas.appendChild(g);
+}
+
 export function renderTransform(opts: TransformRenderOptions): TransformHandle {
-  const { target, window: win, baseExpr, coeffs, showParent, dark, grid, onViewChange } = opts;
+  const {
+    target,
+    window: win,
+    baseExpr,
+    coeffs,
+    showParent,
+    parentPoints,
+    transformedPoints,
+    dark,
+    grid,
+    onViewChange,
+  } = opts;
   const colors = themeColors(dark);
   const eColors = explorerColors(dark);
 
@@ -76,6 +127,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
   applyThemeToPlot(target, colors);
   boldZeroAxes(target);
   dashParent(target, showParent);
+  drawPoints(target, instance, parentPoints, transformedPoints, eColors);
 
   let queued = false;
   instance.on('all:zoom', () => {
@@ -91,6 +143,10 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
       applyThemeToPlot(target, colors);
       boldZeroAxes(target);
       dashParent(target, showParent);
+      // Redraw with the CURRENT (pre-zoom) crossings so markers stay on the curve during the
+      // gesture; onViewChange then updates the window, and the island recomputes them for the
+      // new view on the next render.
+      drawPoints(target, instance, parentPoints, transformedPoints, eColors);
       onViewChange({ xMin: xd[0], xMax: xd[1], yMin: yd[0], yMax: yd[1] });
     });
   });
