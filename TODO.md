@@ -270,6 +270,22 @@ Add a new **Explorers** section whose first entry is a **Function Explorer**: ty
 
 **Status:** Done on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed). Pure logic TDD'd across 6 modules; function-plot renderer + island with pointer arbitration; new Explorers section. Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing, no regressions). Verified headless (0 console errors; anti-teleport, sweeps, arbitration, dark mode).
 
+## [2026-07-11] Feature: Transformation Explorer
+
+**Objective:**
+A second Explorers-section tool at `/explorers/transformations` that makes g(x)=a·f(b(x−h))+k tangible: pick a parent function, drag a/b/h/k, and watch the transformed curve reshape live against a dashed "ghost" of the parent, with a plain-English readout naming each transformation (shift / stretch / compress / reflect).
+
+**Approach:**
+Pure logic in `parents.ts` (8-parent catalog + per-parent default windows) and `transform.ts` (`composeExpr` via mathjs node substitution; `describeTransform` narration with EPS-tolerant knob detection and degenerate-case messages). DOM in `transform-render.ts` (two native function-plot series — dashed ghost parent + solid transformed — with unconditional `on('all:zoom')` re-sync). React island `TransformationExplorer.tsx` (single-source base model: preset fills+overrides / custom Plot deselects; signed a/b sliders + reflect toggles; window controls; `role="status"` readout). Route + hub card + config title; Header unchanged (child-route match). Reuses the shipped graphing/theme/plot helpers and shadcn controls.
+
+**Tests:**
+Vitest: `parents.test.ts`, `transform.test.ts` (compose numeric-equivalence + full narration branch/degenerate/tolerance coverage), `theme.test.ts` ghost contrast. Playwright `transformation.spec.ts` (9): dashed-parent render, slider→readout, reflect toggles, reset→identity, parent switch, custom fn, b=0 collapse message, nav `aria-current`, dark mode.
+
+**Risks & Tradeoffs:**
+Parent-series dashing depends on function-plot's `g.graph` datum order (verified). No draggable point / no animation in v1 (YAGNI). E2E uncovered a shared-Slider a11y bug — fixed (see the Fix entry below).
+
+**Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (gaps G1–G9 closed) → 9-task TDD plan executed subagent-driven with per-task review. Final: 9/9 transformation e2e, 24/24 full e2e, 102/102 Vitest, astro check clean, build emits 6 pages.
+
 ## [2026-07-11] Fix: Accessible name missing on shadcn Slider thumbs
 
 **Objective:**
@@ -283,3 +299,5 @@ Re-enable the two currently-red assertions in `tests/e2e/transformation.spec.ts`
 
 **Risks & Tradeoffs:**
 `slider.tsx` is a shared primitive used by both explorers — verify the visual/`data-slot` styling hooks (`slider-thumb` class, focus ring) are unaffected by moving the prop. Low risk, single-file change, but touches every existing slider consumer.
+
+**Status:** ✅ RESOLVED (2026-07-11, commit 8fcddea). Forwarded `aria-label`/`aria-labelledby` to `SliderPrimitive.Thumb`; both explorers' sliders now resolve by accessible name (Function Explorer's "x value" slider fixed as a bonus). The two transformation e2e assertions pass (9/9 transformation, 24/24 full e2e, no regression); styling/`data-slot` hooks unaffected. Optional follow-up remaining: add a named-role query for the Function Explorer slider in `explorer.spec.ts` (currently `[role="slider"]`).

@@ -740,3 +740,25 @@ Not a fix — a finding. 2 of 9 tests ("moving a slider updates the readout", "b
 - TODO.md: Fix — Accessible name missing on shadcn Slider thumbs
 - Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Task 8)
 - Report: .superpowers/sdd/task-8-report.md
+
+## [2026-07-11 15:11] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers — Transformation Explorer (feature complete) + shared Slider a11y fix
+
+**Summary:**
+Completed the Transformation Explorer at `/explorers/transformations`: pick a parent function (or a custom f(x)), then shift/stretch/compress/reflect it with a/b/h/k sliders + reflect toggles and watch the solid transformed curve reshape live against a dashed "ghost" of the parent, with a plain-English readout naming each transformation. Delivered across 9 TDD tasks: pure modules `parents.ts` (catalog + per-parent windows) and `transform.ts` (`composeExpr` via mathjs node substitution; `describeTransform` narration with EPS-tolerant knob detection + degenerate messages); `theme.ts` `ghost` colour; `transform-render.ts` (two native function-plot series, dashed parent, unconditional zoom re-sync); the `TransformationExplorer.tsx` island (single-source base model, signed sliders, `role="status"` readout); route + hub card + config; and the `transformation.spec.ts` e2e suite. Also fixed a shared bug the e2e surfaced: `ui/slider.tsx` put `aria-label` on the roleless `SliderPrimitive.Root` instead of the `role="slider"` `Thumb`, so every slider in the app (both explorers) had no accessible name — forwarded the ARIA name to the Thumb (WCAG 2.1 SC 4.1.2).
+
+**Rationale:**
+Built as a sibling explorer (not a mode) since transformations and limits share a rendering stack but almost no UI/logic. Executed subagent-driven with a per-task spec+quality review gate. Two defects were caught by the review loop rather than shipping: the plan's `composeExpr` used an untyped mathjs node guard that failed `astro check` (fixed to `instanceof SymbolNode`), and the plan's `zoomBound` render guard broke zoom re-sync on in-place re-renders (removed; `on('all:zoom')` now registers unconditionally per `render.ts`'s proven pattern). The slider a11y fix was in scope because the feature's own WCAG-AA constraint mandates labeled sliders.
+
+**Bug Fix Context (if applicable):**
+Slider accessible-name bug root cause: shadcn wrapper spread all props (incl. `aria-label`) onto `Slider.Root`, but `role="slider"` lives on `Slider.Thumb`, and ARIA names don't inherit from ancestors. Fix forwards `aria-label`/`aria-labelledby` to the Thumb. Verified: both explorers' sliders now resolve by accessible name; no visual/regression change.
+
+**Verification:**
+9/9 Transformation e2e, 24/24 full Playwright e2e (explorer + graphing + transformation, no regressions), 102/102 Vitest unit, `astro check` 0 errors, `npm run build` emits 6 pages.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Tasks 1–9)
+- TODO.md: Feature — Transformation Explorer; Fix — Accessible name (RESOLVED)

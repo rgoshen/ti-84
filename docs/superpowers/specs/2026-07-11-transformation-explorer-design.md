@@ -53,7 +53,9 @@ Pure, DOM-free, Vitest-tested — `src/scripts/explorer/`:
   `{ id, label, expr, window }` (e.g. `{ id:'square', label:'x²', expr:'x^2',
   window:{xMin:-10,xMax:10,yMin:-2,yMax:10} }`). Pure data + a `parentById` lookup.
   Default windows `[G7]`: sin/cos → x∈[−2π,2π], y∈[−3,3]; eˣ → x∈[−3,3], y∈[−1,10];
-  √x → x∈[−2,10], y∈[−2,8]; 1/x → [−10,10]×[−10,10]; x²/x³/|x| → [−10,10]×[−2,10].
+  √x → x∈[−2,10], y∈[−2,8]; 1/x → [−10,10]×[−10,10]; x²/|x| → [−10,10]×[−2,10];
+  x³ → [−5,5]×[−10,10] (symmetric — frames the cubic better; corrected from the
+  earlier x²/x³/|x| grouping during implementation).
 - **`transform.ts`** — the pedagogical core (the TDD target):
   - `EPS = 1e-6` — the single tolerance for all "is this knob active?" tests `[G2]`.
   - `type Coeffs = { a; b; h; k }`.

@@ -478,6 +478,8 @@ git commit -m "feat(explorer): narrate transformations in plain English (describ
 
 > **Verification model:** like the shipped `render.ts`, this DOM module has no node unit test — it is verified by `npm run astro -- check`, the Task 8 e2e (which asserts a dashed parent path and a solid transformed path), and a live `npm run dev` check. Follow the concrete implementation below exactly.
 
+> **Correction (post-implementation, commit 0601f8d):** the `zoomBound` WeakSet guard shown in the code below was **removed** during implementation — it broke zoom re-sync on the Transformation Explorer's in-place re-renders. function-plot routes zoom events to the *latest* instance's emitter, so guarding re-subscription left the live instance without our listener (no re-theme / re-dash / `onViewChange` after the first slider move). Register `instance.on('all:zoom', …)` **unconditionally on every render**, exactly as `render.ts` does. The rest of the block is as-built.
+
 - [ ] **Step 1: Write the renderer**
 
 ```ts
