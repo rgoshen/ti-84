@@ -703,3 +703,18 @@ Design produced via the brainstorming skill (5 clickable decisions), then audite
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md
 - Continues the Explorers section (follows the shipped Function Explorer)
+
+## [2026-07-11 13:47] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers — Transformation Explorer implementation plan
+
+**Summary:**
+Added the TDD implementation plan for the Transformation Explorer: 9 tasks. Tasks 1–4 are pure, Vitest-driven red→green cycles (`parents.ts` catalog + per-parent windows; `theme.ts` `ghost` colour with contrast test; `composeExpr` with numeric-equivalence tests; `describeTransform` narration with full branch/degenerate/tolerance coverage). Tasks 5–7 are DOM integration (`transform-render.ts` two-native-series renderer that dashes the parent's `g.graph` group; `TransformationExplorer.tsx` island; route + hub card + config), gated by `astro check` + build. Task 8 is the Playwright suite; Task 9 updates SUMMARY/TODO. Every code step contains complete code.
+
+**Rationale:**
+Grounded the plan in verified codebase facts: function-plot classes each series as `<g class='graph'>` (so the parent dash is a real selector), re-calling `functionPlot()` does an in-place d3 data-join (smooth slider updates), and mathjs `parse().transform()` substitutes x safely. Renderer/island have no node unit test by design — matching the shipped `render.ts`, they are verified by e2e + a live dev check.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md
+- Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
