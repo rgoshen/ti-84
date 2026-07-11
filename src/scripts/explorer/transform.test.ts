@@ -58,6 +58,10 @@ describe('describeTransform — narration', () => {
     expect(describeTransform({ a: -1, b: 1, h: 0, k: 0 }, 'x²').steps).toEqual(['Reflected over the x-axis']);
   });
 
+  it('vertical compression uses the raw |a| factor', () => {
+    expect(describeTransform({ a: 0.5, b: 1, h: 0, k: 0 }, 'x²').steps).toEqual(['Vertical compression by factor 0.5']);
+  });
+
   it('horizontal compression vs stretch use the |b| convention', () => {
     expect(describeTransform({ a: 1, b: 2, h: 0, k: 0 }, 'x²').steps).toEqual(['Horizontal compression by factor 2']);
     expect(describeTransform({ a: 1, b: 0.5, h: 0, k: 0 }, 'x²').steps).toEqual(['Horizontal stretch by factor 2']);
