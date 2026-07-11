@@ -117,7 +117,7 @@ export function boldZeroAxes(target: HTMLElement): void {
 }
 
 /** Build one SVG marker of the given shape centered at the canvas-local pixel (cx, cy). */
-function makeMarker(shape: PointShape, cx: number, cy: number, color: string): SVGElement {
+export function makeMarker(shape: PointShape, cx: number, cy: number, color: string): SVGElement {
   const r = MARKER_RADIUS;
   let el: SVGElement;
   if (shape === 'square') {
