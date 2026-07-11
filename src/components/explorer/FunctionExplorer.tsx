@@ -2,8 +2,10 @@ import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluate } from 'mathjs';
 
-import { evalAt, type Window2D } from '@/scripts/graphing/math';
+import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
+import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import {
   renderExplorer,
   pointerToData,
@@ -70,6 +72,7 @@ export default function FunctionExplorer(): React.JSX.Element {
   const [showWall, setShowWall] = useState(true);
   const [showFloor, setShowFloor] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  const [showPoints, setShowPoints] = useState(false);
   const [sweep, setSweep] = useState<Sweep | null>(null);
   const [dark, setDark] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true,
@@ -86,6 +89,31 @@ export default function FunctionExplorer(): React.JSX.Element {
   const endNeg = useMemo(() => classifyEndBehavior(expr, 'neg'), [expr]);
   const endPos = useMemo(() => classifyEndBehavior(expr, 'pos'), [expr]);
   const poles = useMemo(() => asymptotes.map((a) => a.x), [asymptotes]);
+
+  // Points + table data are computed HERE and passed down precomputed: `evalAt` re-parses its
+  // expression on every call, so it must stay out of the renderer's and the table's render path.
+  const points = useMemo(
+    () => (showPoints && hasFunction ? gridlineCrossings(expr, displayWindow) : []),
+    [showPoints, hasFunction, expr, displayWindow],
+  );
+  const tableXs = useMemo(
+    () => (hasFunction ? integerXs(displayWindow) : []),
+    [hasFunction, displayWindow],
+  );
+  const tableColumns = useMemo<ValueColumn[]>(
+    () =>
+      hasFunction
+        ? [
+            {
+              key: 'fx',
+              header: `f(x) = ${expr}`,
+              color: explorerColors(dark).curve,
+              values: tableXs.map((x) => evalAt(expr, x)),
+            },
+          ]
+        : [],
+    [hasFunction, expr, tableXs, dark],
+  );
 
   const sweepButtons = useMemo(() => {
     if (!hasFunction) return [];
@@ -119,6 +147,7 @@ export default function FunctionExplorer(): React.JSX.Element {
     endPos,
     showWall,
     showFloor,
+    points,
     sweepTrail: sweep && sweepPathRef.current ? { fromX: sweepPathRef.current.from, leadX: x } : null,
   };
   const xRef = useRef(x);
@@ -288,7 +317,7 @@ export default function FunctionExplorer(): React.JSX.Element {
   // Redraw the overlay when any scene input changes (no plot rebuild).
   useEffect(() => {
     handleRef.current?.redraw();
-  }, [x, sweep, showWall, showFloor, asymptotes, displayWindow, endNeg, endPos, dark]);
+  }, [x, sweep, showWall, showFloor, points, asymptotes, displayWindow, endNeg, endPos, dark]);
 
   // Re-seat the point onto the visible curve when the function or window changes.
   useEffect(() => {
@@ -494,6 +523,14 @@ export default function FunctionExplorer(): React.JSX.Element {
               <Checkbox checked={showGrid} onCheckedChange={(v) => setShowGrid(v === true)} />
               <span className="text-muted-foreground">Show grid</span>
             </label>
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <Checkbox
+                checked={showPoints}
+                disabled={!hasFunction}
+                onCheckedChange={(v) => setShowPoints(v === true)}
+              />
+              <span className="text-muted-foreground">Show points (whole-number crossings)</span>
+            </label>
           </div>
           <p className="text-[11px] text-muted-foreground">
             Drag the point along the curve, or scroll to zoom and drag the background to pan.
@@ -501,8 +538,8 @@ export default function FunctionExplorer(): React.JSX.Element {
         </Card>
       </div>
 
-      {/* Plot */}
-      <div>
+      {/* Plot + value table */}
+      <div className="space-y-4">
         <Card className="overflow-hidden p-2">
           <div
             ref={plotRef}
@@ -513,6 +550,14 @@ export default function FunctionExplorer(): React.JSX.Element {
             style={{ minHeight: 480 }}
           />
         </Card>
+
+        <ValueTable
+          xs={tableXs}
+          columns={tableColumns}
+          note="y values at each integer x in the window"
+          emptyMessage="Plot a function to see its value table."
+        />
+
         <div className="sr-only" role="status" aria-live="polite">
           {announced}
         </div>

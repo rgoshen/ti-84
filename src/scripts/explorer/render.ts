@@ -11,7 +11,7 @@
 
 import functionPlotDefault from 'function-plot';
 import type { FunctionPlotDatum } from 'function-plot';
-import { evalAt, type Window2D } from '@/scripts/graphing/math';
+import { evalAt, type Window2D, type Point } from '@/scripts/graphing/math';
 import {
   themeColors,
   explorerColors,
@@ -21,6 +21,7 @@ import {
   applyThemeToPlot,
   boldZeroAxes,
   asNumericScale,
+  makeMarker,
   SVG_NS,
   type FunctionPlotInstance,
 } from '@/scripts/graphing/plot';
@@ -45,6 +46,8 @@ export interface OverlayScene {
   endPos: EndBehavior;
   showWall: boolean;
   showFloor: boolean;
+  /** Whole-number gridline crossings to mark, already computed by the island (empty = off). */
+  points: Point[];
   /** Active limit-sweep trail (start x → leading x), or null when idle. */
   sweepTrail: { fromX: number; leadX: number } | null;
 }
@@ -171,6 +174,13 @@ function drawExplorerOverlay(
       const Y = yScale(fy);
       g.appendChild(dashedLine(xLeft, Y, xRight, Y, c.floor));
     }
+  }
+
+  // Whole-number gridline crossings. Precomputed by the island — this renderer does no math.
+  for (const p of scene.points) {
+    const marker = makeMarker('circle', xScale(p.x), yScale(p.y), c.curve);
+    marker.setAttribute('data-testid', 'crossing-marker');
+    g.appendChild(marker);
   }
 
   // Animated limit-sweep trail (one polyline, per G9 — not 48 nodes) + arrowhead.
