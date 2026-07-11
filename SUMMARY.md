@@ -816,3 +816,21 @@ The existing e2e suite could not catch this: Playwright's `locator.hover()` **te
 
 **References:**
 - Reported by user during review of PR #5 ("you can't click on anything")
+
+## [2026-07-11 16:23] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers — points toggle & value table design spec
+
+**Summary:**
+Design spec for bringing the graphing calculator's two missing features into **both** explorers: a **Show points** toggle (markers at whole-number gridline crossings) and a **value table** (one row per integer x in the window). Reuses the existing `gridlineCrossings` / `integerXs` / `evalAt` helpers and exports `plot.ts`'s private `makeMarker`; adds one shared presentational `ValueTable` component. The Transformation Explorer covers both curves — markers on parent and transformed, table columns `x | f(x) | g(x)` — so the transformation is readable numerically. On/off toggle only (no shape picker); points default off.
+
+**Rationale:**
+Architecture follows the codebase's existing "islands decide, renderers draw" rule: the islands compute and memoise the crossings and table values, and pass precomputed data down, so renderers and `ValueTable` contain no math. That both removes an internal contradiction in the first draft and creates the single lever the performance risk needs (`evalAt` re-parses its expression on every call, and a slider drag re-derives the crossings each tick).
+
+**Process:**
+Brainstormed (2 clickable decisions), then audited with **spec-gap-auditor** before any code. All load-bearing claims were verified against the source (`makeMarker` is private at `plot.ts:120`; `evalAt` re-parses per call; `gridlineCrossings`/`integerXs` are already unit-tested; graph's table has zero `scope=` attributes). Seven gaps (G1–G7) surfaced and closed; the one product decision (does hiding the parent curve also drop its table column? — no, the table keeps `f(x)`) was resolved with the user.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (gaps G1–G7)
+- Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md (5 tasks; Task 5 is a mandatory visual + perf gate)
