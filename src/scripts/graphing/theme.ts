@@ -64,12 +64,13 @@ export function themeColors(dark: boolean): ThemeColors {
  * Extra colours for the Function Explorer's overlay marks. `themeColors` already
  * owns the shared background / grid / axis / text; this adds the elements unique
  * to the explorer — the curve, the vertical-asymptote "wall" and horizontal
- * "floor" guides, the limit-sweep arrow, and the draggable point (+ its halo).
+ * "floor" guides, the limit-sweep arrow, the draggable point (+ its halo), and
+ * the dashed "ghost" parent curve drawn behind a transformed curve.
  *
  * These are drawn as full-opacity SVG overlays (unlike function-plot's forced
- * low-opacity gridlines), so each of curve/wall/floor/arrow clears WCAG 1.4.11
- * (3:1 non-text contrast) against `themeColors(dark).bg` in BOTH themes — see
- * theme.test.ts. `pointStroke` is a background-toned halo that separates the
+ * low-opacity gridlines), so each of curve/wall/floor/arrow/ghost clears WCAG
+ * 1.4.11 (3:1 non-text contrast) against `themeColors(dark).bg` in BOTH themes —
+ * see theme.test.ts. `pointStroke` is a background-toned halo that separates the
  * point from the curve it rides.
  */
 export interface ExplorerColors {
@@ -85,6 +86,8 @@ export interface ExplorerColors {
   point: string;
   /** Halo ring around the point (background-toned) so it reads on the curve. */
   pointStroke: string;
+  /** De-emphasised parent curve drawn dashed behind the transformed curve. */
+  ghost: string;
 }
 
 /**
@@ -102,6 +105,7 @@ export function explorerColors(dark: boolean): ExplorerColors {
         arrow: '#fb923c',
         point: '#ddd6fe',
         pointStroke: '#0f172a',
+        ghost: '#64748b',
       }
     : {
         curve: '#7f77dd',
@@ -110,6 +114,9 @@ export function explorerColors(dark: boolean): ExplorerColors {
         arrow: '#ea580c',
         point: '#3c3489',
         pointStroke: '#ffffff',
+        // #94a3b8 (slate-400) only clears 2.56:1 against white — below the 3:1
+        // floor. Darkened to slate-500 (also used for dark's ghost) for margin.
+        ghost: '#64748b',
       };
 }
 

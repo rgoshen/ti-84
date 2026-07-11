@@ -77,7 +77,7 @@ describe('explorer palette legibility (Function Explorer)', () => {
   // background. Unlike the low-opacity gridlines, these overlay marks are drawn
   // at full opacity, so contrast is measured at opacity 1.
   const NON_TEXT_MIN_CONTRAST = 3.0;
-  const MARK_KEYS = ['curve', 'wall', 'floor', 'arrow'] as const;
+  const MARK_KEYS = ['curve', 'wall', 'floor', 'arrow', 'ghost'] as const;
 
   for (const dark of [true, false] as const) {
     const label = dark ? 'dark' : 'light';
