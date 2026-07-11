@@ -17,4 +17,7 @@ export const SITE_TITLE_EXPLORERS = import.meta.env.PUBLIC_SITE_TITLE_EXPLORERS 
 export const SITE_TITLE_FUNCTION_EXPLORER =
   import.meta.env.PUBLIC_SITE_TITLE_FUNCTION_EXPLORER ?? 'Function Explorer';
 
+export const SITE_TITLE_TRANSFORMATION_EXPLORER =
+  import.meta.env.PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER ?? 'Transformation Explorer';
+
 export const THEME_DEFAULT = import.meta.env.PUBLIC_THEME_DEFAULT ?? 'dark';

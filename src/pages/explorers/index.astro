@@ -1,6 +1,6 @@
 ---
 import Base from '@/layouts/Base.astro';
-import { SITE_TITLE_EXPLORERS, SITE_TITLE_FUNCTION_EXPLORER } from '@/config';
+import { SITE_TITLE_EXPLORERS, SITE_TITLE_FUNCTION_EXPLORER, SITE_TITLE_TRANSFORMATION_EXPLORER } from '@/config';
 ---
 
 <Base
@@ -27,6 +27,19 @@ import { SITE_TITLE_EXPLORERS, SITE_TITLE_FUNCTION_EXPLORER } from '@/config';
       </p>
       <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
         Open the Function Explorer &rarr;
+      </span>
+    </a>
+    <a
+      href="/explorers/transformations"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_TRANSFORMATION_EXPLORER}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Pick a parent function and shift, stretch, compress, and reflect it with a, b, h, k — watch
+        g(x) = a&middot;f(b(x &minus; h)) + k reshape live against a dashed ghost of the parent.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the Transformation Explorer &rarr;
       </span>
     </a>
   </div>
