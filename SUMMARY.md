@@ -782,3 +782,20 @@ The e2e suite caught the mouseenter-before-click race on the first run (3 of 7 f
 
 **References:**
 - Reported by user during review of PR #5 (Explorers navigation)
+
+## [2026-07-11 16:02] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Header nav — caret placement; Transformation Explorer intro copy
+
+**Summary:**
+The Explorers dropdown caret rendered as a *separate* pill next to the "Explorers" nav item (the link and the caret each carried their own padding/hover background), so it read as two chips instead of one nav item — not standard UI. Moved the pill styling to the wrapper so the label and caret share a single rounded background and one hover/active highlight: `[ Explorers ⌄ ]`. Added the standard caret-flip-on-open affordance via Tailwind's `aria-expanded:rotate-180` variant (the earlier Astro-scoped stylesheet rule never matched). Also fixed a missing space in the Transformation Explorer intro ("and**k**" → "and **k**") caused by Astro collapsing a line-break between text and a `<strong>`.
+
+**Bug Fix Context:**
+Root cause of the caret bug was purely visual and slipped through because the change was verified by behaviour (e2e) and type-checks, but never *looked at*. Caught only when the rendered header was screenshotted. Behaviour was correct throughout — all 7 navigation e2e tests passed both before and after the restyle.
+
+**Verification:**
+Visually confirmed via headless screenshots (closed + open, dark mode, Explorers active). `npm run test:e2e`: 31 passed. `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors.
+
+**References:**
+- Reported by user during review of PR #5

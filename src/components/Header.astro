@@ -53,11 +53,20 @@ const linkClass = (active: boolean): string[] => [
           links.map((link) =>
             link.href === '/explorers' ? (
               <div class="relative" data-explorers-nav>
-                <div class="flex items-center">
+                {/* One nav item: the label and the caret share a single pill, so it
+                    reads and highlights as "Explorers ▾" rather than two chips. */}
+                <div
+                  class:list={[
+                    'flex items-center gap-1 rounded-md py-1.5 pl-3 pr-2 text-sm font-medium transition-colors',
+                    isActive(link.href)
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  ]}
+                >
                   <a
                     href={link.href}
                     aria-current={isActive(link.href) ? 'page' : undefined}
-                    class:list={linkClass(isActive(link.href))}
+                    class="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {link.label}
                   </a>
@@ -68,7 +77,7 @@ const linkClass = (active: boolean): string[] => [
                     aria-expanded="false"
                     aria-controls="explorers-menu"
                     aria-label="Show explorers"
-                    class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    class="inline-flex items-center rounded-sm outline-none transition-transform aria-expanded:rotate-180 focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
