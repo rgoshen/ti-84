@@ -12,4 +12,12 @@ export const SITE_TITLE_GRAPHING =
 export const TI84_IFRAME_SRC =
   import.meta.env.PUBLIC_TI84_IFRAME_SRC ?? 'https://ti84calc.com/ti84calc';
 
+export const SITE_TITLE_EXPLORERS = import.meta.env.PUBLIC_SITE_TITLE_EXPLORERS ?? 'Explorers';
+
+export const SITE_TITLE_FUNCTION_EXPLORER =
+  import.meta.env.PUBLIC_SITE_TITLE_FUNCTION_EXPLORER ?? 'Function Explorer';
+
+export const SITE_TITLE_TRANSFORMATION_EXPLORER =
+  import.meta.env.PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER ?? 'Transformation Explorer';
+
 export const THEME_DEFAULT = import.meta.env.PUBLIC_THEME_DEFAULT ?? 'dark';

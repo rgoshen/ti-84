@@ -60,6 +60,66 @@ export function themeColors(dark: boolean): ThemeColors {
       };
 }
 
+/**
+ * Extra colours for the Function Explorer's overlay marks. `themeColors` already
+ * owns the shared background / grid / axis / text; this adds the elements unique
+ * to the explorer — the curve, the vertical-asymptote "wall" and horizontal
+ * "floor" guides, the limit-sweep arrow, the draggable point (+ its halo), and
+ * the dashed "ghost" parent curve drawn behind a transformed curve.
+ *
+ * These are drawn as full-opacity SVG overlays (unlike function-plot's forced
+ * low-opacity gridlines), so each of curve/wall/floor/arrow/ghost clears WCAG
+ * 1.4.11 (3:1 non-text contrast) against `themeColors(dark).bg` in BOTH themes —
+ * see theme.test.ts. `pointStroke` is a background-toned halo that separates the
+ * point from the curve it rides.
+ */
+export interface ExplorerColors {
+  /** The plotted function. */
+  curve: string;
+  /** Vertical asymptote guide (drawn dashed). */
+  wall: string;
+  /** Horizontal asymptote guide (drawn dashed). */
+  floor: string;
+  /** Limit-sweep trail + arrowhead. */
+  arrow: string;
+  /** Draggable point fill. */
+  point: string;
+  /** Halo ring around the point (background-toned) so it reads on the curve. */
+  pointStroke: string;
+  /** De-emphasised parent curve drawn dashed behind the transformed curve. */
+  ghost: string;
+}
+
+/**
+ * Explorer overlay palette for dark vs light. Dark uses the app's bright chart
+ * hues on the near-black plot background; light mirrors the original
+ * reciprocal-square-explorer's palette on white. All marks are verified for
+ * 3:1 non-text contrast against the background in theme.test.ts.
+ */
+export function explorerColors(dark: boolean): ExplorerColors {
+  return dark
+    ? {
+        curve: '#a78bfa',
+        wall: '#f87171',
+        floor: '#60a5fa',
+        arrow: '#fb923c',
+        point: '#ddd6fe',
+        pointStroke: '#0f172a',
+        ghost: '#64748b',
+      }
+    : {
+        curve: '#7f77dd',
+        wall: '#e24b4a',
+        floor: '#378add',
+        arrow: '#ea580c',
+        point: '#3c3489',
+        pointStroke: '#ffffff',
+        // #94a3b8 (slate-400) only clears 2.56:1 against white — below the 3:1
+        // floor. Darkened to slate-500 (also used for dark's ghost) for margin.
+        ghost: '#64748b',
+      };
+}
+
 interface Rgb {
   r: number;
   g: number;

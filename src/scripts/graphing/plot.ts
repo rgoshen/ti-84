@@ -44,7 +44,7 @@ export interface RenderGraphOptions {
 /** The object returned by function-plot (a Chart instance / event emitter). */
 export type FunctionPlotInstance = ReturnType<typeof functionPlot>;
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
+export const SVG_NS = 'http://www.w3.org/2000/svg';
 const PLOT_HEIGHT = 560;
 const MARKER_RADIUS = 4;
 
@@ -54,13 +54,13 @@ const MARKER_RADIUS = 4;
  * as a union of linear/log scales whose overloaded `domain()` signatures don't
  * combine cleanly, so we narrow through this interface (axes are always linear here).
  */
-interface NumericScale {
+export interface NumericScale {
   (value: number): number;
   invert(pixel: number): number;
   domain(): number[];
 }
 
-function asNumericScale(scale: FunctionPlotScale | undefined): NumericScale | null {
+export function asNumericScale(scale: FunctionPlotScale | undefined): NumericScale | null {
   return scale ? (scale as unknown as NumericScale) : null;
 }
 
@@ -74,7 +74,7 @@ function asNumericScale(scale: FunctionPlotScale | undefined): NumericScale | nu
  * alone. function-plot recreates these elements on every zoom/pan, so this is
  * re-applied after each redraw.
  */
-function applyThemeToPlot(target: HTMLElement, c: ThemeColors): void {
+export function applyThemeToPlot(target: HTMLElement, c: ThemeColors): void {
   const svg = target.querySelector('svg');
   if (!svg) return;
   svg.style.background = c.bg;
@@ -100,7 +100,7 @@ function applyThemeToPlot(target: HTMLElement, c: ThemeColors): void {
  * we bold the line of the "0" tick in each axis. function-plot recreates these
  * on every zoom/pan, so this is re-applied after each redraw.
  */
-function boldZeroAxes(target: HTMLElement): void {
+export function boldZeroAxes(target: HTMLElement): void {
   const svg = target.querySelector('svg');
   if (!svg) return;
   for (const axis of ['x', 'y'] as const) {
@@ -117,7 +117,7 @@ function boldZeroAxes(target: HTMLElement): void {
 }
 
 /** Build one SVG marker of the given shape centered at the canvas-local pixel (cx, cy). */
-function makeMarker(shape: PointShape, cx: number, cy: number, color: string): SVGElement {
+export function makeMarker(shape: PointShape, cx: number, cy: number, color: string): SVGElement {
   const r = MARKER_RADIUS;
   let el: SVGElement;
   if (shape === 'square') {

@@ -241,3 +241,79 @@ Automate testing, building, versioning, changelog generation, and Docker image p
 
 **References:**
 - Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
+
+## [2026-07-04] Feature: Function Explorer (limits & asymptotes)
+
+**Objective:**
+Add a new **Explorers** section whose first entry is a **Function Explorer**: type any function and explore its limit / asymptote behaviour interactively — drag a point along the curve, an x-slider, a live arrow-notation readout (`x → a⁻, f(x) → ∞`), animated limit sweeps toward auto-detected vertical asymptotes and `x→±∞`, and wall/floor/grid toggles. Generalises the standalone `reciprocal-square-explorer.html` (f(x)=1/x²) to any user expression, built on the app's existing **function-plot (SVG)** stack (not raw canvas). Core fix vs the original: the dragged point **pins at the window edge and never teleports across a vertical asymptote to the other branch**.
+
+**Approach:**
+- Pure, node-tested modules under `src/scripts/explorer/`: `limits.ts` (vertical-asymptote detection + end-behaviour classification), `branch.ts` (`branchOf`, `clampDragX` — the anti-teleport fix, `pinToWindow`, `sweepX`, `resolveX`), `notation.ts` (arrow-notation readout). Reuse `@/scripts/graphing/math` (`evalAt`, `bisect`).
+- Extend `graphing/theme.ts` with `explorerColors(dark)` (WCAG-validated in both themes); export shared `plot.ts` helpers (`applyThemeToPlot`, `boldZeroAxes`, `asNumericScale`) for reuse.
+- `src/scripts/explorer/render.ts`: function-plot wrapper (`disableZoom:false`) with a persistent SVG overlay in `g.canvas` (draggable point, sweep trail+arrowhead, dashed walls/floors) positioned via `instance.meta.xScale/yScale`, plus `on('all:zoom')` re-sync.
+- `src/components/explorer/FunctionExplorer.tsx`: React island mirroring `GraphingCalculator` patterns (MutationObserver theme sync, `appliedWindow`/`displayWindow` split, mathjs validation). Pointer arbitration (drag-on-point moves the point, drag-elsewhere pans, wheel zooms); decoupled rAF sweep loop; shadcn `Slider` (new `src/components/ui/slider.tsx` over `radix-ui` — no new dep); coalesced `aria-live` readout.
+- Explorers section: `src/pages/explorers/index.astro` (hub) + `function.astro`; Header 'Explorers' nav link (+ child-route active state); home landing card; config titles. `epsilon = 0.5%·(xMax−xMin)`, recomputed on window/zoom change.
+
+**Tests:**
+- Vitest (TDD-first, per slice): `limits.test.ts` (odd/even/multiple/no asymptote; `sin(x)/x` removable rejected; per-side end-behaviour), `branch.test.ts` (`clampDragX` never crosses a wall; degenerate narrow branch → midpoint; `resolveX` off-pole re-clamp; pin top/bottom/undefined; `sweepX` stops at wall/edge), `notation.test.ts` (wall/edge/value precedence, bands, tie-break), `theme.test.ts` extended (explorer palette ≥3:1 both themes).
+- Playwright e2e (`tests/e2e/explorer.spec.ts`): default `1/x^2` renders; slider near 0 → `x→0⁺, f(x)→∞`; anti-teleport (drag never jumps branch); edge-pin at top inset; auto-detected sweep buttons + stop-at-wall; `tan(x)` many walls / `x^2` none; drag-vs-pan arbitration; wheel-zoom re-detects; dark boot+toggle; nav `aria-current`; `role="status"` readout + keyboard slider.
+
+**Risks & Tradeoffs:**
+- Heuristic asymptote detection can alias on oscillating functions (`sin(1/x)`); degrade gracefully (cap count; a missed pole just omits a button — drag/pin still work). Removable discontinuities rejected via a divergence probe.
+- Pointer arbitration must cooperate with function-plot's internal d3-drag; prototyped first (spike) with a `disableZoom`-toggle fallback.
+- Exporting helpers from `plot.ts` is visibility-only; guarded by existing graphing suites + a re-export smoke test.
+- Shared `Header` `isActive` change (child-route match) guarded by an e2e assertion so existing links don't double-highlight.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Source (functionality reference only): `~/Downloads/reciprocal-square-explorer.html`
+
+**Status:** Done on `feature/function-explorer` (spec-gap-auditor'd; gaps G1–G11 closed). Pure logic TDD'd across 6 modules; function-plot renderer + island with pointer arbitration; new Explorers section. Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing, no regressions). Verified headless (0 console errors; anti-teleport, sweeps, arbitration, dark mode).
+
+## [2026-07-11] Feature: Transformation Explorer
+
+**Objective:**
+A second Explorers-section tool at `/explorers/transformations` that makes g(x)=a·f(b(x−h))+k tangible: pick a parent function, drag a/b/h/k, and watch the transformed curve reshape live against a dashed "ghost" of the parent, with a plain-English readout naming each transformation (shift / stretch / compress / reflect).
+
+**Approach:**
+Pure logic in `parents.ts` (8-parent catalog + per-parent default windows) and `transform.ts` (`composeExpr` via mathjs node substitution; `describeTransform` narration with EPS-tolerant knob detection and degenerate-case messages). DOM in `transform-render.ts` (two native function-plot series — dashed ghost parent + solid transformed — with unconditional `on('all:zoom')` re-sync). React island `TransformationExplorer.tsx` (single-source base model: preset fills+overrides / custom Plot deselects; signed a/b sliders + reflect toggles; window controls; `role="status"` readout). Route + hub card + config title; Header unchanged (child-route match). Reuses the shipped graphing/theme/plot helpers and shadcn controls.
+
+**Tests:**
+Vitest: `parents.test.ts`, `transform.test.ts` (compose numeric-equivalence + full narration branch/degenerate/tolerance coverage), `theme.test.ts` ghost contrast. Playwright `transformation.spec.ts` (9): dashed-parent render, slider→readout, reflect toggles, reset→identity, parent switch, custom fn, b=0 collapse message, nav `aria-current`, dark mode.
+
+**Risks & Tradeoffs:**
+Parent-series dashing depends on function-plot's `g.graph` datum order (verified). No draggable point / no animation in v1 (YAGNI). E2E uncovered a shared-Slider a11y bug — fixed (see the Fix entry below).
+
+**Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (gaps G1–G9 closed) → 9-task TDD plan executed subagent-driven with per-task review. Final: 9/9 transformation e2e, 24/24 full e2e, 102/102 Vitest, astro check clean, build emits 6 pages.
+
+## [2026-07-11] Feature: Points toggle & value table in both Explorers
+
+**Objective:**
+Give both Explorers the two features the Graphing Calculator already had: a **Show points** toggle (markers at every whole-number gridline crossing) and a **value table** (one row per integer x in the current window). In the Transformation Explorer both curves are covered — markers on the parent and the transformed, and table columns `x | f(x) | g(x)` — so a transformation can be read numerically, not just seen.
+
+**Approach:**
+Reuse `gridlineCrossings` / `integerXs` / `evalAt`; export `plot.ts`'s private `makeMarker` so both explorers draw identical circle markers; add one shared, purely-presentational `ValueTable` component (real `<table>`, `scope="col"` headers). Islands compute and memoise the crossings + table values and pass **precomputed** data down — renderers and the table contain no math, which keeps `evalAt` (it re-parses on every call) out of the render path. Points default off; on/off toggle only. "Show parent" hides the parent's curve and markers but **not** its table column.
+
+**Tests:**
+4 new Playwright e2e: Function Explorer (checkbox disabled + empty table with no function; markers appear on toggle; `1/x^2` at x=2 → 0.25; `scope="col"` headers) and Transformation Explorer (markers on both curves; hiding the parent drops its markers but keeps its column; k=+2 → every g(x) = f(x) + 2). Plus a measured perf gate and a visual check.
+
+**Risks & Tradeoffs:**
+`evalAt` re-parses per call, so recomputing crossings during a slider drag was the main risk — mitigated by memoising in the island and measured at **121 fps** during a real drag with points on. Table rows are uncapped (mirrors graph); container scrolls. The graphing calculator was deliberately NOT refactored onto the shared `ValueTable` (shipped code, out of scope) — optional follow-up.
+
+**Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (G1–G7 closed) → 5-task plan → implemented, with the visual + perf gate passed. 36 e2e, 103 Vitest, astro check clean.
+
+## [2026-07-11] Fix: Accessible name missing on shadcn Slider thumbs
+
+**Objective:**
+`src/components/ui/slider.tsx` spreads `{...props}` (including `aria-label`, `id`) onto `SliderPrimitive.Root`, a plain `<span>` with no ARIA role. The actual interactive element — `SliderPrimitive.Thumb`, which carries `role="slider"` — receives no accessible name. This is a WCAG 2.1 SC 4.1.2 (Name, Role, Value) failure: every slider in the app (Transformation Explorer's a/b/h/k, Function Explorer's "x value") is unlabelled for assistive technology and fails `getByRole('slider', { name })` queries. Discovered while writing `tests/e2e/transformation.spec.ts` (Task 8 of the Transformation Explorer plan) — see `.superpowers/sdd/task-8-report.md` for the full diagnosis, including confirmation that the underlying slider *functionality* (value changes, readout updates) is correct and unaffected.
+
+**Approach:**
+Forward `aria-label`/`aria-labelledby` (and any other `Thumb`-relevant ARIA props) from the `Slider` wrapper's props onto `SliderPrimitive.Thumb` instead of (or in addition to) `Root`. For a single-thumb slider a plain `aria-label` prop threaded to the one `Thumb` is sufficient; Radix's docs pattern for multi-thumb sliders takes an array of labels — not needed here since every current usage is single-thumb. Needs manual verification (or an e2e assertion) that both `FunctionExplorer.tsx`'s "x value" slider and `TransformationExplorer.tsx`'s a/b/h/k sliders still resolve by name after the change.
+
+**Tests:**
+Re-enable the two currently-red assertions in `tests/e2e/transformation.spec.ts` (`getByRole('slider', { name: /k — vertical shift/i })`, `getByRole('slider', { name: /b — horizontal stretch/i })`) as the acceptance check — no new test file needed. Also add an equivalent named-role query to `tests/e2e/explorer.spec.ts` for the Function Explorer's slider (currently queried by bare `[role="slider"]`, which never caught this).
+
+**Risks & Tradeoffs:**
+`slider.tsx` is a shared primitive used by both explorers — verify the visual/`data-slot` styling hooks (`slider-thumb` class, focus ring) are unaffected by moving the prop. Low risk, single-file change, but touches every existing slider consumer.
+
+**Status:** ✅ RESOLVED (2026-07-11, commit 8fcddea). Forwarded `aria-label`/`aria-labelledby` to `SliderPrimitive.Thumb`; both explorers' sliders now resolve by accessible name (Function Explorer's "x value" slider fixed as a bonus). The two transformation e2e assertions pass (9/9 transformation, 24/24 full e2e, no regression); styling/`data-slot` hooks unaffected. Optional follow-up remaining: add a named-role query for the Function Explorer slider in `explorer.spec.ts` (currently `[role="slider"]`).

@@ -1,4 +1,4 @@
-# Online Calculators (TI-84 + Graphing)
+# Online Math Tools (TI-84, Graphing, Explorers)
 
 [![CI](https://github.com/rgoshen/ti-84/actions/workflows/ci.yml/badge.svg)](https://github.com/rgoshen/ti-84/actions/workflows/ci.yml)
 [![Release](https://github.com/rgoshen/ti-84/actions/workflows/release.yml/badge.svg)](https://github.com/rgoshen/ti-84/actions/workflows/release.yml)
@@ -9,14 +9,16 @@
 [![Tested with Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-A small multi-page site with two browser-based calculators:
+A small multi-page site with three browser-based math tools:
 
 - **TI-84 Calculator** — a familiar scientific/graphing calculator.
 - **Graphing Calculator** — plot equations, stack multiple functions, mark whole-number gridline crossings, and zoom/pan, all in the browser.
+- **Function Explorer** — an interactive limits & asymptotes explorer: type any function, drag a point along the curve (it pins to the window edge near a vertical asymptote instead of clipping), animate limits toward auto-detected walls and ±∞, and read the behaviour in arrow notation. It's the first entry in a new **Explorers** section for interactive concept tools.
 
-The site is built with **Astro + TypeScript** — a shared layout and header wrap three
-routes (`/` landing, `/ti-84`, `/graphing`), with the interactive graphing calculator
-rendered as a React island (shadcn/ui on Tailwind v4).
+The site is built with **Astro + TypeScript** — a shared layout and header wrap the
+routes (`/` landing, `/ti-84`, `/graphing`, and the `/explorers` hub + `/explorers/function`),
+with the interactive graphing calculator and function explorer each rendered as a React
+island (shadcn/ui on Tailwind v4).
 
 ## Tech stack
 
@@ -62,12 +64,12 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 │   ├── components/
 │   │   ├── Header.astro        # Sticky nav + theme toggle
 │   │   ├── graphing/           # GraphingCalculator React island
+│   │   ├── explorer/           # FunctionExplorer React island
 │   │   └── ui/                 # shadcn/ui primitives
-│   ├── pages/                  # Routes: index (landing), ti-84, graphing
-│   ├── scripts/graphing/
-│   │   ├── math.ts             # Pure, framework-free math (tested)
-│   │   ├── math.test.ts        # Vitest unit tests for the math core
-│   │   └── plot.ts             # Framework-free function-plot wrapper
+│   ├── pages/                  # Routes: index, ti-84, graphing, explorers/{index,function}
+│   ├── scripts/
+│   │   ├── graphing/           # Pure math + function-plot wrapper (math/plot/theme/hover .ts) + tests
+│   │   └── explorer/           # Pure limits/branch/notation logic + render.ts (function-plot overlay) + tests
 │   └── styles/global.css       # @import "tailwindcss" + theme tokens
 ├── public/favicon.svg          # Site icon
 ├── Dockerfile, nginx.conf      # Multi-stage build (Node build → nginx serves dist/)
@@ -118,6 +120,8 @@ docker compose up -d --build
 | `HOST_PORT` | Host port mapped to the container's port 80. | `8084` |
 | `PUBLIC_SITE_TITLE_TI84` | Title/heading for the TI-84 page. | `TI-84 Calculator` |
 | `PUBLIC_SITE_TITLE_GRAPHING` | Title/heading for the graphing page. | `Graphing Calculator Online` |
+| `PUBLIC_SITE_TITLE_EXPLORERS` | Title/heading for the Explorers hub page. | `Explorers` |
+| `PUBLIC_SITE_TITLE_FUNCTION_EXPLORER` | Title/heading for the Function Explorer page. | `Function Explorer` |
 | `PUBLIC_TI84_IFRAME_SRC` | Source URL for the embedded TI-84 iframe. | `https://ti84calc.com/ti84calc` |
 | `PUBLIC_THEME_DEFAULT` | First-visit theme (`dark` or `light`). | `dark` |
 

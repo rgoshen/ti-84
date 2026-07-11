@@ -515,3 +515,374 @@ A mature, automated release pipeline reduces manual effort and human error, and 
 **References:**
 - Spec: `docs/superpowers/specs/2026-06-30-cicd-pipeline-design.md`
 - TODO.md: 2026-06-30 Feature: CI/CD pipeline (semantic-release + GHCR)
+
+## [2026-07-04 19:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — theme palette
+
+**Summary:**
+Added `explorerColors(dark)` + the `ExplorerColors` interface to `src/scripts/graphing/theme.ts` — the overlay palette (curve, wall, floor, arrow, point, pointStroke) for the new Function Explorer, with a dark (bright chart hues on near-black) and light (original reciprocal-square palette on white) variant. Extended `theme.test.ts` (TDD, red→green): curve/wall/floor/arrow each clear 3:1 non-text contrast (WCAG 1.4.11) against the plot background in both themes, the point is visible against the background, and its halo separates it from the curve. Also scaffolded the feature docs: TODO.md entry and `docs/superpowers/specs/2026-07-04-function-explorer-design.md`.
+
+**Rationale:**
+Palette + contrast math lives in the single already-tested `theme.ts` module (its stated charter) rather than a new file, so all colour decisions stay in one WCAG-validated place. Full-opacity overlay marks are held to the 3:1 non-text threshold in both themes so the explorer is legible in dark mode — the app's known weak spot.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
+- Plan slice 1 of 11
+
+## [2026-07-04 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — branch geometry (anti-teleport fix)
+
+**Summary:**
+Added pure, node-tested `src/scripts/explorer/branch.ts` (+ `branch.test.ts`, 24 tests, TDD): `branchOf` (the open interval between neighbouring walls/window edges), `pinToWindow` (the off-page clamp reporting top/bottom/undefined status), `clampDragX` (**the core bug fix** — a drag stays inside the branch it's on and can never cross a vertical asymptote to the other side; a branch narrower than 2·epsilon collapses to its midpoint [G11]), and `resolveX` (re-seats the point off a new pole / back in-window when the function or window changes [G4]). All in data coordinates on `poles: number[]`, decoupled from asymptote detection.
+
+**Rationale:**
+The user's headline requirement — "drag toward the wall pins at the edge and never teleports to the other branch" — is isolated into a single pure function (`clampDragX`) reused by the drag, slider, and animation sweeps, so it's fixed in exactly one tested place. Branch logic needs only wall x-positions, not their blow-up signs, so it takes `number[]` and stays independent of `limits.ts`.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Plan slices 2–3 of 11
+
+## [2026-07-04 19:27] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — asymptote & limit detection
+
+**Summary:**
+Added pure `src/scripts/explorer/limits.ts` (+ `limits.test.ts`, 10 tests, TDD): `findVerticalAsymptotes` (three candidate signals — reciprocal sign-change for odd poles, null-gap and same-sign local-|f|-peak for even poles — merged, then confirmed by a divergence probe that rejects removable/jump discontinuities), `classifyEndBehavior` (finite / posInf / negInf / unknown as x→±∞), and `classifyOneSided`. Verified: 1/x² (even, both →+∞), 1/x (odd, ∓∞), tan(x) (two walls, +∞/−∞), x² (none), sin(x)/x (removable → rejected).
+
+**Bug Fix Context:**
+Initial `blowupFactor=10` (bigMag = 10·windowHeight) missed shallow residue-1 poles like 1/x on a tall window — a pole's nearest-sample magnitude is ~1/dx (sampling-bound), not height-bound. Lowered to 3; the divergence probe, not the candidate gate, is the real false-positive filter.
+
+**Rationale:**
+`evalAt` returns null for both undefined points and non-finite results, so a pole and a domain edge are indistinguishable from one sample — the growth-probe separates them. Kept fully pure/node-tested so the heuristic thresholds are pinned by tests.
+
+**References:**
+- Design: `docs/superpowers/specs/2026-07-04-function-explorer-design.md`
+- Plan slice 4 of 11
+
+## [2026-07-04 19:29] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — limit-sweep path
+
+**Summary:**
+Added `sweepX(t, sweep, w, poles, epsilon)` + the `Sweep` type to `branch.ts` (+4 tests, 28 total). Given animation progress t∈[0,1], returns the leading x that walks across the relevant branch toward its target — a wall (`approach`, stopping at a∓epsilon) or a window edge (`end`, x→±∞) — routed through the same `clampDragX` so the walk can never cross a wall out of its branch.
+
+**Rationale:**
+Reusing `clampDragX` for the animation (not just the drag) means the "never cross a wall" guarantee holds for the limit sweeps too, from one tested source.
+
+**References:**
+- Plan slice 5 of 11
+
+## [2026-07-04 19:31] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — arrow-notation readout
+
+**Summary:**
+Added pure `src/scripts/explorer/notation.ts` (+ `notation.test.ts`, 8 tests, TDD): `describeReadout(ReadoutInput)` and the `formatApproach`/`formatInfinity`/`formatLimitValue`/`toSuperscript` formatters. Precedence: nearest wall within the wall band (one-sided arrow from its blow-up sign, tie-break smaller x) → x-edge end-behaviour message → plain `f(x)=value`. A pinned-off-screen point renders `→ ∞`/`→ −∞` instead of a clipped number; an `unknown` tail gets a neutral "keeps oscillating" note, not a false arrow. Reuses `formatNumber` from `hover.ts`.
+
+**Rationale:**
+This is both the teaching payload and the accessible text (destined for an aria-live region), so it's a pure function with the display precedence pinned by tests — the DOM layer just renders its two strings. Full unit suite now 86 green.
+
+**References:**
+- Plan slice 6 of 11
+
+## [2026-07-04 19:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — shared plot helpers + Slider primitive
+
+**Summary:**
+Exported the reusable low-level helpers from `src/scripts/graphing/plot.ts` (`SVG_NS`, `NumericScale`, `asNumericScale`, `applyThemeToPlot`, `boldZeroAxes`) so the explorer renderer can share them (visibility-only; `renderGraph` behaviour unchanged). Added `src/components/ui/slider.tsx` — a shadcn (new-york) `Slider` wrapper over the already-installed `radix-ui` `Slider` primitive (no new dependency), keyboard-accessible out of the box. `astro check` clean (33 files).
+
+**Rationale:**
+DRY — the explorer reuses the graphing calculator's SVG theming + scale-narrowing instead of duplicating them. The exports are non-breaking; correctness is guarded by the existing graphing unit/e2e suites plus the typecheck (and the explorer's own upcoming e2e).
+
+**References:**
+- Plan slices 7–8 of 11
+
+## [2026-07-04 19:42] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — renderer, island, and Explorers section
+
+**Summary:**
+Added the DOM/integration layer and wired it into a new **Explorers** section. `src/scripts/explorer/render.ts`: a function-plot wrapper (`disableZoom:false`) that draws the SVG overlay (draggable point, one-polyline sweep trail + arrowhead, dashed walls / up-to-two floors) into `g.canvas` via the live D3 scales, re-syncs on `all:zoom`, and exposes `pointerToData`/`localOf` for hit-testing. `src/components/explorer/FunctionExplorer.tsx`: the React island — MutationObserver theme sync, `appliedWindow`/`displayWindow` split, memoised asymptote/end-behaviour scans, **pointer arbitration** (capture-phase pointerdown on the point grabs it and blocks function-plot's pan; elsewhere pans; wheel zooms), a decoupled rAF sweep loop (cancelled on rebuild/zoom/manual interaction), `prefers-reduced-motion` support, a coalesced `role="status"` aria-live readout, and shadcn controls incl. the new keyboard `Slider`. Added routes `src/pages/explorers/{index,function}.astro`, `SITE_TITLE_EXPLORERS`/`SITE_TITLE_FUNCTION_EXPLORER` config, a Header "Explorers" link with child-route active state, and a home-page card (grid widened to 3 up).
+
+**Rationale:**
+The reuse boundary stays at the logic layer — this DOM code just renders decisions from the pure, tested modules. Keeping zoom/pan (user's choice) let the explorer reuse the graphing calculator's `all:zoom` re-sync and window-mirroring almost verbatim; the arbitration is the only genuinely new interaction.
+
+**Verification:**
+Built (5 pages) and driven headless: 0 console errors; point renders and pins; `1/x^2` → walls/floor + `x→0⁻/0⁺/±∞` buttons; the `x → 0⁺` sweep animates and **stops at +0.04 (a+ε), pinned to the top edge — never crossing the wall**; readout settles to `x → 0⁺, f(x) → ∞`; `tan(x)` → two walls at ±1.571 with per-side buttons. Screenshot confirms dark-mode rendering.
+
+**References:**
+- Plan slices 9–10 of 11
+
+## [2026-07-04 19:47] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer — end-to-end tests
+
+**Summary:**
+Added `tests/e2e/explorer.spec.ts` (7 Playwright tests): default `1/x^2` renders with the four auto-detected limit buttons; **the anti-teleport bug fix via a real mouse drag** (grab the point, drag 400px past the wall — reported x stays ≥ 0, never jumps branch, and pins to the top edge); a limit sweep animates and stops on the correct side; **pointer arbitration** (a drag on the point moves it without panning, a drag on the background pans the window); asymptote detection follows the function (`tan(x)` → per-side wall buttons, `x^2` → none); the aria-live status region carries the arrow text and the slider is keyboard-operable; and the Explorers nav link is `aria-current` on the explorer page.
+
+**Rationale:**
+Playwright's real pointer events exercise the capture-phase arbitration and `setPointerCapture` path that a synthetic `dispatchEvent` can't — so the drag-vs-pan and anti-teleport guarantees are verified against the actual library, not a mock.
+
+**Verification:**
+Full suite green — 86 Vitest unit + 15 Playwright e2e (7 explorer + 8 graphing); the shared `Header.isActive` change did not regress existing nav/e2e.
+
+**References:**
+- Plan slice 11 of 11
+
+## [2026-07-04 19:50] Commit Summary
+
+**Change Type:** Docs
+**Scope:** README, TODO, Docker/env config
+
+**Summary:**
+Updated documentation for the Function Explorer: README now lists three tools (adds the Function Explorer + Explorers section), the routes, an updated project-structure tree (`components/explorer/`, `scripts/explorer/`), and two new env rows. Wired `PUBLIC_SITE_TITLE_EXPLORERS` and `PUBLIC_SITE_TITLE_FUNCTION_EXPLORER` through the Dockerfile (ARG/ENV), docker-compose build args, and `.env.example` so the documented Docker overrides are real. Marked the TODO.md feature entry Done with the verification summary.
+
+**Rationale:**
+Keep the docs accurate to the shipped feature — the README's Docker env table must match what the build actually accepts.
+
+**References:**
+- TODO.md: 2026-07-04 Feature: Function Explorer (limits & asymptotes)
+
+## [2026-07-04 19:55] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Function Explorer — limit-sweep pacing
+
+**Summary:**
+Added an ease-out (cubic) to `sweepX` so a limit animation decelerates as it nears the target. Previously the sweep moved linearly in x; because a curve blows up steeply right beside a wall, the point rode the gentle far part of the curve for almost the whole animation and only reached the window edge in the final frame, so the along-the-edge travel to the asymptote was a single invisible flick. With ease-out, the near-wall x-slice (where the point pins to the edge and glides to the wall) now occupies ~45% of the animation. New unit test pins the pacing (87 Vitest total).
+
+**Bug Fix Context:**
+Reported: "when in animation mode, when it hits the window edge it should stop [rising] but continue along the window edge until it hits the asymptote." Root cause was pacing, not geometry — the point already pinned and slid correctly (verified by frame sampling), but linear-in-x timing compressed the edge-glide from ~110ms to imperceptible. Ease-out redistributes the time to the interesting segment. Verified by re-sampling the trajectory headless: 7 of 14 frames now pinned at the edge, gliding from x≈0.39 to x≈0.04.
+
+**References:**
+- Plan slice 5 (sweepX) — follow-up refinement
+
+## [2026-07-04 20:53] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Function Explorer — no default function + stop-at-window-edge interaction
+
+**Summary:**
+Two user-requested corrections. (1) **No default function** — the explorer now starts empty (no hardcoded `1/x^2`); controls are disabled and the plot shows only axes until the user plots a function. (2) **The point stops at the window edge** instead of pinning-and-sliding along it to the asymptote. Introduced `src/scripts/explorer/visible.ts` (+ `visible.test.ts`, 10 tests): `visibleRange` (the on-screen curve segment within a branch), `clampToVisible` (drag/slider stop at the edge crossing), `sweepEndpoints` (animate to the edge, then stop), `resolveVisibleX` (re-seat onto the visible curve). This replaces the wall-standoff `clampDragX`/`sweepX`/`resolveX` + `epsilon` — removed from `branch.ts` (now just the pure `branchOf` + `pinToWindow`). Sweeps animate linearly (dropped the ease-out). Updated the island, e2e (now asserts the point stops at the top-edge crossing ~0.378, not the wall), and the design doc.
+
+**Bug Fix Context:**
+Earlier feedback "when it hits the window edge it should stop … until it hits the asymptote" was ambiguous; I first made the point travel *along* the edge to the wall. The user clarified (screenshot, green box): it should STOP at the window edge, not travel along it. Root model: the point may only occupy the *visible* part of the curve — it halts where the curve exits the window. Because a pole sends the curve off-screen before the wall, this also guarantees no wall-crossing (the original anti-teleport requirement) without any standoff epsilon.
+
+**Verification:**
+80 Vitest unit + 15 Playwright e2e green; `astro check` clean; build emits 5 pages. Headless: empty on load (no point), plot `1/x^2` → the `x → 0⁺` sweep rides the curve and stops at x = 0.378 (the y=7 edge crossing), pin `onscreen`, with no horizontal edge-travel (screenshot confirmed).
+
+**References:**
+- Design doc revision note (2026-07-04, post-implementation)
+
+## [2026-07-11 13:38] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers — Transformation Explorer design spec
+
+**Summary:**
+Added the design spec for a new **Transformation Explorer**, a second sibling tool in the Explorers section that teaches the general form g(x) = a·f(b(x − h)) + k. A curated parent-function picker (x², x³, |x|, √x, 1/x, sin x, cos x, eˣ) plus a custom f(x) box feed one base expression; four signed sliders (a, b, h, k) with reflect toggles reshape a bold transformed curve live against a dashed "ghost" of the parent, with a plain-English readout naming each active transformation. Pure logic is split into `parents.ts` (catalog + per-parent default windows) and `transform.ts` (`composeExpr` via mathjs node-substitution + `describeTransform` narration), with DOM glue in `transform-render.ts` (two native function-plot series). No draggable point and no animation in v1.
+
+**Rationale:**
+Kept as a new sibling rather than a mode inside the 522-line limits component because the two are pedagogically orthogonal and share a rendering stack but almost no UI/logic. Reuses the shipped `applyThemeToPlot`/`boldZeroAxes`/`explorerColors`/`evalAt` infrastructure and shadcn controls; nav is zero-touch because `Header.astro` already matches child routes.
+
+**Process:**
+Design produced via the brainstorming skill (5 clickable decisions), then audited with the spec-gap-auditor against the Software Code Review Checklist **before** writing the spec. All load-bearing codebase claims were verified (multi-series function-plot, mathjs parse+transform, shadcn Slider). Nine gaps (G1–G9) were surfaced and closed inline; the Material gap (base-function state model) and two product decisions (degenerate-case handling, per-parent windows) were resolved with the user.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md
+- Continues the Explorers section (follows the shipped Function Explorer)
+
+## [2026-07-11 13:47] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers — Transformation Explorer implementation plan
+
+**Summary:**
+Added the TDD implementation plan for the Transformation Explorer: 9 tasks. Tasks 1–4 are pure, Vitest-driven red→green cycles (`parents.ts` catalog + per-parent windows; `theme.ts` `ghost` colour with contrast test; `composeExpr` with numeric-equivalence tests; `describeTransform` narration with full branch/degenerate/tolerance coverage). Tasks 5–7 are DOM integration (`transform-render.ts` two-native-series renderer that dashes the parent's `g.graph` group; `TransformationExplorer.tsx` island; route + hub card + config), gated by `astro check` + build. Task 8 is the Playwright suite; Task 9 updates SUMMARY/TODO. Every code step contains complete code.
+
+**Rationale:**
+Grounded the plan in verified codebase facts: function-plot classes each series as `<g class='graph'>` (so the parent dash is a real selector), re-calling `functionPlot()` does an in-place d3 data-join (smooth slider updates), and mathjs `parse().transform()` substitutes x safely. Renderer/island have no node unit test by design — matching the shipped `render.ts`, they are verified by e2e + a live dev check.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md
+- Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
+
+## [2026-07-11 15:00] Commit Summary
+
+**Change Type:** Test
+**Scope:** Transformation Explorer — end-to-end coverage (Task 8 of the implementation plan)
+
+**Summary:**
+Added `tests/e2e/transformation.spec.ts` (9 Playwright tests) covering the Transformation Explorer against the production build: default dashed-parent/solid-child render, slider-driven readout updates, reflect-toggle sign flip + `aria-pressed`, reset-to-identity, parent switching + reframing, custom `f(x)` plotting, the `b = 0` degenerate-collapse message, Explorers nav `aria-current`, and dark mode. Several `getByText(...)` assertions from the brief were scoped to `page.locator('li').filter({ hasText })` — the readout text is duplicated by a debounced `role="status"` live-region echo (and, for the identity message, also by the intro paragraph and picker label), which otherwise trips Playwright's strict-mode multi-match or races the 250ms debounce.
+
+**Rationale:**
+Kept every assertion accessible-name-first per the brief (`getByRole('slider', { name: ... })`, `getByRole('button', { name: ... })`) rather than falling back to CSS/id selectors, since that is what actually proves the controls are usable by assistive technology — the whole point of the gate.
+
+**Bug Fix Context (if applicable):**
+Not a fix — a finding. 2 of 9 tests ("moving a slider updates the readout", "b = 0 explains the collapse") fail (fast, 10s) because `getByRole('slider', { name })` never matches: `src/components/ui/slider.tsx` spreads `aria-label`/`id` onto `SliderPrimitive.Root` (a plain, roleless `<span>`), not `SliderPrimitive.Thumb` (the element that actually carries `role="slider"`). ARIA does not propagate `aria-label` from an ancestor to a descendant role, so every slider thumb in the app — this component's a/b/h/k here, and the Function Explorer's "x value" slider — has **no accessible name**, a WCAG 2.1 SC 4.1.2 (Name, Role, Value) failure. Verified with a throwaway diagnostic spec that the underlying *functional* behavior is correct (arrow keys do move the value and update the readout) — only the accessible name is missing. Left the two tests red on purpose per the task's explicit instruction not to weaken assertions to force a green run; tracked as a new TODO.md entry for follow-up.
+
+**Verification:**
+`npm run test:e2e -- transformation`: 7 passed, 2 failed (deterministic across 3 repeat runs — not flaky). Full `npm run test:e2e`: 22 passed, 2 failed, no regressions in `explorer.spec.ts`/`graphing.spec.ts`. `npm test`: 102 Vitest passed. `npm run astro -- check`: 0 errors/warnings. `npm run build`: 6 pages.
+
+**References:**
+- TODO.md: Fix — Accessible name missing on shadcn Slider thumbs
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Task 8)
+- Report: .superpowers/sdd/task-8-report.md
+
+## [2026-07-11 15:11] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers — Transformation Explorer (feature complete) + shared Slider a11y fix
+
+**Summary:**
+Completed the Transformation Explorer at `/explorers/transformations`: pick a parent function (or a custom f(x)), then shift/stretch/compress/reflect it with a/b/h/k sliders + reflect toggles and watch the solid transformed curve reshape live against a dashed "ghost" of the parent, with a plain-English readout naming each transformation. Delivered across 9 TDD tasks: pure modules `parents.ts` (catalog + per-parent windows) and `transform.ts` (`composeExpr` via mathjs node substitution; `describeTransform` narration with EPS-tolerant knob detection + degenerate messages); `theme.ts` `ghost` colour; `transform-render.ts` (two native function-plot series, dashed parent, unconditional zoom re-sync); the `TransformationExplorer.tsx` island (single-source base model, signed sliders, `role="status"` readout); route + hub card + config; and the `transformation.spec.ts` e2e suite. Also fixed a shared bug the e2e surfaced: `ui/slider.tsx` put `aria-label` on the roleless `SliderPrimitive.Root` instead of the `role="slider"` `Thumb`, so every slider in the app (both explorers) had no accessible name — forwarded the ARIA name to the Thumb (WCAG 2.1 SC 4.1.2).
+
+**Rationale:**
+Built as a sibling explorer (not a mode) since transformations and limits share a rendering stack but almost no UI/logic. Executed subagent-driven with a per-task spec+quality review gate. Two defects were caught by the review loop rather than shipping: the plan's `composeExpr` used an untyped mathjs node guard that failed `astro check` (fixed to `instanceof SymbolNode`), and the plan's `zoomBound` render guard broke zoom re-sync on in-place re-renders (removed; `on('all:zoom')` now registers unconditionally per `render.ts`'s proven pattern). The slider a11y fix was in scope because the feature's own WCAG-AA constraint mandates labeled sliders.
+
+**Bug Fix Context (if applicable):**
+Slider accessible-name bug root cause: shadcn wrapper spread all props (incl. `aria-label`) onto `Slider.Root`, but `role="slider"` lives on `Slider.Thumb`, and ARIA names don't inherit from ancestors. Fix forwards `aria-label`/`aria-labelledby` to the Thumb. Verified: both explorers' sliders now resolve by accessible name; no visual/regression change.
+
+**Verification:**
+9/9 Transformation e2e, 24/24 full Playwright e2e (explorer + graphing + transformation, no regressions), 102/102 Vitest unit, `astro check` 0 errors, `npm run build` emits 6 pages.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
+- Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Tasks 1–9)
+- TODO.md: Feature — Transformation Explorer; Fix — Accessible name (RESOLVED)
+
+## [2026-07-11 15:52] Commit Summary
+
+**Change Type:** Feature | Fix
+**Scope:** Site navigation — Explorers hub routing + header dropdown
+
+**Summary:**
+Two navigation corrections now that the Explorers section holds more than one tool. (1) **Fix:** the home page's third card was titled "Function Explorer" and linked straight to `/explorers/function`, skipping the hub — it is now an **"Explorers"** card linking to `/explorers` so you choose which explorer. (2) **Feature:** the header's "Explorers" nav item keeps its link to the hub but gains a caret that discloses a dropdown of the individual explorers (Function Explorer, Transformation Explorer), with the current explorer marked `aria-current`. New `tests/e2e/navigation.spec.ts` (7 tests) covers both.
+
+**Rationale:**
+Dropdown visibility is owned entirely by JS with three independent open reasons (`pinned` via the caret, `hovered`, and focus-inside-the-menu) rather than a CSS `:focus-within` reveal. Two reasons: a `:focus-within` menu cannot be dismissed with Escape while focus remains in the nav; and a caret that toggled on *current visibility* would open-then-instantly-close, because a pointer press fires `mouseenter` before `click` (and on touch a tap fires both, making the caret a dead no-op). Separating `pinned` from `hovered` makes the caret always open on first activation across mouse, touch, and keyboard.
+
+**Bug Fix Context (if applicable):**
+The e2e suite caught the mouseenter-before-click race on the first run (3 of 7 failing) — the fix was to stop deriving the toggle from `menu.hidden` and track the open reasons independently.
+
+**Verification:**
+`npm run test:e2e`: **31 passed** (24 existing + 7 new navigation; no regressions in graphing/explorer/transformation). `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors. `npm run build`: clean.
+
+**References:**
+- Reported by user during review of PR #5 (Explorers navigation)
+
+## [2026-07-11 16:02] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Header nav — caret placement; Transformation Explorer intro copy
+
+**Summary:**
+The Explorers dropdown caret rendered as a *separate* pill next to the "Explorers" nav item (the link and the caret each carried their own padding/hover background), so it read as two chips instead of one nav item — not standard UI. Moved the pill styling to the wrapper so the label and caret share a single rounded background and one hover/active highlight: `[ Explorers ⌄ ]`. Added the standard caret-flip-on-open affordance via Tailwind's `aria-expanded:rotate-180` variant (the earlier Astro-scoped stylesheet rule never matched). Also fixed a missing space in the Transformation Explorer intro ("and**k**" → "and **k**") caused by Astro collapsing a line-break between text and a `<strong>`.
+
+**Bug Fix Context:**
+Root cause of the caret bug was purely visual and slipped through because the change was verified by behaviour (e2e) and type-checks, but never *looked at*. Caught only when the rendered header was screenshotted. Behaviour was correct throughout — all 7 navigation e2e tests passed both before and after the restyle.
+
+**Verification:**
+Visually confirmed via headless screenshots (closed + open, dark mode, Explorers active). `npm run test:e2e`: 31 passed. `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors.
+
+**References:**
+- Reported by user during review of PR #5
+
+## [2026-07-11 16:07] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Header nav — Explorers dropdown was unreachable with the mouse
+
+**Summary:**
+The dropdown opened on hover but its items could not be clicked. The menu was positioned with `mt-1`, leaving a 4px margin gap between the nav item and the menu card. That gap belongs to neither element, so moving the cursor toward the menu left `[data-explorers-nav]`, fired `mouseleave`, and closed the menu before the pointer arrived. Replaced the margin with a **hover bridge**: the menu's outer box now starts flush at `top-full` (zero gap — hit areas touch) and carries the 4px visual offset as `pt-1` padding *inside* the hoverable region, with the bordered card nested in it. Verified geometrically: nav bottom = menu top = 49px (gap 0), card renders at 53px.
+
+**Bug Fix Context:**
+The existing e2e suite could not catch this: Playwright's `locator.hover()` **teleports** the cursor straight to the target, so it never traverses the dead space a real mouse crosses, and therefore never fires the `mouseleave` that closed the menu. Added `tests/e2e/navigation.spec.ts` → "the mouse can travel from the nav into the dropdown and click an item", which walks the cursor with `page.mouse.move(..., { steps: 25 })` and asserts the menu survives the journey, then presses the item. Proven non-vacuous: with the fix stashed the new test FAILS at exactly the "must NOT have closed on the way down" assertion; with it restored it passes.
+
+**Verification:**
+`npm run test:e2e`: **32 passed** (8 navigation incl. the new traversal test; no regressions). `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors. Visually confirmed open/closed states via headless screenshot.
+
+**References:**
+- Reported by user during review of PR #5 ("you can't click on anything")
+
+## [2026-07-11 16:23] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers — points toggle & value table design spec
+
+**Summary:**
+Design spec for bringing the graphing calculator's two missing features into **both** explorers: a **Show points** toggle (markers at whole-number gridline crossings) and a **value table** (one row per integer x in the window). Reuses the existing `gridlineCrossings` / `integerXs` / `evalAt` helpers and exports `plot.ts`'s private `makeMarker`; adds one shared presentational `ValueTable` component. The Transformation Explorer covers both curves — markers on parent and transformed, table columns `x | f(x) | g(x)` — so the transformation is readable numerically. On/off toggle only (no shape picker); points default off.
+
+**Rationale:**
+Architecture follows the codebase's existing "islands decide, renderers draw" rule: the islands compute and memoise the crossings and table values, and pass precomputed data down, so renderers and `ValueTable` contain no math. That both removes an internal contradiction in the first draft and creates the single lever the performance risk needs (`evalAt` re-parses its expression on every call, and a slider drag re-derives the crossings each tick).
+
+**Process:**
+Brainstormed (2 clickable decisions), then audited with **spec-gap-auditor** before any code. All load-bearing claims were verified against the source (`makeMarker` is private at `plot.ts:120`; `evalAt` re-parses per call; `gridlineCrossings`/`integerXs` are already unit-tested; graph's table has zero `scope=` attributes). Seven gaps (G1–G7) surfaced and closed; the one product decision (does hiding the parent curve also drop its table column? — no, the table keeps `f(x)`) was resolved with the user.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (gaps G1–G7)
+- Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md (5 tasks; Task 5 is a mandatory visual + perf gate)
+
+## [2026-07-11 16:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Both Explorers — points toggle & value table
+
+**Summary:**
+Brought the graphing calculator's two missing features into **both** explorers. **Show points** marks every whole-number gridline crossing on the curve (reusing `gridlineCrossings`); a **value table** under each plot lists every integer x in the current window (`integerXs`) with `—` where the function is undefined. The Function Explorer gets one `f(x)` column; the **Transformation Explorer covers both curves** — markers on the parent (`ghost`) and the transformed (`curve`), and columns `x | f(x) | g(x)`, so the transformation reads numerically as well as visually. Points default off; on/off toggle only (no shape picker — the explorers have a fixed 1–2 curves already separated by colour and solid-vs-dashed). Exported `plot.ts`'s private `makeMarker` and added one shared, purely-presentational `ValueTable` component.
+
+**Rationale:**
+Follows the codebase's "islands decide, renderers draw" rule: the islands compute and **memoise** the crossings and table values and pass precomputed data down, so neither the renderers nor `ValueTable` ever call `evalAt` (which re-parses its expression on every call). That single decision is what keeps a slider drag cheap. "Show parent" governs the **plot only** — the `f(x)` column always shows, because the table is data, not decoration.
+
+**Verification (all measured, not assumed):**
+36 Playwright e2e (4 new, no regressions), 103 Vitest, `astro check` 0 errors, build clean. **Perf gate:** a real-cursor drag of the `a` slider with points ON sustained **121 fps** over 1.1 s (134 frames) — smooth. **Zoom:** settles (marker count stable across 700 ms) and recomputes crossings for the new window — no render loop. **Visual:** screenshotted both explorers with points on; markers sit on the curves in the right colours, the draggable point stays distinct, and the tables render correct values (`1/x^2` → `—` at x=0, `0.25` at x=±2; with k=−3, g = f − 3 across every row).
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (G1–G7 closed)
+- Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md
+
+## [2026-07-11 16:43] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Both Explorers — point shape picker (parity with the graphing calculator)
+
+**Summary:**
+Added the circle/square/triangle **Shape** picker beside the *Show points* checkbox in both explorers, replicating the graphing calculator's existing control exactly (`Checkbox` + `Select` over the shared `PointShape` type and `SHAPES` list). `OverlayScene` and `TransformRenderOptions` each carry a `pointShape`, which is passed straight to the already-shared `makeMarker`. In the Transformation Explorer both curves use the picked shape and remain separated by **colour** — the same model graph uses to separate equations.
+
+**Rationale:**
+This corrects an earlier decision of mine. I had recommended an on/off toggle only, reasoning that the shape picker exists in graph to distinguish *stacked* equations while the explorers have a fixed 1–2 curves already separated by colour and solid-vs-dashed. That was wrong on two counts: consistency across the app matters more than a marginal YAGNI saving (the same feature should not have different controls in different tools), and the pattern was already implemented and tested in `GraphingCalculator.tsx` — so replicating it was cheaper than justifying its absence. No new abstraction was invented; the existing pattern was reused.
+
+**Verification:**
+38 Playwright e2e (2 new — picking Square in the Function Explorer renders `<rect>` markers and zero `<circle>`; picking Triangle in the Transformation Explorer renders `<path>` markers on **both** curves), 103 Vitest, `astro check` 0 errors, build clean. Visually confirmed both explorers with the picker (square in the Function Explorer, triangle in the Transformation Explorer) — as a bonus, the round draggable point now reads as clearly distinct from square/triangle crossing markers.
+
+**References:**
+- Reported by user during review of PR #5 ("why on the graph I have the option to pick the point shape and on the two explorers I don't?")
+
+## [2026-07-11 16:51] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker — wire the Transformation Explorer title build-arg
+
+**Summary:**
+`src/config.ts` gained `SITE_TITLE_TRANSFORMATION_EXPLORER` (reading `PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER`) when the Transformation Explorer landed, but the variable was never added to the `Dockerfile` (ARG/ENV), `docker-compose.yml` (build args), or `.env.example` — unlike every other page title. The site still rendered (the constant falls back to a hardcoded default), so nothing broke; the env var was simply **silently ignored** in a containerised build. Now wired in all three places, restoring the established pattern.
+
+**Bug Fix Context:**
+Missed when the Transformation Explorer route was added — a config constant was introduced without following it through the Docker build-arg chain. Surfaced by the user asking about producing a container image to run via Docker.
+
+**Verification:**
+Built the image with an override — `docker build --build-arg PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER="Transformations (custom)"` — ran it, and confirmed the custom string is baked into `<title>` on `/explorers/transformations` (it would not have been before this fix). All six routes serve HTTP 200 from the container: `/`, `/ti-84`, `/graphing`, `/explorers`, `/explorers/function`, `/explorers/transformations`.
+
+**References:**
+- Dockerfile, docker-compose.yml, .env.example

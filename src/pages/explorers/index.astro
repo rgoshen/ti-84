@@ -1,0 +1,46 @@
+---
+import Base from '@/layouts/Base.astro';
+import { SITE_TITLE_EXPLORERS, SITE_TITLE_FUNCTION_EXPLORER, SITE_TITLE_TRANSFORMATION_EXPLORER } from '@/config';
+---
+
+<Base
+  title={SITE_TITLE_EXPLORERS}
+  description="Interactive explorers for building intuition about math concepts — starting with a function limit and asymptote explorer."
+>
+  <section class="py-8 text-center sm:py-12">
+    <h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">{SITE_TITLE_EXPLORERS}</h1>
+    <p class="mx-auto mt-3 max-w-2xl text-muted-foreground">
+      Interactive tools for building intuition, not just getting an answer. Drag, animate, and watch
+      the math respond.
+    </p>
+  </section>
+
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <a
+      href="/explorers/function"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_FUNCTION_EXPLORER}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Drag a point along any function to see limits, arrow notation, and asymptotes come alive —
+        with animated limit sweeps toward walls and &plusmn;&infin;.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the Function Explorer &rarr;
+      </span>
+    </a>
+    <a
+      href="/explorers/transformations"
+      class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
+    >
+      <h2 class="text-lg font-medium">{SITE_TITLE_TRANSFORMATION_EXPLORER}</h2>
+      <p class="mt-2 text-sm text-muted-foreground">
+        Pick a parent function and shift, stretch, compress, and reflect it with a, b, h, k — watch
+        g(x) = a&middot;f(b(x &minus; h)) + k reshape live against a dashed ghost of the parent.
+      </p>
+      <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
+        Open the Transformation Explorer &rarr;
+      </span>
+    </a>
+  </div>
+</Base>
