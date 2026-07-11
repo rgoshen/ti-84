@@ -21,9 +21,12 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
+const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
+
 type WindowFields = Record<keyof Window2D, string>;
 const windowToFields = (w: Window2D): WindowFields => ({
-  xMin: String(w.xMin), xMax: String(w.xMax), yMin: String(w.yMin), yMax: String(w.yMax),
+  xMin: String(round6(w.xMin)), xMax: String(round6(w.xMax)),
+  yMin: String(round6(w.yMin)), yMax: String(round6(w.yMax)),
 });
 
 export default function TransformationExplorer(): React.JSX.Element {
@@ -165,7 +168,7 @@ export default function TransformationExplorer(): React.JSX.Element {
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
         <Card className="gap-3 p-4">
-          <Label>Parent function</Label>
+          <h3 className="text-sm font-medium">Parent function</h3>
           <div className="flex flex-wrap gap-2">
             {PARENTS.map((p) => (
               <Button
