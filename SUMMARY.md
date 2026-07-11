@@ -869,3 +869,20 @@ This corrects an earlier decision of mine. I had recommended an on/off toggle on
 
 **References:**
 - Reported by user during review of PR #5 ("why on the graph I have the option to pick the point shape and on the two explorers I don't?")
+
+## [2026-07-11 16:51] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker — wire the Transformation Explorer title build-arg
+
+**Summary:**
+`src/config.ts` gained `SITE_TITLE_TRANSFORMATION_EXPLORER` (reading `PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER`) when the Transformation Explorer landed, but the variable was never added to the `Dockerfile` (ARG/ENV), `docker-compose.yml` (build args), or `.env.example` — unlike every other page title. The site still rendered (the constant falls back to a hardcoded default), so nothing broke; the env var was simply **silently ignored** in a containerised build. Now wired in all three places, restoring the established pattern.
+
+**Bug Fix Context:**
+Missed when the Transformation Explorer route was added — a config constant was introduced without following it through the Docker build-arg chain. Surfaced by the user asking about producing a container image to run via Docker.
+
+**Verification:**
+Built the image with an override — `docker build --build-arg PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER="Transformations (custom)"` — ran it, and confirmed the custom string is baked into `<title>` on `/explorers/transformations` (it would not have been before this fix). All six routes serve HTTP 200 from the container: `/`, `/ti-84`, `/graphing`, `/explorers`, `/explorers/function`, `/explorers/transformations`.
+
+**References:**
+- Dockerfile, docker-compose.yml, .env.example
