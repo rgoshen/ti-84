@@ -2,11 +2,24 @@
 // Shared sticky site header: brand + nav with an active-page indicator, plus a
 // light/dark theme toggle. Colors use the shadcn/Tailwind theme tokens so they
 // follow the `.dark` class set by the Base layout's theme bootstrap.
+//
+// The Explorers item is a link to the hub PLUS a caret that discloses a dropdown
+// of the individual explorers, so you can either browse the section or jump
+// straight to one. Visibility is JS-owned (single source of truth) so `Escape`
+// can close it even while focus is still inside the nav — a CSS `:focus-within`
+// reveal cannot be dismissed that way.
+import { SITE_TITLE_FUNCTION_EXPLORER, SITE_TITLE_TRANSFORMATION_EXPLORER } from '@/config';
+
 const links = [
   { href: '/', label: 'Home' },
   { href: '/ti-84', label: 'TI-84' },
   { href: '/graphing', label: 'Graphing' },
   { href: '/explorers', label: 'Explorers' },
+] as const;
+
+const explorers = [
+  { href: '/explorers/function', label: SITE_TITLE_FUNCTION_EXPLORER },
+  { href: '/explorers/transformations', label: SITE_TITLE_TRANSFORMATION_EXPLORER },
 ] as const;
 
 // Normalize a trailing slash so "/ti-84" and "/ti-84/" match the same nav link.
@@ -22,6 +35,13 @@ const isActive = (href: string): boolean => {
   if (current === target) return true;
   return target !== '/' && current.startsWith(`${target}/`);
 };
+
+const linkClass = (active: boolean): string[] => [
+  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+  active
+    ? 'bg-muted text-foreground'
+    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+];
 ---
 
 <header class="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
@@ -30,20 +50,74 @@ const isActive = (href: string): boolean => {
       <a href="/" class="text-xl font-semibold tracking-tight">Online Calculators</a>
       <nav aria-label="Main" class="flex items-center gap-1">
         {
-          links.map((link) => (
-            <a
-              href={link.href}
-              aria-current={isActive(link.href) ? 'page' : undefined}
-              class:list={[
-                'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive(link.href)
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              ]}
-            >
-              {link.label}
-            </a>
-          ))
+          links.map((link) =>
+            link.href === '/explorers' ? (
+              <div class="relative" data-explorers-nav>
+                <div class="flex items-center">
+                  <a
+                    href={link.href}
+                    aria-current={isActive(link.href) ? 'page' : undefined}
+                    class:list={linkClass(isActive(link.href))}
+                  >
+                    {link.label}
+                  </a>
+                  <button
+                    type="button"
+                    data-explorers-toggle
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                    aria-controls="explorers-menu"
+                    aria-label="Show explorers"
+                    class="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      aria-hidden="true"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <ul
+                  id="explorers-menu"
+                  data-explorers-menu
+                  hidden
+                  class="absolute left-0 top-full z-30 mt-1 min-w-56 rounded-md border bg-background p-1 shadow-md"
+                >
+                  {explorers.map((explorer) => (
+                    <li>
+                      <a
+                        href={explorer.href}
+                        aria-current={current === normalize(explorer.href) ? 'page' : undefined}
+                        class:list={[
+                          'block rounded-md px-3 py-2 text-sm transition-colors',
+                          current === normalize(explorer.href)
+                            ? 'bg-muted text-foreground'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        ]}
+                      >
+                        {explorer.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <a
+                href={link.href}
+                aria-current={isActive(link.href) ? 'page' : undefined}
+                class:list={linkClass(isActive(link.href))}
+              >
+                {link.label}
+              </a>
+            ),
+          )
         }
       </nav>
     </div>
@@ -105,4 +179,72 @@ const isActive = (href: string): boolean => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
     syncLabel();
   });
+</script>
+
+<script>
+  // Explorers dropdown. Visibility is owned entirely by JS (the `hidden` attribute
+  // + `aria-expanded`), so there is one source of truth: hovering opens it for mouse
+  // users, the caret button opens it for keyboard/touch (Enter/Space fire `click`
+  // natively on a <button>), and Escape / tabbing away / clicking outside close it.
+  // Deliberately NOT a CSS `:focus-within` reveal — that cannot be dismissed with
+  // Escape while focus remains inside the nav.
+  const nav = document.querySelector('[data-explorers-nav]');
+  const caret = nav?.querySelector('[data-explorers-toggle]');
+  const menu = nav?.querySelector('[data-explorers-menu]');
+
+  if (nav instanceof HTMLElement && caret instanceof HTMLButtonElement && menu instanceof HTMLElement) {
+    // Three independent reasons the menu can be open. Keeping them separate is what
+    // makes the caret work: a pointer press fires `mouseenter` BEFORE `click`, so a
+    // caret that toggled on current visibility would open-then-instantly-close (and
+    // be a dead no-op on touch). Instead the caret toggles `pinned` only.
+    let pinned = false; // opened deliberately via the caret (click / Enter / Space / tap)
+    let hovered = false; // pointer is over the nav
+    // Focus inside the MENU (not merely inside the nav) also holds it open — that
+    // way `Escape` can still dismiss it while focus sits on the caret.
+    const focusInMenu = (): boolean => menu.contains(document.activeElement);
+
+    const render = (): void => {
+      const open = pinned || hovered || focusInMenu();
+      menu.hidden = !open;
+      caret.setAttribute('aria-expanded', String(open));
+    };
+
+    nav.addEventListener('mouseenter', () => {
+      hovered = true;
+      render();
+    });
+    nav.addEventListener('mouseleave', () => {
+      hovered = false;
+      render();
+    });
+
+    caret.addEventListener('click', () => {
+      pinned = !pinned;
+      render();
+    });
+
+    nav.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        pinned = false;
+        caret.focus(); // pulls focus out of the menu so `focusInMenu()` goes false
+        render();
+      }
+    });
+
+    // Tabbing all the way out of the nav dismisses it; moving between the link,
+    // the caret, and the menu items does not.
+    nav.addEventListener('focusout', () => {
+      requestAnimationFrame(() => {
+        if (!nav.contains(document.activeElement)) pinned = false;
+        render();
+      });
+    });
+
+    document.addEventListener('click', (event: MouseEvent) => {
+      if (event.target instanceof Node && !nav.contains(event.target)) {
+        pinned = false;
+        render();
+      }
+    });
+  }
 </script>

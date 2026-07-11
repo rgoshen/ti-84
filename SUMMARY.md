@@ -762,3 +762,23 @@ Slider accessible-name bug root cause: shadcn wrapper spread all props (incl. `a
 - Spec: docs/superpowers/specs/2026-07-11-transformation-explorer-design.md (gaps G1–G9)
 - Plan: docs/superpowers/plans/2026-07-11-transformation-explorer.md (Tasks 1–9)
 - TODO.md: Feature — Transformation Explorer; Fix — Accessible name (RESOLVED)
+
+## [2026-07-11 15:52] Commit Summary
+
+**Change Type:** Feature | Fix
+**Scope:** Site navigation — Explorers hub routing + header dropdown
+
+**Summary:**
+Two navigation corrections now that the Explorers section holds more than one tool. (1) **Fix:** the home page's third card was titled "Function Explorer" and linked straight to `/explorers/function`, skipping the hub — it is now an **"Explorers"** card linking to `/explorers` so you choose which explorer. (2) **Feature:** the header's "Explorers" nav item keeps its link to the hub but gains a caret that discloses a dropdown of the individual explorers (Function Explorer, Transformation Explorer), with the current explorer marked `aria-current`. New `tests/e2e/navigation.spec.ts` (7 tests) covers both.
+
+**Rationale:**
+Dropdown visibility is owned entirely by JS with three independent open reasons (`pinned` via the caret, `hovered`, and focus-inside-the-menu) rather than a CSS `:focus-within` reveal. Two reasons: a `:focus-within` menu cannot be dismissed with Escape while focus remains in the nav; and a caret that toggled on *current visibility* would open-then-instantly-close, because a pointer press fires `mouseenter` before `click` (and on touch a tap fires both, making the caret a dead no-op). Separating `pinned` from `hovered` makes the caret always open on first activation across mouse, touch, and keyboard.
+
+**Bug Fix Context (if applicable):**
+The e2e suite caught the mouseenter-before-click race on the first run (3 of 7 failing) — the fix was to stop deriving the toggle from `menu.hidden` and track the open reasons independently.
+
+**Verification:**
+`npm run test:e2e`: **31 passed** (24 existing + 7 new navigation; no regressions in graphing/explorer/transformation). `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors. `npm run build`: clean.
+
+**References:**
+- Reported by user during review of PR #5 (Explorers navigation)

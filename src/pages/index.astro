@@ -1,6 +1,6 @@
 ---
 import Base from '@/layouts/Base.astro';
-import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING, SITE_TITLE_FUNCTION_EXPLORER } from '@/config';
+import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING, SITE_TITLE_EXPLORERS } from '@/config';
 ---
 
 <Base
@@ -42,15 +42,16 @@ import { SITE_TITLE_TI84, SITE_TITLE_GRAPHING, SITE_TITLE_FUNCTION_EXPLORER } fr
     </a>
 
     <a
-      href="/explorers/function"
+      href="/explorers"
       class="group rounded-xl border bg-card p-6 shadow-sm transition-colors hover:bg-accent"
     >
-      <h2 class="text-lg font-medium">{SITE_TITLE_FUNCTION_EXPLORER}</h2>
+      <h2 class="text-lg font-medium">{SITE_TITLE_EXPLORERS}</h2>
       <p class="mt-2 text-sm text-muted-foreground">
-        Drag a point along any function to see its limits, arrow notation, and asymptotes come alive.
+        Interactive tools for building intuition: explore a function&rsquo;s limits and asymptotes, or
+        shift, stretch, and reflect graphs with transformations.
       </p>
       <span class="mt-4 inline-block text-sm font-medium group-hover:underline">
-        Open the Function Explorer &rarr;
+        Browse the explorers &rarr;
       </span>
     </a>
   </div>
