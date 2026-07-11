@@ -96,3 +96,41 @@ test('dark mode still renders both curves', async ({ page }) => {
   await page.getByRole('button', { name: 'Toggle theme' }).click();
   await expect(page.locator(`${PLOT} g.graph`)).toHaveCount(2);
 });
+
+test('show points marks both curves; hiding the parent drops its markers but keeps its column', async ({
+  page,
+}) => {
+  await goto(page);
+  await page.getByRole('checkbox', { name: /show points/i }).check();
+
+  await expect(page.locator('[data-testid="crossing-marker-parent"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="crossing-marker-transformed"]').first()).toBeVisible();
+
+  // Hiding the parent removes its MARKERS…
+  await page.getByRole('checkbox', { name: /show parent/i }).uncheck();
+  await expect(page.locator('[data-testid="crossing-marker-parent"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid="crossing-marker-transformed"]').first()).toBeVisible();
+
+  // …but the f(x) COLUMN stays: the table is data, not decoration.
+  await expect(
+    page.locator('[data-testid="value-table"] tr[data-x="1"] td[data-col="fx"]'),
+  ).toBeVisible();
+});
+
+test('the value table shows f(x) and g(x), and a vertical shift moves g by exactly k', async ({
+  page,
+}) => {
+  await goto(page);
+  const table = page.locator('[data-testid="value-table"]');
+
+  // Parent x²: at x = 1, f = 1 and (identity) g = 1.
+  await expect(table.locator('tr[data-x="1"] td[data-col="fx"]')).toHaveText('1');
+  await expect(table.locator('tr[data-x="1"] td[data-col="gx"]')).toHaveText('1');
+
+  // k = +2  →  g(x) = f(x) + 2, so g(1) = 3 while f(1) is unchanged.
+  const k = page.getByRole('slider', { name: /k — vertical shift/i });
+  await k.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
+  await expect(table.locator('tr[data-x="1"] td[data-col="gx"]')).toHaveText('3');
+  await expect(table.locator('tr[data-x="1"] td[data-col="fx"]')).toHaveText('1');
+});

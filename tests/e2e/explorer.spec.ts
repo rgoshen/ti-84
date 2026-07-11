@@ -142,3 +142,28 @@ test('the Explorers nav link is marked current on the explorer page', async ({ p
     'page',
   );
 });
+
+test('with no function plotted, points are disabled and the value table is empty', async ({ page }) => {
+  await page.goto('/explorers/function');
+  await expect(page.locator(`${PLOT} svg`)).toBeVisible();
+
+  await expect(page.getByRole('checkbox', { name: /show points/i })).toBeDisabled();
+  await expect(page.getByText('Plot a function to see its value table.')).toBeVisible();
+});
+
+test('show points marks whole-number crossings, and the value table lists integer x', async ({
+  page,
+}) => {
+  await gotoExplorer(page, '1/x^2');
+
+  await expect(page.locator('[data-testid="crossing-marker"]')).toHaveCount(0);
+  await page.getByRole('checkbox', { name: /show points/i }).check();
+  await expect(page.locator('[data-testid="crossing-marker"]').first()).toBeVisible();
+
+  const table = page.locator('[data-testid="value-table"]');
+  await expect(table).toBeVisible();
+  // 1/x^2 at x = 2 is 0.25
+  await expect(table.locator('tr[data-x="2"] td[data-col="fx"]')).toHaveText('0.25');
+  // real column headers, not a grid of divs
+  await expect(table.locator('th[scope="col"]').first()).toHaveText('x');
+});
