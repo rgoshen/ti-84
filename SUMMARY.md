@@ -852,3 +852,20 @@ Follows the codebase's "islands decide, renderers draw" rule: the islands comput
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-explorer-points-and-value-table-design.md (G1–G7 closed)
 - Plan: docs/superpowers/plans/2026-07-11-explorer-points-and-value-table.md
+
+## [2026-07-11 16:43] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Both Explorers — point shape picker (parity with the graphing calculator)
+
+**Summary:**
+Added the circle/square/triangle **Shape** picker beside the *Show points* checkbox in both explorers, replicating the graphing calculator's existing control exactly (`Checkbox` + `Select` over the shared `PointShape` type and `SHAPES` list). `OverlayScene` and `TransformRenderOptions` each carry a `pointShape`, which is passed straight to the already-shared `makeMarker`. In the Transformation Explorer both curves use the picked shape and remain separated by **colour** — the same model graph uses to separate equations.
+
+**Rationale:**
+This corrects an earlier decision of mine. I had recommended an on/off toggle only, reasoning that the shape picker exists in graph to distinguish *stacked* equations while the explorers have a fixed 1–2 curves already separated by colour and solid-vs-dashed. That was wrong on two counts: consistency across the app matters more than a marginal YAGNI saving (the same feature should not have different controls in different tools), and the pattern was already implemented and tested in `GraphingCalculator.tsx` — so replicating it was cheaper than justifying its absence. No new abstraction was invented; the existing pattern was reused.
+
+**Verification:**
+38 Playwright e2e (2 new — picking Square in the Function Explorer renders `<rect>` markers and zero `<circle>`; picking Triangle in the Transformation Explorer renders `<path>` markers on **both** curves), 103 Vitest, `astro check` 0 errors, build clean. Visually confirmed both explorers with the picker (square in the Function Explorer, triangle in the Transformation Explorer) — as a bonus, the round draggable point now reads as clearly distinct from square/triangle crossing markers.
+
+**References:**
+- Reported by user during review of PR #5 ("why on the graph I have the option to pick the point shape and on the two explorers I don't?")

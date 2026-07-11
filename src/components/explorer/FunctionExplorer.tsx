@@ -28,10 +28,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import type { PointShape } from '@/scripts/graphing/plot';
 
 // Tunables, in one place.
 const DEFAULT_WINDOW: Window2D = { xMin: -4, xMax: 4, yMin: -1, yMax: 7 };
+const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 const POINT_HIT_RADIUS_PX = 16; // grab radius for the draggable point
 const SWEEP_MS = 1400; // limit-sweep animation duration
 const READOUT_SETTLE_MS = 250; // coalesce aria-live announcements
@@ -73,6 +82,7 @@ export default function FunctionExplorer(): React.JSX.Element {
   const [showFloor, setShowFloor] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showPoints, setShowPoints] = useState(false);
+  const [pointShape, setPointShape] = useState<PointShape>('circle');
   const [sweep, setSweep] = useState<Sweep | null>(null);
   const [dark, setDark] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true,
@@ -148,6 +158,7 @@ export default function FunctionExplorer(): React.JSX.Element {
     showWall,
     showFloor,
     points,
+    pointShape,
     sweepTrail: sweep && sweepPathRef.current ? { fromX: sweepPathRef.current.from, leadX: x } : null,
   };
   const xRef = useRef(x);
@@ -317,7 +328,7 @@ export default function FunctionExplorer(): React.JSX.Element {
   // Redraw the overlay when any scene input changes (no plot rebuild).
   useEffect(() => {
     handleRef.current?.redraw();
-  }, [x, sweep, showWall, showFloor, points, asymptotes, displayWindow, endNeg, endPos, dark]);
+  }, [x, sweep, showWall, showFloor, points, pointShape, asymptotes, displayWindow, endNeg, endPos, dark]);
 
   // Re-seat the point onto the visible curve when the function or window changes.
   useEffect(() => {
@@ -523,14 +534,35 @@ export default function FunctionExplorer(): React.JSX.Element {
               <Checkbox checked={showGrid} onCheckedChange={(v) => setShowGrid(v === true)} />
               <span className="text-muted-foreground">Show grid</span>
             </label>
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <Checkbox
-                checked={showPoints}
-                disabled={!hasFunction}
-                onCheckedChange={(v) => setShowPoints(v === true)}
-              />
-              <span className="text-muted-foreground">Show points (whole-number crossings)</span>
-            </label>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={showPoints}
+                  disabled={!hasFunction}
+                  onCheckedChange={(v) => setShowPoints(v === true)}
+                />
+                <span className="text-muted-foreground">Show points</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <span className="text-muted-foreground">Shape:</span>
+                <Select
+                  value={pointShape}
+                  onValueChange={(v) => setPointShape(v as PointShape)}
+                  disabled={!hasFunction}
+                >
+                  <SelectTrigger size="sm" className="capitalize">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHAPES.map((s) => (
+                      <SelectItem key={s} value={s} className="capitalize">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            </div>
           </div>
           <p className="text-[11px] text-muted-foreground">
             Drag the point along the curve, or scroll to zoom and drag the background to pan.

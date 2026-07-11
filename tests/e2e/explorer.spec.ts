@@ -167,3 +167,17 @@ test('show points marks whole-number crossings, and the value table lists intege
   // real column headers, not a grid of divs
   await expect(table.locator('th[scope="col"]').first()).toHaveText('x');
 });
+
+test('the point shape picker changes the marker shape, like the graphing calculator', async ({
+  page,
+}) => {
+  await gotoExplorer(page, '1/x^2');
+  await page.getByRole('checkbox', { name: /show points/i }).check();
+  await expect(page.locator('circle[data-testid="crossing-marker"]').first()).toBeVisible();
+
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Square' }).click();
+
+  await expect(page.locator('rect[data-testid="crossing-marker"]').first()).toBeVisible();
+  await expect(page.locator('circle[data-testid="crossing-marker"]')).toHaveCount(0);
+});

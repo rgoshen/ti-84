@@ -134,3 +134,21 @@ test('the value table shows f(x) and g(x), and a vertical shift moves g by exact
   await expect(table.locator('tr[data-x="1"] td[data-col="gx"]')).toHaveText('3');
   await expect(table.locator('tr[data-x="1"] td[data-col="fx"]')).toHaveText('1');
 });
+
+test('the point shape picker changes the markers on both curves', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('checkbox', { name: /show points/i }).check();
+  await expect(
+    page.locator('circle[data-testid="crossing-marker-transformed"]').first(),
+  ).toBeVisible();
+
+  await page.getByRole('combobox').click();
+  await page.getByRole('option', { name: 'Triangle' }).click();
+
+  // Both curves follow the picked shape; colour is what separates them (same as graph).
+  await expect(page.locator('path[data-testid="crossing-marker-parent"]').first()).toBeVisible();
+  await expect(
+    page.locator('path[data-testid="crossing-marker-transformed"]').first(),
+  ).toBeVisible();
+  await expect(page.locator('circle[data-testid="crossing-marker-transformed"]')).toHaveCount(0);
+});

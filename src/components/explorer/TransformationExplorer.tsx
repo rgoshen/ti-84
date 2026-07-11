@@ -13,10 +13,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import type { PointShape } from '@/scripts/graphing/plot';
 
 // Tunables, in one place.
 const IDENTITY: Coeffs = { a: 1, b: 1, h: 0, k: 0 };
+const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 const A_RANGE = { min: -5, max: 5, step: 0.1 };
 const H_RANGE = { min: -10, max: 10, step: 0.1 };
 const round2 = (n: number): number => Math.round(n * 100) / 100;
@@ -44,6 +53,7 @@ export default function TransformationExplorer(): React.JSX.Element {
   const [showParent, setShowParent] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showPoints, setShowPoints] = useState(false);
+  const [pointShape, setPointShape] = useState<PointShape>('circle');
   const [dark, setDark] = useState(() =>
     typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true,
   );
@@ -157,6 +167,7 @@ export default function TransformationExplorer(): React.JSX.Element {
         showParent,
         parentPoints,
         transformedPoints,
+        pointShape,
         dark,
         grid: showGrid,
         onViewChange: (w) => { viewRef.current = w; setDisplayWindow(w); },
@@ -165,7 +176,7 @@ export default function TransformationExplorer(): React.JSX.Element {
     } catch {
       setError('Could not plot that function. Check the syntax and try again.');
     }
-  }, [baseExpr, coeffs, showParent, parentPoints, transformedPoints, dark, showGrid]);
+  }, [baseExpr, coeffs, showParent, parentPoints, transformedPoints, pointShape, dark, showGrid]);
 
   // Redraw on any change. appliedWindow is a dep (a fresh window resets the view)
   // but displayWindow is NOT, so interactive zoom doesn't retrigger a rebuild.
@@ -296,10 +307,27 @@ export default function TransformationExplorer(): React.JSX.Element {
               <Checkbox checked={showGrid} onCheckedChange={(v) => setShowGrid(v === true)} />
               <span className="text-muted-foreground">Show grid</span>
             </label>
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <Checkbox checked={showPoints} onCheckedChange={(v) => setShowPoints(v === true)} />
-              <span className="text-muted-foreground">Show points (whole-number crossings)</span>
-            </label>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2">
+                <Checkbox checked={showPoints} onCheckedChange={(v) => setShowPoints(v === true)} />
+                <span className="text-muted-foreground">Show points</span>
+              </label>
+              <label className="inline-flex items-center gap-1.5">
+                <span className="text-muted-foreground">Shape:</span>
+                <Select value={pointShape} onValueChange={(v) => setPointShape(v as PointShape)}>
+                  <SelectTrigger size="sm" className="capitalize">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SHAPES.map((s) => (
+                      <SelectItem key={s} value={s} className="capitalize">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+            </div>
           </div>
         </Card>
       </div>

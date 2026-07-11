@@ -18,6 +18,7 @@ import {
   makeMarker,
   SVG_NS,
   type FunctionPlotInstance,
+  type PointShape,
 } from '@/scripts/graphing/plot';
 import { composeExpr, type Coeffs } from './transform';
 
@@ -36,6 +37,8 @@ export interface TransformRenderOptions {
   /** Precomputed crossings; empty when the toggle is off. Parent markers obey `showParent`. */
   parentPoints: Point[];
   transformedPoints: Point[];
+  /** Marker shape, same picker as the graphing calculator. Colour separates the two curves. */
+  pointShape: PointShape;
   dark: boolean;
   grid: boolean;
   onViewChange: (w: Window2D) => void;
@@ -64,6 +67,7 @@ function drawPoints(
   instance: FunctionPlotInstance,
   parentPoints: Point[],
   transformedPoints: Point[],
+  pointShape: PointShape,
   eColors: ExplorerColors,
 ): void {
   const svg = target.querySelector('svg');
@@ -79,7 +83,7 @@ function drawPoints(
   g.setAttribute('class', 'transform-points');
   const add = (pts: Point[], color: string, kind: string): void => {
     for (const p of pts) {
-      const marker = makeMarker('circle', xScale(p.x), yScale(p.y), color);
+      const marker = makeMarker(pointShape, xScale(p.x), yScale(p.y), color);
       marker.setAttribute('data-testid', `crossing-marker-${kind}`);
       g.appendChild(marker);
     }
@@ -98,6 +102,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
     showParent,
     parentPoints,
     transformedPoints,
+    pointShape,
     dark,
     grid,
     onViewChange,
@@ -127,7 +132,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
   applyThemeToPlot(target, colors);
   boldZeroAxes(target);
   dashParent(target, showParent);
-  drawPoints(target, instance, parentPoints, transformedPoints, eColors);
+  drawPoints(target, instance, parentPoints, transformedPoints, pointShape, eColors);
 
   let queued = false;
   instance.on('all:zoom', () => {
@@ -146,7 +151,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
       // Redraw with the CURRENT (pre-zoom) crossings so markers stay on the curve during the
       // gesture; onViewChange then updates the window, and the island recomputes them for the
       // new view on the next render.
-      drawPoints(target, instance, parentPoints, transformedPoints, eColors);
+      drawPoints(target, instance, parentPoints, transformedPoints, pointShape, eColors);
       onViewChange({ xMin: xd[0], xMax: xd[1], yMin: yd[0], yMax: yd[1] });
     });
   });

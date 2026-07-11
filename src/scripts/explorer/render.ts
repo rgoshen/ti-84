@@ -24,6 +24,7 @@ import {
   makeMarker,
   SVG_NS,
   type FunctionPlotInstance,
+  type PointShape,
 } from '@/scripts/graphing/plot';
 import { pinToWindow } from './branch';
 import type { Asymptote, EndBehavior } from './limits';
@@ -48,6 +49,8 @@ export interface OverlayScene {
   showFloor: boolean;
   /** Whole-number gridline crossings to mark, already computed by the island (empty = off). */
   points: Point[];
+  /** Marker shape, same picker as the graphing calculator. */
+  pointShape: PointShape;
   /** Active limit-sweep trail (start x → leading x), or null when idle. */
   sweepTrail: { fromX: number; leadX: number } | null;
 }
@@ -178,7 +181,7 @@ function drawExplorerOverlay(
 
   // Whole-number gridline crossings. Precomputed by the island — this renderer does no math.
   for (const p of scene.points) {
-    const marker = makeMarker('circle', xScale(p.x), yScale(p.y), c.curve);
+    const marker = makeMarker(scene.pointShape, xScale(p.x), yScale(p.y), c.curve);
     marker.setAttribute('data-testid', 'crossing-marker');
     g.appendChild(marker);
   }
