@@ -26,13 +26,6 @@ test('renders a dashed parent and a solid transformed curve by default', async (
 
 test('moving a slider updates the readout and keeps both curves', async ({ page }) => {
   await goto(page);
-  // KNOWN BUG (src/components/ui/slider.tsx): aria-label lands on
-  // SliderPrimitive.Root, not the Thumb that carries role="slider" — so the
-  // accessible name never reaches the actual slider element. This query
-  // is intentionally accessible-name-based (the correct way to target a
-  // labelled control) and is expected to time out until that's fixed. A
-  // shorter timeout keeps the failure fast instead of burning the full 30s.
-  test.setTimeout(10_000);
   const kSlider = page.getByRole('slider', { name: /k — vertical shift/i });
   await kSlider.focus();
   for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // +2.0 at step 0.1
@@ -80,9 +73,6 @@ test('a custom function plots and transforms', async ({ page }) => {
 
 test('b = 0 explains the collapse instead of blanking silently', async ({ page }) => {
   await goto(page);
-  // Same known accessible-name bug as above — see the comment in "moving a
-  // slider updates the readout". Kept accessible-name-based on purpose.
-  test.setTimeout(10_000);
   const bSlider = page.getByRole('slider', { name: /b — horizontal stretch/i });
   await bSlider.focus();
   // Default b = 1 at step 0.1 → 10 ArrowLeft reaches 0.
