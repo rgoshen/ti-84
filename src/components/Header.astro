@@ -93,29 +93,36 @@ const linkClass = (active: boolean): string[] => [
                   </button>
                 </div>
 
-                <ul
+                {/* The outer box starts flush against the nav item (`top-full`, no
+                    margin) and carries the visual gap as PADDING. That keeps the
+                    cursor inside the nav the whole way down — a `mt-*` gap here is
+                    dead space that fires `mouseleave` and closes the menu before you
+                    can reach it. The padding is the hover bridge. */}
+                <div
                   id="explorers-menu"
                   data-explorers-menu
                   hidden
-                  class="absolute left-0 top-full z-30 mt-1 min-w-56 rounded-md border bg-background p-1 shadow-md"
+                  class="absolute left-0 top-full z-30 pt-1"
                 >
-                  {explorers.map((explorer) => (
-                    <li>
-                      <a
-                        href={explorer.href}
-                        aria-current={current === normalize(explorer.href) ? 'page' : undefined}
-                        class:list={[
-                          'block rounded-md px-3 py-2 text-sm transition-colors',
-                          current === normalize(explorer.href)
-                            ? 'bg-muted text-foreground'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                        ]}
-                      >
-                        {explorer.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                  <ul class="min-w-56 rounded-md border bg-background p-1 shadow-md">
+                    {explorers.map((explorer) => (
+                      <li>
+                        <a
+                          href={explorer.href}
+                          aria-current={current === normalize(explorer.href) ? 'page' : undefined}
+                          class:list={[
+                            'block rounded-md px-3 py-2 text-sm transition-colors',
+                            current === normalize(explorer.href)
+                              ? 'bg-muted text-foreground'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          ]}
+                        >
+                          {explorer.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             ) : (
               <a

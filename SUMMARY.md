@@ -799,3 +799,20 @@ Visually confirmed via headless screenshots (closed + open, dark mode, Explorers
 
 **References:**
 - Reported by user during review of PR #5
+
+## [2026-07-11 16:07] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Header nav — Explorers dropdown was unreachable with the mouse
+
+**Summary:**
+The dropdown opened on hover but its items could not be clicked. The menu was positioned with `mt-1`, leaving a 4px margin gap between the nav item and the menu card. That gap belongs to neither element, so moving the cursor toward the menu left `[data-explorers-nav]`, fired `mouseleave`, and closed the menu before the pointer arrived. Replaced the margin with a **hover bridge**: the menu's outer box now starts flush at `top-full` (zero gap — hit areas touch) and carries the 4px visual offset as `pt-1` padding *inside* the hoverable region, with the bordered card nested in it. Verified geometrically: nav bottom = menu top = 49px (gap 0), card renders at 53px.
+
+**Bug Fix Context:**
+The existing e2e suite could not catch this: Playwright's `locator.hover()` **teleports** the cursor straight to the target, so it never traverses the dead space a real mouse crosses, and therefore never fires the `mouseleave` that closed the menu. Added `tests/e2e/navigation.spec.ts` → "the mouse can travel from the nav into the dropdown and click an item", which walks the cursor with `page.mouse.move(..., { steps: 25 })` and asserts the menu survives the journey, then presses the item. Proven non-vacuous: with the fix stashed the new test FAILS at exactly the "must NOT have closed on the way down" assertion; with it restored it passes.
+
+**Verification:**
+`npm run test:e2e`: **32 passed** (8 navigation incl. the new traversal test; no regressions). `npm test`: 103 Vitest. `npm run astro -- check`: 0 errors. Visually confirmed open/closed states via headless screenshot.
+
+**References:**
+- Reported by user during review of PR #5 ("you can't click on anything")

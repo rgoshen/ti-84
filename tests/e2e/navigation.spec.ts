@@ -41,6 +41,34 @@ test('hovering the Explorers nav opens the dropdown', async ({ page }) => {
   await expect(menu(page)).toBeVisible();
 });
 
+/**
+ * THE RULE: a real mouse must be able to travel from the nav item into the menu
+ * and click an item. `locator.hover()` TELEPORTS the cursor, so it never crosses
+ * the space between the nav item and the menu — that blind spot let a `mt-1` gap
+ * ship, which fired `mouseleave` mid-journey and closed the menu before you could
+ * reach it. Here we walk the cursor in steps, the way a hand does.
+ */
+test('the mouse can travel from the nav into the dropdown and click an item', async ({ page }) => {
+  await page.goto('/');
+
+  const navBox = await explorersNav(page).boundingBox();
+  if (!navBox) throw new Error('explorers nav not found');
+  await page.mouse.move(navBox.x + navBox.width / 2, navBox.y + navBox.height / 2, { steps: 5 });
+  await expect(menu(page)).toBeVisible();
+
+  const item = menu(page).getByRole('link', { name: 'Transformation Explorer' });
+  const itemBox = await item.boundingBox();
+  if (!itemBox) throw new Error('menu item not found');
+
+  // Cross the space between the item and the menu the way a real cursor does.
+  await page.mouse.move(itemBox.x + itemBox.width / 2, itemBox.y + itemBox.height / 2, { steps: 25 });
+  await expect(menu(page)).toBeVisible(); // must NOT have closed on the way down
+
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(page).toHaveURL(/\/explorers\/transformations\/?$/);
+});
+
 test('picking an explorer from the dropdown navigates to it', async ({ page }) => {
   await page.goto('/');
   await caret(page).click();
