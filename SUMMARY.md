@@ -1598,3 +1598,24 @@ verification reproducible instead of relying on an unrecorded local tool.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 7
+
+## [2026-07-12 15:24] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export completion
+
+**Summary:**
+Documented how to export one PNG/PDF artifact from each supported graph tool, the
+201-row boundary, light fixed-width behavior, and TI-84 exclusion. Updated the project
+structure and test commands, and marked the TODO complete with exact unit, e2e,
+coverage, build, visual-QA, and production-audit evidence.
+
+**Rationale:**
+Export behavior includes deliberate constraints that users and maintainers need to
+understand: the file is content-only, uses desktop proportions regardless of viewport,
+and refuses oversized tables rather than silently truncating mathematical data.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md

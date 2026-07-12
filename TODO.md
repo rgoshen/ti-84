@@ -391,6 +391,12 @@ out of scope.
 - Export uses a light presentation palette for predictable sharing and printing,
   independent of the active application theme.
 
-**Status:** Design approved visually; implementation pending on
-`feature/graph-result-export`. Eight `spec-gap-auditor` findings resolved before
-implementation planning.
+**Status:** Done on `feature/graph-result-export`. Eight `spec-gap-auditor` findings
+were resolved before implementation. Verification: 160/160 Vitest tests, 51/51
+Playwright tests, zero Astro diagnostics, production build emits all 6 pages, and V8
+coverage reports 86.08% statements / 82.36% branches / 86.88% functions / 88.07%
+lines. Actual PNGs from all three tools were inspected at desktop plus mobile/dark
+inputs: each remained a light 1,440px content-only artifact with a fixed 960x560 graph,
+readable panels/table, and no clipping or controls. Production dependency audit: zero
+vulnerabilities; four moderate advisories remain confined to Astro's development YAML
+language-server chain.
