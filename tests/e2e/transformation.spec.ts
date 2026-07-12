@@ -17,7 +17,25 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
   await h.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
 
-  const download = await downloadExport(page, 'PNG');
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    const snapshot = await artifact.evaluate((node) => {
+      const graph = node.querySelector('[data-testid="export-graph"]');
+      const graphStyle = graph instanceof HTMLElement ? graph.style : null;
+      return {
+        text: node.textContent,
+        rows: node.querySelectorAll('tbody tr').length,
+        controls: node.querySelectorAll('button, input, select, nav').length,
+        graph: graphStyle
+          ? { width: parseFloat(graphStyle.width), height: parseFloat(graphStyle.height) }
+          : null,
+      };
+    });
+    expect(snapshot.text).toContain('g(x) = (x − 1)²');
+    expect(snapshot.text).toContain('Function details');
+    expect(snapshot.rows).toBe(9);
+    expect(snapshot.controls).toBe(0);
+    expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
+  });
   expect(download.suggestedFilename()).toMatch(
     /^transformation-explorer-\d{4}-\d{2}-\d{2}\.png$/,
   );
@@ -26,11 +44,25 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
   expect(bytes.readUInt32BE(16)).toBe(1440);
   expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
 
+  const pdf = await downloadExport(page, 'PDF');
+  const pdfBytes = await readDownload(pdf);
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdfBytes.toString('latin1')).toMatch(
+    /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
+  );
+
   await page.getByLabel('xMin', { exact: true }).fill('0');
   await page.getByLabel('xMax', { exact: true }).fill('201');
   await page.getByRole('button', { name: 'Apply window' }).click();
   await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
   await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
+
+  const wideDownload = await downloadExport(page, 'PNG', async (artifact) => {
+    await expect(artifact.locator('tbody tr')).toHaveCount(9);
+  });
+  const wideBytes = await readDownload(wideDownload);
+  expect(wideBytes.readUInt32BE(16)).toBe(1440);
+  expect(wideBytes.readUInt32BE(20)).toBeLessThan(1440);
 });
 
 test('renders a dashed parent and a solid transformed curve by default', async ({ page }) => {

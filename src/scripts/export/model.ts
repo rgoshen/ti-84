@@ -95,7 +95,7 @@ const SUPERSCRIPT_DIGITS: Record<string, string> = {
 };
 
 export function formatExportEquation(expression: string): string {
-  return expression.replace(/\^(-?\d+)/g, (_match, exponent: string) =>
+  return expression.replace(/\s*\^\s*\(?(-?\d+)\)?/g, (_match, exponent: string) =>
     [...exponent].map((character) => SUPERSCRIPT_DIGITS[character]).join(''),
   );
 }

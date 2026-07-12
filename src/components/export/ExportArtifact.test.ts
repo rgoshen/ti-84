@@ -11,7 +11,11 @@ const MODEL: ExportArtifactModel = {
   title: 'Graphing Calculator',
   exportedAt: 'July 12, 2026',
   window: { xMin: -10.459925966974, xMax: 11.57158384563583, yMin: -5, yMax: 20 },
-  legend: [{ label: 'y = x²', color: '#2563eb', detail: 'Points hidden' }],
+  legend: [{
+    label: 'y = thisIsAnIntentionallyLongFunctionName(x) + x²',
+    color: '#2563eb',
+    detail: 'Points hidden',
+  }],
   sections: [
     {
       title: 'Graph information',
@@ -31,7 +35,7 @@ const MODEL: ExportArtifactModel = {
   ],
   table: {
     title: 'Selected values',
-    headers: ['x', 'x²'],
+    headers: ['x', 'thisIsAnIntentionallyLongFunctionName(x) + x²'],
     rows: [
       ['0', '0'],
       ['1', '1'],
@@ -48,7 +52,7 @@ describe('ExportArtifact', () => {
     expect(html).toContain('width:960px;height:560px');
     expect(html).toContain('background:#f8fafc');
     expect(html).toContain('Graphing Calculator');
-    expect(html).toContain('y = x²');
+    expect(html).toContain('y = thisIsAnIntentionallyLongFunctionName(x) + x²');
     expect(html).toContain('x [-10.46, 11.572]');
     expect(html).toContain('Graph information');
     expect(html).toContain('data-testid="export-details"');
@@ -56,6 +60,8 @@ describe('ExportArtifact', () => {
     expect(html).toContain('Analysis');
     expect(html).toContain('Visible settings');
     expect(html).toContain('Selected values');
+    expect(html).toContain('overflow-wrap:anywhere');
+    expect(html).toContain('table-layout:fixed');
     expect(html).not.toMatch(/<(button|input|select|nav)\b/);
   });
 

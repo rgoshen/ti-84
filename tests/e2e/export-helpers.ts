@@ -1,4 +1,4 @@
-import type { Download, Page } from '@playwright/test';
+import type { Download, Locator, Page } from '@playwright/test';
 
 export async function readDownload(download: Download): Promise<Buffer> {
   const stream = await download.createReadStream();
@@ -7,9 +7,15 @@ export async function readDownload(download: Download): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-export async function downloadExport(page: Page, format: 'PNG' | 'PDF'): Promise<Download> {
+export async function downloadExport(
+  page: Page,
+  format: 'PNG' | 'PDF',
+  inspectArtifact?: (artifact: Locator) => Promise<void>,
+): Promise<Download> {
   await page.getByRole('button', { name: 'Export' }).click();
+  const inspectionPromise = inspectArtifact?.(page.getByTestId('export-artifact'));
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: `Download ${format}` }).click();
+  await inspectionPromise;
   return downloadPromise;
 }

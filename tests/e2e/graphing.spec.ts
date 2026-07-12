@@ -89,7 +89,38 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
   await page.getByRole('button', { name: 'Plot' }).click();
   await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
 
-  const png = await downloadExport(page, 'PNG');
+  const windowInputs = page.locator('input[type="number"]');
+  for (const [index, value] of [
+    '-10.459925966974',
+    '11.57158384563583',
+    '-5.739505589180887',
+    '5.249036586587907',
+  ].entries()) {
+    await windowInputs.nth(index).fill(value);
+  }
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  const png = await downloadExport(page, 'PNG', async (artifact) => {
+    const snapshot = await artifact.evaluate((node) => {
+      const graph = node.querySelector('[data-testid="export-graph"]');
+      const graphStyle = graph instanceof HTMLElement ? graph.style : null;
+      return {
+        text: node.textContent,
+        rows: node.querySelectorAll('tbody tr').length,
+        controls: node.querySelectorAll('button, input, select, nav').length,
+        width: parseFloat(node.style.width),
+        graph: graphStyle
+          ? { width: parseFloat(graphStyle.width), height: parseFloat(graphStyle.height) }
+          : null,
+      };
+    });
+    expect(snapshot.text).toContain('x [-10.46, 11.572] | y [-5.74, 5.249]');
+    expect(snapshot.text).toContain('y = x²');
+    expect(snapshot.rows).toBe(9);
+    expect(snapshot.controls).toBe(0);
+    expect(snapshot.width).toBe(1440);
+    expect(snapshot.graph).toEqual({ width: 960, height: 560 });
+  });
   expect(png.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.png$/);
   const pngBytes = await readDownload(png);
   expect(pngBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
@@ -117,6 +148,13 @@ test('keeps graph export available for a wide window', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
   await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
+
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    await expect(artifact.locator('tbody tr')).toHaveCount(9);
+  });
+  const bytes = await readDownload(download);
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+  expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
 });
 
 test('dark mode renders a visible grid and a bold, light-colored origin cross', async ({

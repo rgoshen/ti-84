@@ -140,6 +140,7 @@ export default function ExportArtifact({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
+                    minWidth: 0,
                     padding: '8px 0',
                     borderBottom:
                       index === model.legend.length - 1 ? undefined : '1px solid #e2e8f0',
@@ -150,7 +151,7 @@ export default function ExportArtifact({
                     aria-hidden="true"
                     style={{ width: 12, height: 12, flex: 'none', borderRadius: '50%', background: item.color }}
                   />
-                  <strong>{item.label}</strong>
+                  <strong style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{item.label}</strong>
                   {item.detail ? (
                     <span style={{ marginLeft: 'auto', color: MUTED, fontSize: 11 }}>
                       {item.detail}
@@ -188,7 +189,13 @@ export default function ExportArtifact({
           {model.table.title}
         </h2>
         <table
-          style={{ width: '100%', borderCollapse: 'collapse', background: '#ffffff', fontSize: 12 }}
+          style={{
+            width: '100%',
+            tableLayout: 'fixed',
+            borderCollapse: 'collapse',
+            background: '#ffffff',
+            fontSize: 12,
+          }}
         >
           <thead>
             <tr>
@@ -196,7 +203,7 @@ export default function ExportArtifact({
                 <th
                   key={`${header}-${index}`}
                   scope="col"
-                  style={{ padding: '7px 10px', border: `1px solid ${BORDER}`, background: '#e8eef5', textAlign: 'right' }}
+                  style={{ padding: '7px 10px', border: `1px solid ${BORDER}`, background: '#e8eef5', textAlign: 'right', overflowWrap: 'anywhere' }}
                 >
                   {header}
                 </th>

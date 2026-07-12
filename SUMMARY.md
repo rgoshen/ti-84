@@ -1696,3 +1696,31 @@ signature checks did not reveal that the sidebar was controlling the grid height
 **References:**
 - TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
 - Visual QA: output/playwright/*-corrected.png
+
+## [2026-07-12 16:08] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export audit closure and documentation
+
+**Summary:**
+Closed the post-implementation `spec-gap-auditor` findings with real capture-path
+content assertions for every tool, PDF coverage for both explorers, wide-window
+export checks, flexible integer-power normalization, and defensive wrapping for long
+equations. Updated the README, specification, implementation-plan warning, and TODO
+to describe the corrected artifact rather than the rejected complete-table design.
+
+**Rationale:**
+File signatures and outer dimensions alone could not prove that the downloaded
+artifact contained rounded values, readable equations, a dominant graph, or no
+controls. Inspecting the exact mounted node passed to `html-to-image` verifies that
+wiring while keeping raster output tests deterministic and independent of OCR.
+
+**Bug Fix Context:**
+The first correction fixed the user's specific graph but the audit found that spaced
+or parenthesized powers could still show caret notation and long equations could
+expand fixed-width regions. Both cases now have regression coverage.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- `spec-gap-auditor` post-implementation review

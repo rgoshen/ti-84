@@ -66,5 +66,13 @@ describe('downloadExportArtifact', () => {
       width: 756,
       height: 472.5,
     });
+
+    for (const height of [1354, 1420]) {
+      const placement = fitImageToLetterLandscape(1440, height);
+      expect(placement.x).toBeGreaterThanOrEqual(18);
+      expect(placement.y).toBeGreaterThanOrEqual(18);
+      expect(placement.height).toBe(576);
+      expect(placement.width).toBeLessThan(756);
+    }
   });
 });

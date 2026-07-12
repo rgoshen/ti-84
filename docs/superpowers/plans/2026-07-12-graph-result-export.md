@@ -1,10 +1,18 @@
 # Graph Result Export Implementation Plan
 
+> **Superseding correction (2026-07-12):** User review rejected the original
+> complete-table/custom-page output described in portions of this execution record.
+> The implemented contract now selects at most nine representative rows, formats
+> bounds and integer powers for display, and fits the shared raster within margins on
+> one standard Letter landscape PDF. The current source of truth is
+> `docs/superpowers/specs/2026-07-12-graph-result-export-design.md`; obsolete code
+> samples and task expectations below are retained only as implementation history.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add one-file PNG and PDF exports for the Graphing Calculator, Function Explorer, and Transformation Explorer while excluding the TI-84 and all interactive controls.
 
-**Architecture:** Each tool snapshots its current state into a shared read-only artifact model and supplies a callback that renders the graph with the existing renderer into a fixed 960 x 560 off-screen target. A shared controller renders the 1,440px light artifact, captures it once with `html-to-image`, and either downloads the PNG or embeds the identical image in a custom-size one-page PDF through `jsPDF`.
+**Architecture:** Each tool snapshots its current state into a shared read-only artifact model and supplies a callback that renders the graph with the existing renderer into a fixed 960 x 560 off-screen target. A shared controller renders the 1,440px light artifact, captures it once with `html-to-image`, and either downloads the PNG or fits the identical image on a standard Letter landscape page through `jsPDF`.
 
 **Tech Stack:** Astro 7, React 19, TypeScript 6, Tailwind CSS 4, Radix Dropdown Menu, function-plot, html-to-image 1.11.13, jsPDF 4.2.1, Vitest, Playwright.
 
@@ -16,7 +24,8 @@
 - Render every artifact at 1,440 CSS pixels wide with a 960 x 560 graph region and PNG pixel ratio 1.
 - Always use the light export palette, independent of the application theme.
 - Snapshot state before rendering; live animation, zoom, and edits cannot mutate an in-progress artifact.
-- Disable export above 201 whole-number-x rows and never truncate rows silently.
+- Select at most nine representative whole-number-x rows while preserving the first
+  and last available values.
 - Keep all artifact content read-only and exclude navigation, controls, hover UI, and animation UI.
 - Pin all dependency versions and preserve at least 80% changed-code coverage.
 

@@ -424,5 +424,12 @@ PDF.
   the interactive page remains the complete data source.
 - Raster PDF text remains non-selectable because PNG/PDF visual parity is retained.
 
-**Status:** In progress after user review found the first implementation did not match
-the approved preview.
+**Status:** Done on `feature/graph-result-export` after the user review correction.
+The actual Graphing PNG is 1,440x1,139 with rounded bounds, superscript notation, and
+nine selected values; its PDF is one 792x612pt Letter landscape page. Actual Function
+and Transformation PNGs are 1,440x1,354 and 1,440x1,420. The repeated
+`spec-gap-auditor` review led to mounted-artifact content checks for all three tools,
+all-tool PDF coverage, wide-window export coverage, exponent normalization, and
+long-expression wrapping. Final verification: 164/164 Vitest tests, 51/51 Playwright
+tests, zero Astro diagnostics, six production pages built, 86.13% statements / 82.14%
+branches / 87.69% functions / 88.33% lines, and zero production vulnerabilities.

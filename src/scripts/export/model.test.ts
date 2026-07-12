@@ -52,6 +52,7 @@ describe('graph export model', () => {
   it('formats integer exponents with readable superscripts', () => {
     expect(formatExportEquation('x^2')).toBe('x²');
     expect(formatExportEquation('2x^10 - x^-3')).toBe('2x¹⁰ - x⁻³');
+    expect(formatExportEquation('x ^ 2 + x^(10)')).toBe('x² + x¹⁰');
   });
 
   it('selects at most nine representative rows including both endpoints', () => {

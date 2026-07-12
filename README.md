@@ -58,12 +58,13 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 After plotting a function, use **Export** in the Graphing Calculator, Function
 Explorer, or Transformation Explorer and choose **Download PNG** or **Download PDF**.
 Each action creates one content-only artifact containing the fixed desktop graph,
-equations, current window, tool-specific analysis, and complete whole-number value
-table. Controls and navigation are omitted, and exports always use a light presentation
-palette even when the site is dark or opened on mobile.
+equations, current window, tool-specific analysis, and up to nine representative
+whole-number values. Controls and navigation are omitted, and exports always use a
+light presentation palette even when the site is dark or opened on mobile.
 
-To keep the single artifact within reliable browser canvas limits, narrow the x window
-to 201 whole-number values or fewer. The embedded TI-84 does not support exports.
+PNG downloads preserve the wide 1,440px artifact. PDF downloads fit the same content
+within margins on one standard Letter landscape page. The embedded TI-84 does not
+support exports.
 
 ## Project structure
 

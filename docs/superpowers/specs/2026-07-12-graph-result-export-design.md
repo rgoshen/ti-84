@@ -26,6 +26,11 @@ is 960 x 560 CSS pixels. Height grows only for the result panels and a compact
 selected-values table. PNG capture uses pixel ratio 1; PDF fits the PNG proportionally
 inside a standard Letter landscape page with 18pt margins.
 
+Artifact height is content-driven rather than a canonical pixel constant because
+equation length and tool analysis vary. The canonical fixtures for all three tools
+must remain wider than they are tall; tests assert this ratio without coupling the
+contract to platform font metrics.
+
 The artifact uses a light presentation palette for consistent printing and sharing.
 It excludes the site header, navigation, buttons, editable inputs, sliders,
 checkboxes, selectors, hover tooltips, animation controls, and the export menu itself.
@@ -82,10 +87,11 @@ A shared export module owns:
 The module accepts conversion and download adapters. Unit tests inject stubs rather
 than invoking canvas, PDF, or browser download APIs.
 
-[`html-to-image`](https://github.com/bubkoo/html-to-image) converts both the existing
-graph DOM and final export surface to PNG. [`jsPDF`](https://github.com/parallax/jsPDF)
-places that same final PNG on a standard Letter landscape PDF page. Both dependencies are
-MIT-licensed and will be pinned in `package.json` and `package-lock.json`.
+[`html-to-image`](https://github.com/bubkoo/html-to-image) converts the complete
+off-screen export surface, including its dedicated graph render, to PNG.
+[`jsPDF`](https://github.com/parallax/jsPDF) places that same final PNG on a standard
+Letter landscape PDF page. Both dependencies are MIT-licensed and pinned in
+`package.json` and `package-lock.json`.
 
 ### Read-Only Surface
 
@@ -216,3 +222,20 @@ The `spec-gap-auditor` review identified and closed eight gaps before implementa
 6. Defined export eligibility for each supported tool and render-failure behavior.
 7. Specified Function Explorer asymptote and end-behavior content precisely.
 8. Clarified per-equation versus shared marker-setting ownership.
+
+## Post-Implementation Audit
+
+The requested `spec-gap-auditor` review was repeated after the user rejected the first
+downloaded output. Its actionable findings were closed as follows:
+
+- Browser tests inspect the mounted artifact passed to capture for all three tools,
+  including formatted content, nine rows, a 960x560 graph, and zero controls.
+- All three tools download and validate a standard Letter landscape PDF; unit tests
+  verify proportional fitting and minimum 18pt margins for the taller explorer
+  artifacts.
+- Wide-window tests export after applying the window and verify nine rows plus a wide
+  1,440px PNG.
+- Exponent formatting covers compact, spaced, negative, and parenthesized integer
+  powers. Long equations wrap in legends and fixed-layout table headers.
+- Exact artifact heights remain deliberately non-contractual because system font
+  metrics and valid equation length vary; the wide ratio is the stable requirement.

@@ -40,7 +40,25 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
   await plot(page, '1/x^2');
 
   await page.getByRole('button', { name: 'x → 0⁺' }).click();
-  const download = await downloadExport(page, 'PNG');
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    const snapshot = await artifact.evaluate((node) => {
+      const graph = node.querySelector('[data-testid="export-graph"]');
+      const graphStyle = graph instanceof HTMLElement ? graph.style : null;
+      return {
+        text: node.textContent,
+        rows: node.querySelectorAll('tbody tr').length,
+        controls: node.querySelectorAll('button, input, select, nav').length,
+        graph: graphStyle
+          ? { width: parseFloat(graphStyle.width), height: parseFloat(graphStyle.height) }
+          : null,
+      };
+    });
+    expect(snapshot.text).toContain('f(x) = 1/x²');
+    expect(snapshot.text).toContain('Asymptotes and end behavior');
+    expect(snapshot.rows).toBe(9);
+    expect(snapshot.controls).toBe(0);
+    expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
+  });
   expect(download.suggestedFilename()).toMatch(/^function-explorer-\d{4}-\d{2}-\d{2}\.png$/);
   const bytes = await readDownload(download);
   expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
@@ -59,6 +77,13 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
     return Array.from(context.getImageData(0, 0, 1, 1).data);
   }, bytes.toString('base64'));
   expect(topLeft.slice(0, 3)).toEqual([248, 250, 252]);
+
+  const pdf = await downloadExport(page, 'PDF');
+  const pdfBytes = await readDownload(pdf);
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdfBytes.toString('latin1')).toMatch(
+    /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
+  );
 });
 
 test('keeps Function Explorer export available for a wide window', async ({ page }) => {
@@ -70,6 +95,13 @@ test('keeps Function Explorer export available for a wide window', async ({ page
 
   await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
   await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
+
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    await expect(artifact.locator('tbody tr')).toHaveCount(9);
+  });
+  const bytes = await readDownload(download);
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+  expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
 });
 
 test('starts with no function and no point until one is plotted', async ({ page }) => {
