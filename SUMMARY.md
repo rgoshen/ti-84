@@ -930,3 +930,22 @@ With no `ti-84` image cached: plain `docker compose up -d` reported `Pulling →
 - Reported by user: "why would you create a different docker compose file? ... why not just have the current docker compose file pull it"
 - Docker Compose Build Specification, "Using build and image"; `pull_policy` in the Services top-level element
 - docker-compose.yml, README.md, .env.example
+
+## [2026-07-11 20:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Grew the parent catalog from 8 to 11 — added identity (x), cube root (∛x) and natural
+log (ln x) — and reordered it into teaching sequence. Added `defaultParent()` so the
+explorer still opens on x² even though identity is now listed first.
+
+**Rationale:**
+Cube root is spelled `cbrt(x)`, not `x^(1/3)`: mathjs returns a complex number for
+negative x, which would have silently erased the left half of the curve. Natural log is
+`log(x)` — base-e in both mathjs and function-plot; `ln` does not exist in either.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Spec: docs/superpowers/specs/2026-07-11-parent-catalog-and-function-details-design.md

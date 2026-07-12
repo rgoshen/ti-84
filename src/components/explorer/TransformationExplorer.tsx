@@ -6,7 +6,7 @@ import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/g
 import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
-import { PARENTS, parentById } from '@/scripts/explorer/parents';
+import { PARENTS, parentById, defaultParent } from '@/scripts/explorer/parents';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import type { PointShape } from '@/scripts/graphing/plot';
 
 // Tunables, in one place.
 const IDENTITY: Coeffs = { a: 1, b: 1, h: 0, k: 0 };
+const DEFAULT_PARENT = defaultParent();
 const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 const A_RANGE = { min: -5, max: 5, step: 0.1 };
 const H_RANGE = { min: -10, max: 10, step: 0.1 };
@@ -41,15 +42,15 @@ const windowToFields = (w: Window2D): WindowFields => ({
 });
 
 export default function TransformationExplorer(): React.JSX.Element {
-  const [baseExpr, setBaseExpr] = useState(PARENTS[0].expr);
-  const [exprInput, setExprInput] = useState(PARENTS[0].expr);
-  const [parentId, setParentId] = useState<string | null>(PARENTS[0].id);
-  const [parentLabel, setParentLabel] = useState(PARENTS[0].label);
+  const [baseExpr, setBaseExpr] = useState(DEFAULT_PARENT.expr);
+  const [exprInput, setExprInput] = useState(DEFAULT_PARENT.expr);
+  const [parentId, setParentId] = useState<string | null>(DEFAULT_PARENT.id);
+  const [parentLabel, setParentLabel] = useState(DEFAULT_PARENT.label);
   const [coeffs, setCoeffs] = useState<Coeffs>(IDENTITY);
   const [error, setError] = useState<string | null>(null);
-  const [appliedWindow, setAppliedWindow] = useState<Window2D>(PARENTS[0].window);
-  const [displayWindow, setDisplayWindow] = useState<Window2D>(PARENTS[0].window);
-  const [fields, setFields] = useState<WindowFields>(() => windowToFields(PARENTS[0].window));
+  const [appliedWindow, setAppliedWindow] = useState<Window2D>(DEFAULT_PARENT.window);
+  const [displayWindow, setDisplayWindow] = useState<Window2D>(DEFAULT_PARENT.window);
+  const [fields, setFields] = useState<WindowFields>(() => windowToFields(DEFAULT_PARENT.window));
   const [showParent, setShowParent] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showPoints, setShowPoints] = useState(false);
