@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.3.0](https://github.com/rgoshen/ti-84/compare/v0.2.2...v0.3.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **explorer:** polish function details panel per whole-branch review ([4493dbf](https://github.com/rgoshen/ti-84/commit/4493dbff190080325b2c35b242755f4257e80a1e))
+
+
+### Features
+
+* **explorer:** add identity, cube root and natural log parents ([6cdfa22](https://github.com/rgoshen/ti-84/commit/6cdfa227479e10b969b901a71bf3fdaa4f60437b))
+* **explorer:** add read-only function details panel ([a122a06](https://github.com/rgoshen/ti-84/commit/a122a06b963eec7cc1e1abf85c8d01756f9f0a95))
+* **explorer:** compose the concrete transformed equation ([3bcc182](https://github.com/rgoshen/ti-84/commit/3bcc182c982d6022aa35d2c1c85ca020cbf19739))
+* **explorer:** declare domain, range, asymptotes and inverse per parent ([692e5eb](https://github.com/rgoshen/ti-84/commit/692e5ebf97634269b714f1dd0a56bfea16b54b9c))
+* **explorer:** derive domain, range, intercepts and asymptotes for g(x) ([5841d5f](https://github.com/rgoshen/ti-84/commit/5841d5f3001e460896956fb5ae62321fda03bdc2))
+* **explorer:** give each parent a display template for its own notation ([b77c52c](https://github.com/rgoshen/ti-84/commit/b77c52cb670d7a41556ed111e30ad2e819c4f9f9))
+* **explorer:** move the parent picker to a dropdown ([51ede1d](https://github.com/rgoshen/ti-84/commit/51ede1d78e7abd392b1e5c2c7bf408e67c4af7bc))
+* **explorer:** show only the real equation, never f(x) ([a98ea0f](https://github.com/rgoshen/ti-84/commit/a98ea0f67b51ce7384a0e4823d2df53ff7313a54))
+* **explorer:** show the concrete equation in the readout ([9b0f588](https://github.com/rgoshen/ti-84/commit/9b0f58837554b1b9e7340b375201e178e39f6aa6))
+
 ## [0.2.2](https://github.com/rgoshen/ti-84/compare/v0.2.1...v0.2.2) (2026-07-12)
 
 
