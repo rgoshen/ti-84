@@ -12,7 +12,8 @@ contains only read-only result content. The embedded TI-84 is explicitly exclude
 Each supported tool displays an Export menu with two commands:
 
 - **Download PNG** creates one wide image.
-- **Download PDF** creates one single-page PDF containing the same image and content.
+- **Download PDF** places the same image and content on one standard Letter landscape
+  page with margins.
 
 The commands are disabled when there is no meaningful graph to export. While an
 export is being prepared, the menu reports a busy state and prevents duplicate
@@ -21,9 +22,9 @@ and shows a concise, accessible error.
 
 The exported artifact always uses fixed desktop proportions, even when initiated
 from a mobile viewport. The artifact is 1,440 CSS pixels wide, and its graph region
-is 960 x 560 CSS pixels. Height grows only for the result panels and complete value
-table. PNG capture uses pixel ratio 1; PDF uses the PNG pixel width and height as a
-zero-margin custom page.
+is 960 x 560 CSS pixels. Height grows only for the result panels and a compact
+selected-values table. PNG capture uses pixel ratio 1; PDF fits the PNG proportionally
+inside a standard Letter landscape page with 18pt margins.
 
 The artifact uses a light presentation palette for consistent printing and sharing.
 It excludes the site header, navigation, buttons, editable inputs, sliders,
@@ -39,7 +40,7 @@ relevant read-only information.
 - Every plotted equation with its curve color
 - For each equation, whether point markers are shown and their shape
 - Current graph window
-- Complete whole-number-x value table for the current window
+- Up to nine representative whole-number-x values selected across the current window
 
 ### Function Explorer
 
@@ -51,7 +52,7 @@ relevant read-only information.
   `x -> +infinity`; finite end limits are labeled as horizontal asymptotes, while
   infinite or unknown behavior is stated explicitly
 - Visible guide settings plus shared marker visibility and shape as text
-- Complete whole-number-x value table
+- Up to nine representative whole-number-x values selected across the current window
 
 ### Transformation Explorer
 
@@ -62,7 +63,7 @@ relevant read-only information.
 - Parent/transformed function details when available
 - Visible parent/grid settings plus shared marker visibility and shape as text;
   parent markers are reported as suppressed when the parent curve is hidden
-- Complete parent and transformed value table
+- Up to nine representative parent and transformed values selected across the current window
 
 ## Architecture
 
@@ -75,7 +76,7 @@ A shared export module owns:
 - fixed-size export-graph rendering;
 - final artifact capture at a fixed CSS width;
 - browser download creation and cleanup;
-- one-page PDF sizing that preserves the artifact aspect ratio;
+- standard Letter landscape PDF fitting that preserves the artifact aspect ratio;
 - normalized user-facing errors.
 
 The module accepts conversion and download adapters. Unit tests inject stubs rather
@@ -83,7 +84,7 @@ than invoking canvas, PDF, or browser download APIs.
 
 [`html-to-image`](https://github.com/bubkoo/html-to-image) converts both the existing
 graph DOM and final export surface to PNG. [`jsPDF`](https://github.com/parallax/jsPDF)
-places that same final PNG on a custom-sized PDF page. Both dependencies are
+places that same final PNG on a standard Letter landscape PDF page. Both dependencies are
 MIT-licensed and will be pinned in `package.json` and `package-lock.json`.
 
 ### Read-Only Surface
@@ -121,9 +122,9 @@ Each command attempts the off-screen export render before download. A render or
 conversion failure produces the accessible error state and no file; it does not
 mutate the live graph or permanently disable later attempts.
 
-An artifact supports at most 201 whole-number-x rows. Above that limit both commands
-are disabled and the menu reports, “Narrow the x window to 201 whole-number values or
-fewer.” Rows are never silently truncated.
+The artifact selects at most nine representative whole-number-x rows across the
+visible window, always including the first and last available rows. The interactive
+page remains the source for the complete table.
 
 The export menu uses familiar download/file icons, descriptive text, keyboard
 navigation, visible focus, and an `aria-live` status for progress or errors. Existing
@@ -136,13 +137,13 @@ graph interaction remains unchanged.
 3. The tool renders an off-screen, fixed-size light export graph and mounts its
    read-only artifact from that immutable snapshot.
 4. After images and fonts are ready, the controller captures the complete artifact.
-5. PNG downloads that data directly; PDF embeds it on one aspect-ratio-matched page.
+5. PNG downloads that data directly; PDF fits it within margins on one standard
+   Letter landscape page.
 6. Temporary object URLs and the export surface are removed in a `finally` path.
 
 ## Error Handling and Security
 
 - Empty graphing/function tools cannot start an export.
-- Windows containing more than 201 whole-number x values cannot start an export.
 - Conversion failures produce one generic message without exposing stack traces.
 - Filenames are constructed from fixed tool slugs and an ISO-style date, never raw
   equations or user input.
@@ -165,8 +166,8 @@ Strict Red -> Green -> Refactor slices:
    assertion.
 7. Export from desktop, mobile, and dark application states; verify identical artifact
    and graph dimensions plus the light graph background and axes.
-8. Cover the 201-row eligibility boundary and immutable Function Explorer snapshot
-   during an active limit animation.
+8. Cover representative row selection, rounded window bounds, standard landscape PDF
+   dimensions, and immutable Function Explorer snapshots during active animation.
 
 Changed code must maintain at least 80% coverage, pass Astro typecheck, Vitest, the
 production build, and the complete Playwright suite.
@@ -176,13 +177,21 @@ production build, and the complete Playwright suite.
 - `html-to-image` relies on SVG `foreignObject`. Its documented current-browser
   support is adequate for this client-only site, but a capture failure must remain
   recoverable.
-- Large value tables increase canvas dimensions. The 201-row limit bounds artifact
-  height and canvas area without silently discarding mathematical data.
+- The artifact intentionally selects representative table values to preserve the
+  approved visual hierarchy; the interactive page retains the complete data.
 - PDF text is rasterized and therefore not selectable. This is the deliberate cost of
   guaranteeing that PDF and PNG are visually identical and remain one artifact.
-- A custom-size single-page PDF may print with scaling on standard Letter/A4 paper.
-  Preserving the complete result in one artifact is prioritized over standard paper
-  pagination.
+- The standard Letter landscape PDF scales the raster artifact to fit one page. This
+  improves printing consistency but retains raster, non-selectable text.
+
+## User Review Correction
+
+The first implementation was rejected after inspection because it diverged from the
+approved preview: raw floating-point bounds, machine equation notation, a full table
+that dominated the graph, and a custom portrait PDF page. This section supersedes the
+earlier complete-table/custom-page decisions. Display bounds use at most three
+decimals, integer powers use superscript notation, the artifact shows at most nine
+representative rows, and PDF output is standard Letter landscape with margins.
 
 ## Non-Goals
 
@@ -200,7 +209,9 @@ The `spec-gap-auditor` review identified and closed eight gaps before implementa
 1. Replaced responsive live-plot capture with a fixed-size export render.
 2. Made the entire artifact, including the graph, explicitly light-themed.
 3. Defined deterministic artifact, graph, PNG, and PDF dimensions.
-4. Added a tested 201-row value-table limit instead of an unbounded canvas.
+4. Initially bounded the complete value table; user review superseded that decision
+   with a tested nine-row representative selection that preserves the graph-first
+   composition.
 5. Required an immutable snapshot so active animation cannot alter an export.
 6. Defined export eligibility for each supported tool and render-failure behavior.
 7. Specified Function Explorer asymptote and end-behavior content precisely.

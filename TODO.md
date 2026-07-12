@@ -366,8 +366,8 @@ out of scope.
 - Render a shared, read-only export surface at a fixed 1,440px desktop width from an
   immutable state snapshot. Render the graph off-screen at 960x560 in a light palette
   through each tool's existing renderer so mobile and desktop exports match.
-- Keep one artifact per action: PNG downloads the complete surface; PDF embeds that
-  same surface on one custom-sized landscape page.
+- Keep one artifact per action: PNG downloads the complete surface; PDF fits that
+  same surface within margins on one standard Letter landscape page.
 - Use pinned, MIT-licensed `html-to-image` and `jsPDF` dependencies behind a small
   export adapter so browser conversion can be stubbed in unit tests.
 
@@ -377,26 +377,52 @@ out of scope.
   download, correct extension/signature, and absence from the TI-84 page.
 - Visual verification at desktop and mobile browser widths to confirm the artifact
   always uses desktop proportions and contains no interactive controls.
-- Boundary tests at 201/202 whole-number x values and an active-animation export test
-  for immutable Function Explorer captures.
+- Representative-row selection tests and an active-animation export test for
+  immutable Function Explorer captures.
 - Run Vitest, Astro typecheck, production build, and the complete Playwright suite.
 
 **Risks & Tradeoffs:**
 - DOM capture relies on SVG `foreignObject`; current Chrome, Firefox, and Safari are
-  supported, but very large tables may approach browser canvas limits.
-- Artifacts above 201 whole-number-x rows are rejected with guidance rather than
-  silently truncated; this bounds canvas height and memory use.
+  supported. The artifact selects at most nine representative rows to keep capture
+  dimensions bounded.
 - The PDF is a raster rendering of the same PNG surface. This guarantees visual
   parity and a single page, but its text is not selectable.
 - Export uses a light presentation palette for predictable sharing and printing,
   independent of the active application theme.
 
-**Status:** Done on `feature/graph-result-export`. Eight `spec-gap-auditor` findings
-were resolved before implementation. Verification: 160/160 Vitest tests, 51/51
-Playwright tests, zero Astro diagnostics, production build emits all 6 pages, and V8
-coverage reports 86.08% statements / 82.36% branches / 86.88% functions / 88.07%
-lines. Actual PNGs from all three tools were inspected at desktop plus mobile/dark
-inputs: each remained a light 1,440px content-only artifact with a fixed 960x560 graph,
-readable panels/table, and no clipping or controls. Production dependency audit: zero
-vulnerabilities; four moderate advisories remain confined to Astro's development YAML
-language-server chain.
+**Status:** Reopened by the export-preview correction below. The first implementation
+passed automated checks but did not match the approved visual target when the user
+inspected the actual downloaded PNG and PDF.
+
+## [2026-07-12] Fix: Match the Approved Export Preview
+
+**Objective:**
+Correct the export artifact so it matches the approved wide desktop preview instead
+of producing a tall generic report with raw machine values and an oversized portrait
+PDF.
+
+**Approach:**
+- Format graph-window bounds to at most three decimal places and render integer
+  exponents with readable superscripts in equation labels.
+- Keep the graph dominant and replace the complete value-table dump with at most nine
+  representative values selected across the visible x window.
+- Keep PNG as the shared visual source, but place it with margins on a standard Letter
+  landscape PDF page instead of creating a custom page from the captured pixel size.
+- Preserve the content-only layout, fixed desktop graph, light palette, tool-specific
+  information, and TI-84 exclusion.
+
+**Tests:**
+- Unit tests first for coordinate formatting, equation display formatting,
+  representative row selection, and landscape PDF image fitting.
+- Update Playwright assertions to verify rounded output-model values and a standard
+  landscape PDF MediaBox.
+- Inspect actual PNG and PDF exports from all three tools against the approved preview.
+- Re-run Vitest, Astro check, build, coverage, and the full Playwright suite.
+
+**Risks & Tradeoffs:**
+- The artifact intentionally shows representative table values rather than every row;
+  the interactive page remains the complete data source.
+- Raster PDF text remains non-selectable because PNG/PDF visual parity is retained.
+
+**Status:** In progress after user review found the first implementation did not match
+the approved preview.

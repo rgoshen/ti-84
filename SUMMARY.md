@@ -1619,3 +1619,28 @@ and refuses oversized tables rather than silently truncating mathematical data.
 - TODO.md: [2026-07-12] Graph Result Export
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
 - Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md
+
+## [2026-07-12 15:43] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export preview correction
+
+**Summary:**
+Reopened graph export after the user's downloaded PNG/PDF showed that the first
+implementation did not match the approved preview. Revised the contract to require
+rounded bounds, readable exponent notation, at most nine representative values, and
+a standard Letter landscape PDF with margins.
+
+**Rationale:**
+The original complete-table/custom-page choices turned a graph-first desktop artifact
+into a tall data dump and portrait PDF. The approved visual hierarchy is the source of
+truth; complete table data remains available in the interactive tool.
+
+**Bug Fix Context:**
+The reported PNG was 1,440x1,542 with 14-16 decimal window values. Its 6.6 MB PDF used
+a custom 1,080x1,156.5pt portrait page instead of a standard landscape page.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- User-provided PNG/PDF from 2026-07-12
