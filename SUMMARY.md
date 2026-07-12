@@ -1406,3 +1406,25 @@ with 1,001 table rows can exceed practical browser canvas limits.
 - TODO.md: [2026-07-12] Graph Result Export
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
 - Spec audit: 8 findings resolved
+
+## [2026-07-12 13:01] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export implementation plan
+
+**Summary:**
+Added a seven-task, TDD-first implementation plan covering the pure export contract,
+dependency-injected PNG/PDF conversion, fixed read-only artifact, accessible menu and
+lifecycle, one integration slice per supported tool, TI-84 exclusion, full automated
+verification, coverage, and cross-viewport visual QA.
+
+**Rationale:**
+The plan isolates browser conversion from domain mapping so pure behavior remains
+fast and deterministic to test. Each tool owns its state-to-artifact adapter while
+reusing the existing plot renderer and the shared export surface, which avoids both
+duplicated graph math and a generic shared module coupled to explorer internals.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md
