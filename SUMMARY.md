@@ -981,3 +981,45 @@ passing (0 failing). `npm run build` clean (6 pages, 0 type errors).
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Plan: docs/superpowers/plans referenced by .superpowers/sdd/task-2-brief.md (Task 2 of the plan)
+
+## [2026-07-11 20:17] Commit Summary
+
+**Change Type:** Test
+**Scope:** explorer/parents
+
+**Summary:**
+Closed a vacuous-test gap in `parents.test.ts` flagged by code review. The existing
+`solve() returns genuine solutions of f(u) = c` test only checks the solutions
+`solve()` returns, but never asserts it returns any — five parents (square, sqrt,
+recip, abs, exp) legitimately return `[]` on some branches, so if one of those
+`solve` implementations regressed to unconditionally return `[]`, the round-trip
+loop would simply never execute and the suite would still pass. Added
+`solve() is reachable: returns a non-empty result for a probe in the parent's range`,
+a table of one in-range probe `c` per parent (all 11), asserting `solve(c)` is
+`'infinite'` (sin/cos) or a non-empty array — plus an assertion that the table's id
+list matches `PARENTS` exactly, so a parent silently dropped from the table would
+also fail.
+
+**Rationale:**
+Considered folding a "reachable" assertion into the existing round-trip test instead
+of adding a new one, but that would re-couple the two concerns (round-trip validity
+vs. reachability) the review called out as separately load-bearing; a standalone
+test keeps the failure message unambiguous about which invariant broke.
+
+**Bug Fix Context (if applicable):**
+Not a runtime bug — `parents.ts` was verified correct by hand in review and was not
+modified. This is a test-coverage gap: the round-trip test is structurally unable to
+catch a `solve` that regresses to always returning `[]`.
+
+**Tests:**
+Added 1 Vitest case (14 total in the file, up from 13). Verified the new test is not
+itself vacuous by temporarily sabotaging `sqrt`'s `solve` to unconditionally return
+`[]`: the new test failed (`sqrt: solve(2) should not be empty: expected 0 to be
+greater than 0`) while the pre-existing round-trip test kept passing, exactly
+reproducing the gap under review. Reverted the sabotage (confirmed via `git diff`
+showing no changes to `parents.ts`) and reran: 14/14 passing. Full suite (`npm test`):
+9 files, 113 passed, 0 failed (up from 112).
+
+**References:**
+- Code review finding on `src/scripts/explorer/parents.test.ts`
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details

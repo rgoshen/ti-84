@@ -84,6 +84,37 @@ describe('parent properties', () => {
     }
   });
 
+  // The round-trip test above only walks the solutions solve() DOES return —
+  // if a solve() regressed to unconditionally return [], that loop would just
+  // never execute and the round-trip test would still pass. This guards against
+  // that: for a probe genuinely inside each parent's range, solve() must be
+  // reachable — 'infinite', or a non-empty array.
+  it("solve() is reachable: returns a non-empty result for a probe in the parent's range", () => {
+    const reachable: { id: string; c: number }[] = [
+      { id: 'identity', c: 1 }, // range all: any c
+      { id: 'square', c: 4 }, // range y ≥ 0: u = ±2
+      { id: 'sqrt', c: 2 }, // range y ≥ 0: u = 4
+      { id: 'cube', c: 8 }, // range all: u = 2
+      { id: 'cbrt', c: 2 }, // range all: u = 8
+      { id: 'recip', c: 0.5 }, // range y ≠ 0: u = 2
+      { id: 'abs', c: 3 }, // range y ≥ 0: u = ±3
+      { id: 'exp', c: 1 }, // range y > 0: u = 0
+      { id: 'ln', c: 0 }, // range all: u = 1
+      { id: 'sin', c: 0 }, // range [-1, 1]: infinite
+      { id: 'cos', c: 0 }, // range [-1, 1]: infinite
+    ];
+    expect(reachable.map((r) => r.id)).toEqual(PARENTS.map((p) => p.id));
+    for (const { id, c } of reachable) {
+      const p = parentById(id)!;
+      const sol = p.props.solve(c);
+      if (sol === 'infinite') {
+        expect(sol, `${id}: solve(${c})`).toBe('infinite');
+      } else {
+        expect(sol.length, `${id}: solve(${c}) should not be empty`).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it('declares the asymptotes of the two parents that have them', () => {
     expect(parentById('recip')?.props.verticalAsymptote).toBe(0);
     expect(parentById('recip')?.props.horizontalAsymptote).toBe(0);
