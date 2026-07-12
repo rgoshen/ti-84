@@ -1644,3 +1644,31 @@ a custom 1,080x1,156.5pt portrait page instead of a standard landscape page.
 - TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
 - User-provided PNG/PDF from 2026-07-12
+
+## [2026-07-12 15:50] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph result export presentation
+
+**Summary:**
+Replaced raw graph bounds and calculator exponent syntax with report formatting,
+selected at most nine representative table rows across each visible window, removed
+the obsolete 201-row export rejection, and fitted PDF captures within an 18pt margin
+on a standard Letter landscape page. Applied the corrected snapshot mapping to the
+Graphing Calculator, Function Explorer, and Transformation Explorer.
+
+**Rationale:**
+The first export passed its technical checks while producing a different artifact
+from the approved preview. Moving the presentation rules into the shared export model
+keeps PNG and PDF content consistent and prevents each tool from reintroducing raw
+values or unbounded tables.
+
+**Bug Fix Context:**
+The rejected PNG was taller than it was wide because it rendered every whole-number
+x row. The PDF then copied that raster height into a custom portrait MediaBox. The
+corrected tests require a wide PNG, representative values, readable notation, and a
+792x612pt Letter landscape PDF.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md

@@ -45,7 +45,9 @@ import type { PointShape } from '@/scripts/graphing/plot';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import {
   EXPORT_GRAPH_HEIGHT,
+  formatExportEquation,
   formatExportValue,
+  selectRepresentativeRows,
   type ExportSnapshot,
 } from '@/scripts/export/model';
 
@@ -440,7 +442,7 @@ export default function FunctionExplorer(): React.JSX.Element {
     const snapshotEndNeg = { ...endNeg };
     const snapshotEndPos = { ...endPos };
     const snapshotPoints = points.map((point) => ({ ...point }));
-    const snapshotXs = [...tableXs];
+    const snapshotXs = selectRepresentativeRows(tableXs);
     const snapshotReadout = { ...readout };
     const snapshotFx = evalAt(snapshotExpr, snapshotX);
     const lightColors = explorerColors(false);
@@ -474,7 +476,7 @@ export default function FunctionExplorer(): React.JSX.Element {
         window: snapshotWindow,
         legend: [
           {
-            label: `f(x) = ${snapshotExpr}`,
+            label: `f(x) = ${formatExportEquation(snapshotExpr)}`,
             color: lightColors.curve,
             detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
           },
@@ -508,8 +510,8 @@ export default function FunctionExplorer(): React.JSX.Element {
           },
         ],
         table: {
-          title: 'Value table (whole-number x)',
-          headers: ['x', `f(x) = ${snapshotExpr}`],
+          title: 'Selected values',
+          headers: ['x', `f(x) = ${formatExportEquation(snapshotExpr)}`],
           rows: snapshotXs.map((tableX) => [
             String(tableX),
             formatExportValue(evalAt(snapshotExpr, tableX)),
@@ -697,7 +699,6 @@ export default function FunctionExplorer(): React.JSX.Element {
         <div className="flex justify-end">
           <GraphResultExport
             hasGraph={hasFunction}
-            rowCount={tableXs.length}
             createSnapshot={createExportSnapshot}
           />
         </div>

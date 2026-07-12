@@ -18,7 +18,6 @@ import {
 
 export interface GraphResultExportProps {
   hasGraph: boolean;
-  rowCount: number;
   createSnapshot: () => ExportSnapshot;
 }
 
@@ -33,10 +32,9 @@ function nextFrame(): Promise<void> {
 
 export default function GraphResultExport({
   hasGraph,
-  rowCount,
   createSnapshot,
 }: GraphResultExportProps): React.JSX.Element {
-  const eligibility = exportEligibility(hasGraph, rowCount);
+  const eligibility = exportEligibility(hasGraph);
   const [pending, setPending] = React.useState<PendingExport | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState('');

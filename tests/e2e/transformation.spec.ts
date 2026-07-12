@@ -9,7 +9,7 @@ async function goto(page: Page): Promise<void> {
   await expect(page.locator(`${PLOT} svg`)).toBeVisible();
 }
 
-test('exports one fixed transformation artifact and enforces the table row limit', async ({
+test('exports one fixed transformation artifact across wide graph windows', async ({
   page,
 }) => {
   await goto(page);
@@ -28,8 +28,8 @@ test('exports one fixed transformation artifact and enforces the table row limit
   await page.getByLabel('xMin', { exact: true }).fill('0');
   await page.getByLabel('xMax', { exact: true }).fill('201');
   await page.getByRole('button', { name: 'Apply window' }).click();
-  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
-  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
 });
 
 test('renders a dashed parent and a solid transformed curve by default', async ({ page }) => {

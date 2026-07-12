@@ -26,7 +26,10 @@ import { Card } from '@/components/ui/card';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import {
   EXPORT_GRAPH_HEIGHT,
+  formatExportBound,
+  formatExportEquation,
   formatExportValue,
+  selectRepresentativeRows,
   type ExportSnapshot,
 } from '@/scripts/export/model';
 
@@ -286,7 +289,7 @@ export default function GraphingCalculator(): React.JSX.Element {
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotWindow = { ...displayWindow };
     const snapshotEquations = equations.map((equation) => ({ ...equation }));
-    const snapshotXs = [...tableXs];
+    const snapshotXs = selectRepresentativeRows(tableXs);
 
     return {
       model: {
@@ -295,7 +298,7 @@ export default function GraphingCalculator(): React.JSX.Element {
         exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
         window: snapshotWindow,
         legend: snapshotEquations.map((equation) => ({
-          label: `y = ${equation.expr}`,
+          label: `y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
           detail: equation.showPoints
             ? `Points shown (${equation.pointShape})`
@@ -305,15 +308,15 @@ export default function GraphingCalculator(): React.JSX.Element {
           {
             title: 'Graph information',
             facts: [
-              { label: 'x range', value: `${snapshotWindow.xMin} to ${snapshotWindow.xMax}` },
-              { label: 'y range', value: `${snapshotWindow.yMin} to ${snapshotWindow.yMax}` },
+              { label: 'x range', value: `${formatExportBound(snapshotWindow.xMin)} to ${formatExportBound(snapshotWindow.xMax)}` },
+              { label: 'y range', value: `${formatExportBound(snapshotWindow.yMin)} to ${formatExportBound(snapshotWindow.yMax)}` },
               { label: 'Functions', value: String(snapshotEquations.length) },
             ],
           },
         ],
         table: {
-          title: 'Value table (whole-number x)',
-          headers: ['x', ...snapshotEquations.map((equation) => `y = ${equation.expr}`)],
+          title: 'Selected values',
+          headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
           rows: snapshotXs.map((x) => [
             String(x),
             ...snapshotEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
@@ -498,7 +501,6 @@ export default function GraphingCalculator(): React.JSX.Element {
         <div className="flex justify-end">
           <GraphResultExport
             hasGraph={equations.length > 0}
-            rowCount={tableXs.length}
             createSnapshot={createExportSnapshot}
           />
         </div>

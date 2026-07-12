@@ -61,15 +61,15 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
   expect(topLeft.slice(0, 3)).toEqual([248, 250, 252]);
 });
 
-test('disables Function Explorer export above the complete-table row limit', async ({ page }) => {
+test('keeps Function Explorer export available for a wide window', async ({ page }) => {
   await gotoExplorer(page, 'x');
   const windowInputs = page.locator('input[type="number"]');
   await windowInputs.nth(0).fill('0');
   await windowInputs.nth(1).fill('201');
   await page.getByRole('button', { name: 'Apply window' }).click();
 
-  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
-  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
 });
 
 test('starts with no function and no point until one is plotted', async ({ page }) => {

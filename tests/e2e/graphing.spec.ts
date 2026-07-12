@@ -94,14 +94,18 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
   const pngBytes = await readDownload(png);
   expect(pngBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect(pngBytes.readUInt32BE(16)).toBe(1440);
+  expect(pngBytes.readUInt32BE(20)).toBeLessThan(1440);
 
   const pdf = await downloadExport(page, 'PDF');
   expect(pdf.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.pdf$/);
   const pdfBytes = await readDownload(pdf);
   expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdfBytes.toString('latin1')).toMatch(
+    /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
+  );
 });
 
-test('disables graph export above the complete-table row limit', async ({ page }) => {
+test('keeps graph export available for a wide window', async ({ page }) => {
   await page.goto('/graphing');
   await page.locator('#eq-input').fill('x');
   await page.getByRole('button', { name: 'Plot' }).click();
@@ -111,8 +115,8 @@ test('disables graph export above the complete-table row limit', async ({ page }
   await windowInputs.nth(1).fill('201');
   await page.getByRole('button', { name: 'Apply window' }).click();
 
-  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
-  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
 });
 
 test('dark mode renders a visible grid and a bold, light-colored origin cross', async ({

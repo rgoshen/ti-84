@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { downloadExportArtifact, type ExportDependencies } from './download';
+import {
+  downloadExportArtifact,
+  fitImageToLetterLandscape,
+  type ExportDependencies,
+} from './download';
 
 describe('downloadExportArtifact', () => {
   const node = { scrollHeight: 900 } as HTMLElement;
@@ -53,5 +57,14 @@ describe('downloadExportArtifact', () => {
       'function-explorer-2026-07-12.pdf',
     );
     expect(dependencies.savePng).not.toHaveBeenCalled();
+  });
+
+  it('fits the artifact within margins on a Letter landscape page', () => {
+    expect(fitImageToLetterLandscape(1440, 900)).toEqual({
+      x: 18,
+      y: 69.75,
+      width: 756,
+      height: 472.5,
+    });
   });
 });

@@ -10,8 +10,8 @@ const MODEL: ExportArtifactModel = {
   slug: 'graphing-calculator',
   title: 'Graphing Calculator',
   exportedAt: 'July 12, 2026',
-  window: { xMin: -10, xMax: 10, yMin: -5, yMax: 20 },
-  legend: [{ label: 'y = x^2', color: '#2563eb', detail: 'Points hidden' }],
+  window: { xMin: -10.459925966974, xMax: 11.57158384563583, yMin: -5, yMax: 20 },
+  legend: [{ label: 'y = x²', color: '#2563eb', detail: 'Points hidden' }],
   sections: [
     {
       title: 'Graph information',
@@ -22,8 +22,8 @@ const MODEL: ExportArtifactModel = {
     },
   ],
   table: {
-    title: 'Value table',
-    headers: ['x', 'x^2'],
+    title: 'Selected values',
+    headers: ['x', 'x²'],
     rows: [
       ['0', '0'],
       ['1', '1'],
@@ -40,9 +40,10 @@ describe('ExportArtifact', () => {
     expect(html).toContain('width:960px;height:560px');
     expect(html).toContain('background:#f8fafc');
     expect(html).toContain('Graphing Calculator');
-    expect(html).toContain('y = x^2');
+    expect(html).toContain('y = x²');
+    expect(html).toContain('x [-10.46, 11.572]');
     expect(html).toContain('Graph information');
-    expect(html).toContain('Value table');
+    expect(html).toContain('Selected values');
     expect(html).not.toMatch(/<(button|input|select|nav)\b/);
   });
 
@@ -50,7 +51,6 @@ describe('ExportArtifact', () => {
     const html = renderToStaticMarkup(
       React.createElement(GraphResultExport, {
         hasGraph: false,
-        rowCount: 0,
         createSnapshot: () => {
           throw new Error('not called while disabled');
         },

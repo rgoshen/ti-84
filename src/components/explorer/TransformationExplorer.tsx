@@ -27,7 +27,9 @@ import type { PointShape } from '@/scripts/graphing/plot';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import {
   EXPORT_GRAPH_HEIGHT,
+  formatExportEquation,
   formatExportValue,
+  selectRepresentativeRows,
   type ExportSnapshot,
 } from '@/scripts/export/model';
 
@@ -266,7 +268,7 @@ export default function TransformationExplorer(): React.JSX.Element {
     const snapshotSteps = [...readout.steps];
     const snapshotParentPoints = parentPoints.map((point) => ({ ...point }));
     const snapshotTransformedPoints = transformedPoints.map((point) => ({ ...point }));
-    const snapshotXs = [...tableXs];
+    const snapshotXs = selectRepresentativeRows(tableXs);
     const snapshotFDetails = fDetails ? { ...fDetails } : null;
     const snapshotGDetails = gDetails ? { ...gDetails } : null;
     const snapshotComposed = composed;
@@ -288,12 +290,14 @@ export default function TransformationExplorer(): React.JSX.Element {
         window: snapshotWindow,
         legend: [
           {
-            label: `Parent: ${snapshotParentLabel}`,
+            label: `Parent: ${formatExportEquation(snapshotParentLabel)}`,
             color: lightColors.ghost,
             detail: showParent ? 'Shown (dashed)' : 'Hidden; parent markers suppressed',
           },
           {
-            label: snapshotEquation ?? 'Transformed function unavailable',
+            label: snapshotEquation
+              ? formatExportEquation(snapshotEquation)
+              : 'Transformed function unavailable',
             color: lightColors.curve,
             detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
           },
@@ -302,7 +306,12 @@ export default function TransformationExplorer(): React.JSX.Element {
           {
             title: 'Transformation',
             facts: [
-              { label: 'Equation', value: snapshotEquation ?? 'Unavailable' },
+              {
+                label: 'Equation',
+                value: snapshotEquation
+                  ? formatExportEquation(snapshotEquation)
+                  : 'Unavailable',
+              },
               { label: 'a', value: String(snapshotCoeffs.a) },
               { label: 'b', value: String(snapshotCoeffs.b) },
               { label: 'h', value: String(snapshotCoeffs.h) },
@@ -326,8 +335,12 @@ export default function TransformationExplorer(): React.JSX.Element {
           },
         ],
         table: {
-          title: 'Value table (whole-number x)',
-          headers: ['x', `Parent: ${snapshotParentLabel}`, snapshotEquation ?? 'Transformed'],
+          title: 'Selected values',
+          headers: [
+            'x',
+            `Parent: ${formatExportEquation(snapshotParentLabel)}`,
+            snapshotEquation ? formatExportEquation(snapshotEquation) : 'Transformed',
+          ],
           rows: snapshotXs.map((tableX) => [
             String(tableX),
             formatExportValue(evalAt(snapshotBaseExpr, tableX)),
@@ -482,7 +495,6 @@ export default function TransformationExplorer(): React.JSX.Element {
         <div className="flex justify-end">
           <GraphResultExport
             hasGraph={equation !== null}
-            rowCount={tableXs.length}
             createSnapshot={createExportSnapshot}
           />
         </div>

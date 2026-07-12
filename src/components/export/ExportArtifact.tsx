@@ -4,6 +4,7 @@ import {
   ARTIFACT_WIDTH,
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,
+  formatExportBound,
   type ExportArtifactModel,
 } from '@/scripts/export/model';
 
@@ -56,7 +57,7 @@ export default function ExportArtifact({
         <div style={{ color: MUTED, fontSize: 12, lineHeight: 1.5, textAlign: 'right' }}>
           <div>{model.exportedAt}</div>
           <div>
-            x [{win.xMin}, {win.xMax}] | y [{win.yMin}, {win.yMax}]
+            x [{formatExportBound(win.xMin)}, {formatExportBound(win.xMax)}] | y [{formatExportBound(win.yMin)}, {formatExportBound(win.yMax)}]
           </div>
         </div>
       </header>
