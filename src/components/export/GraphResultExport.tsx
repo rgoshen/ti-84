@@ -116,7 +116,7 @@ export default function GraphResultExport({
       {eligibility.reason ? (
         <p className="text-xs text-muted-foreground">{eligibility.reason}</p>
       ) : null}
-      <p className="sr-only" role="status" aria-live="polite">
+      <p className="sr-only" aria-live="polite">
         {status}
       </p>
 

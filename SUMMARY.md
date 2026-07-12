@@ -1555,3 +1555,27 @@ from the artifact.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 6
+
+## [2026-07-12 14:16] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export progress accessibility
+
+**Summary:**
+Removed the export controller's unconditional `role="status"` while retaining its
+polite live-region announcement. Added a static regression assertion and verified all
+five existing explorer/graph tooltip status tests.
+
+**Rationale:**
+Every supported tool already owns a status landmark, and the graphing tooltip adds one
+conditionally. The export controller's second landmark made role queries ambiguous
+and duplicated the accessibility contract. `aria-live="polite"` provides progress
+announcements without claiming another status role.
+
+**Bug Fix Context:**
+The full Playwright suite found five strict-mode failures because the new empty export
+status and the existing tool/tooltip status resolved simultaneously.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Full-suite regression found during Plan Task 7

@@ -59,5 +59,7 @@ describe('ExportArtifact', () => {
 
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>.*Export.*<\/button>/);
     expect(html).toContain('Graph something before exporting.');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain('role="status"');
   });
 });
