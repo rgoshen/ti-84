@@ -14,3 +14,4 @@ playwright-report/
 /playwright/.cache/
 .playwright-mcp/
 .superpowers/
+coverage/

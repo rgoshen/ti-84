@@ -1579,3 +1579,22 @@ status and the existing tool/tooltip status resolved simultaneously.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Full-suite regression found during Plan Task 7
+
+## [2026-07-12 15:24] Commit Summary
+
+**Change Type:** Test
+**Scope:** Export coverage verification
+
+**Summary:**
+Pinned `@vitest/coverage-v8` 4.1.9, added the repeatable `npm run test:coverage`
+command, and ignored generated coverage output. Measured 86.08% statements, 82.36%
+branches, 86.88% functions, and 88.07% lines across the exercised unit modules.
+
+**Rationale:**
+The repository required at least 80% coverage on changed work but previously had no
+coverage provider. Pinning the provider to the installed Vitest version makes the
+verification reproducible instead of relying on an unrecorded local tool.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 7
