@@ -1750,3 +1750,23 @@ directly.
 **References:**
 - TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 16:22] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export raster baseline plan
+
+**Summary:**
+Added a two-task implementation plan for deterministic downloaded-PNG snapshots and
+their review workflow. The plan defines the exact Playwright fixtures, red/green
+commands, bundled Inter weights, platform-independent snapshot path, explicit update
+script, verification gates, and atomic commits.
+
+**Rationale:**
+The approved visual design needs an executable maintenance workflow, not only a
+baseline requirement. Separating read-only comparison from intentional replacement
+makes visual changes reviewable and prevents normal tests from approving regressions.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: docs/superpowers/plans/2026-07-12-export-raster-baselines.md
