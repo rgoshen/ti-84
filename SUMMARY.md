@@ -1382,3 +1382,27 @@ for PNG and PDF guarantees that both formats remain a single, equivalent artifac
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 12:54] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export specification audit
+
+**Summary:**
+Resolved all eight material gaps from the requested `spec-gap-auditor` review. The
+contract now defines fixed artifact and graph dimensions, a dedicated light export
+render, immutable snapshots, per-tool eligibility, a 201-row table boundary, precise
+Function Explorer asymptote content, and marker-setting ownership.
+
+**Rationale:**
+Capturing the responsive live graph contradicted both fixed desktop output and the
+light export palette: mobile geometry and dark theming would leak into the file. An
+off-screen render through the existing tool renderer keeps the graph behavior DRY
+while making dimensions, theme, and animation consistency deterministic. The
+auditor's suggested 1,001-row cap was tightened to 201 because a 1,440px-wide image
+with 1,001 table rows can exceed practical browser canvas limits.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Spec audit: 8 findings resolved

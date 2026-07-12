@@ -363,8 +363,9 @@ out of scope.
 **Approach:**
 - Add an accessible Export menu to each supported React island with PNG and PDF
   choices.
-- Render a shared, read-only export surface at a fixed desktop width using current
-  tool state and a captured image of the existing SVG graph.
+- Render a shared, read-only export surface at a fixed 1,440px desktop width from an
+  immutable state snapshot. Render the graph off-screen at 960x560 in a light palette
+  through each tool's existing renderer so mobile and desktop exports match.
 - Keep one artifact per action: PNG downloads the complete surface; PDF embeds that
   same surface on one custom-sized landscape page.
 - Use pinned, MIT-licensed `html-to-image` and `jsPDF` dependencies behind a small
@@ -376,15 +377,20 @@ out of scope.
   download, correct extension/signature, and absence from the TI-84 page.
 - Visual verification at desktop and mobile browser widths to confirm the artifact
   always uses desktop proportions and contains no interactive controls.
+- Boundary tests at 201/202 whole-number x values and an active-animation export test
+  for immutable Function Explorer captures.
 - Run Vitest, Astro typecheck, production build, and the complete Playwright suite.
 
 **Risks & Tradeoffs:**
 - DOM capture relies on SVG `foreignObject`; current Chrome, Firefox, and Safari are
   supported, but very large tables may approach browser canvas limits.
+- Artifacts above 201 whole-number-x rows are rejected with guidance rather than
+  silently truncated; this bounds canvas height and memory use.
 - The PDF is a raster rendering of the same PNG surface. This guarantees visual
   parity and a single page, but its text is not selectable.
 - Export uses a light presentation palette for predictable sharing and printing,
   independent of the active application theme.
 
 **Status:** Design approved visually; implementation pending on
-`feature/graph-result-export`.
+`feature/graph-result-export`. Eight `spec-gap-auditor` findings resolved before
+implementation planning.
