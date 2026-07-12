@@ -433,3 +433,35 @@ all-tool PDF coverage, wide-window export coverage, exponent normalization, and
 long-expression wrapping. Final verification: 164/164 Vitest tests, 51/51 Playwright
 tests, zero Astro diagnostics, six production pages built, 86.13% statements / 82.14%
 branches / 87.69% functions / 88.33% lines, and zero production vulnerabilities.
+
+## [2026-07-12] Test: Approved Export Raster Baselines
+
+**Objective:**
+Protect the user-approved graph export composition with automated visual regression
+tests that compare the actual downloaded PNG for every supported tool. This closes
+the planning gap that allowed the original implementation to diverge from the shown
+artifact while still passing structural tests.
+
+**Approach:**
+- Add one focused Playwright visual suite for Graphing Calculator, Function Explorer,
+  and Transformation Explorer; keep TI-84 excluded.
+- Freeze date-dependent content and bundle the Inter font already named by the export
+  so local and Linux CI compare the same raster inputs.
+- Store platform-independent approved PNGs in the test tree and allow updates only
+  through an explicit npm command.
+- Retain semantic artifact assertions for precise failure diagnosis.
+
+**Tests:**
+- First run the new suite without baselines and confirm the expected missing-snapshot
+  failure.
+- Generate reviewed baselines, rerun the visual suite without update mode, and prove
+  a deliberate pixel mutation fails comparison.
+- Run Vitest, Astro check, build, the full Playwright suite, and production audit.
+
+**Risks & Tradeoffs:**
+- Raster checks are sensitive to font and browser changes; both inputs are pinned and
+  baseline replacements require explicit review.
+- The 0.1% pixel tolerance absorbs minor antialiasing but intentionally rejects
+  meaningful composition or content drift.
+
+**Status:** In progress.

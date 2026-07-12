@@ -199,6 +199,33 @@ earlier complete-table/custom-page decisions. Display bounds use at most three
 decimals, integer powers use superscript notation, the artifact shows at most nine
 representative rows, and PDF output is standard Letter landscape with margins.
 
+## Approved Raster Baselines
+
+The downloaded PNG from each supported tool is protected by a committed Playwright
+golden image. These checks compare the actual browser download, not a screenshot of
+the live page or a substitute report surface.
+
+The three canonical fixtures are:
+
+- Graphing Calculator: `y = x^2` with the decimal window from the user-reported
+  regression.
+- Function Explorer: `f(x) = 1/x^2` at the default plotted point and window.
+- Transformation Explorer: the default quadratic parent and identity transform.
+
+Each fixture freezes the browser clock at July 12, 2026 and renders the export with a
+bundled, pinned Inter font. The visual matcher permits at most a 0.1% pixel difference
+to absorb minor raster antialiasing while still rejecting layout, content, graph,
+color, spacing, and table regressions. The existing semantic assertions remain in
+place to diagnose the mathematical or structural cause of a visual failure.
+
+Normal test execution is read-only. Baselines can be replaced only through the
+explicit `npm run test:e2e:update-snapshots` command. Generated expected/actual/diff
+files from failed runs remain untracked; only reviewed baseline PNGs are committed.
+
+The baseline path is platform-independent. The bundled font, fixed Playwright
+Chromium version, fixed date, fixed artifact dimensions, and light export theme are
+the deterministic rendering boundary used locally and in Linux CI.
+
 ## Non-Goals
 
 - Exporting or packaging the tools themselves

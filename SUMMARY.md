@@ -1724,3 +1724,29 @@ expand fixed-width regions. Both cases now have regression coverage.
 - TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
 - `spec-gap-auditor` post-implementation review
+
+## [2026-07-12 16:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export visual regression design
+
+**Summary:**
+Added the previously omitted raster-baseline contract for all three downloadable
+graph artifacts. Defined canonical fixtures, deterministic date and font inputs, a
+0.1% pixel tolerance, platform-independent baseline paths, and an explicit-only
+approval command. Added the required TDD task to TODO.md.
+
+**Rationale:**
+The original plan treated visual comparison as a manual completion check, which could
+not protect the approved artifact from later drift. Committed golden PNGs turn that
+approved composition into an executable contract while semantic assertions continue
+to explain failures.
+
+**Bug Fix Context:**
+The first implementation passed signature, dimension, and content tests despite not
+matching the preview shown to the user. This design addresses that planning defect
+directly.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
