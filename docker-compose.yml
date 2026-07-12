@@ -14,6 +14,10 @@ services:
         PUBLIC_TI84_IFRAME_SRC: ${PUBLIC_TI84_IFRAME_SRC:-https://ti84calc.com/ti84calc}
         PUBLIC_THEME_DEFAULT: ${PUBLIC_THEME_DEFAULT:-dark}
     image: ti-84:latest
+    # This image is built locally and never published under this name, so tell compose
+    # not to try pulling it first — otherwise every `up` prints a misleading
+    # "pull access denied for ti-84" warning before falling back to the build.
+    pull_policy: build
     container_name: graphing-calculator
     ports:
       - "${HOST_PORT:-8084}:80"
