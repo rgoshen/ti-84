@@ -1448,3 +1448,23 @@ without redefining dimensions, eligibility messages, or filename behavior.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 1
+
+## [2026-07-12 13:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export download adapters
+
+**Summary:**
+Added a dependency-injected export boundary that captures the artifact once at the
+audited dimensions, downloads that capture directly as PNG, or embeds the identical
+image into a zero-margin custom-size PDF. Added two TDD orchestration tests and lazy
+browser imports for `html-to-image` and `jsPDF`.
+
+**Rationale:**
+Injecting conversion and save operations keeps unit tests deterministic and prevents
+browser/canvas behavior from leaking into export policy. A single capture path also
+guarantees PNG/PDF visual parity and avoids loading the PDF library during normal use.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 2
