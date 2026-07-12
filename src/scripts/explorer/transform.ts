@@ -33,7 +33,6 @@ export function composeExpr(baseExpr: string, c: Coeffs): string {
 }
 
 export interface TransformReadout {
-  equation: string; // e.g. 'g(x) = 3·f(2(x − 1)) − 4'
   steps: string[]; // ordered plain-English transformations, or one explanatory line
 }
 
@@ -41,8 +40,7 @@ const fmt = (n: number): string => formatNumber(n);
 
 /**
  * The inner argument b(x − h) as display text: 'x', 'x − 3', '−x', '2(x − 3)'.
- * Shared by the abstract readout (`f(…)`) and the concrete equation in `equation.ts`,
- * so the two lines can never disagree about the same quantity.
+ * Consumed by `equation.ts` to build the equation the user actually reads.
  */
 export function innerArgument(c: Coeffs): string {
   const hPart = Math.abs(c.h) < EPS ? 'x' : c.h > 0 ? `x − ${fmt(c.h)}` : `x + ${fmt(-c.h)}`;
@@ -52,26 +50,19 @@ export function innerArgument(c: Coeffs): string {
   return compound ? `${fmt(c.b)}(${hPart})` : `${fmt(c.b)}x`;
 }
 
-/** Build the readable equation, simplifying identity terms. */
-function formatEquation(c: Coeffs): string {
-  const fPart = `f(${innerArgument(c)})`;
-  const aPart =
-    Math.abs(c.a - 1) < EPS ? fPart : Math.abs(c.a + 1) < EPS ? `−${fPart}` : `${fmt(c.a)}·${fPart}`;
-  const kPart = Math.abs(c.k) < EPS ? '' : c.k > 0 ? ` + ${fmt(c.k)}` : ` − ${fmt(-c.k)}`;
-  return `g(x) = ${aPart}${kPart}`;
-}
-
 /**
  * Narrate the transformation as an ordered step list. Order is horizontal
  * (inside-out: reflect → scale → shift) then vertical (reflect → scale → shift),
  * matching how "work inside the parentheses first" is taught [G5]. Degenerate
  * b=0 / a=0 replace the list with a single explanation [G3].
+ *
+ * The equation itself is NOT built here — `equation.ts` writes it out concretely
+ * (`g(x) = 2(x − 3)² + 1`). This module used to render it as `g(x) = 2·f(x − 3) + 1`,
+ * which is meaningless to a student who does not already know what f is.
  */
-export function describeTransform(c: Coeffs, parentLabel: string): TransformReadout {
-  const equation = formatEquation(c);
-
-  if (Math.abs(c.b) < EPS) return { equation, steps: ['b = 0: the graph collapses to a horizontal line.'] };
-  if (Math.abs(c.a) < EPS) return { equation, steps: ['a = 0: the graph flattens to the line y = k.'] };
+export function describeTransform(c: Coeffs): TransformReadout {
+  if (Math.abs(c.b) < EPS) return { steps: ['b = 0: the graph collapses to a horizontal line.'] };
+  if (Math.abs(c.a) < EPS) return { steps: ['a = 0: the graph flattens to the line y = k.'] };
 
   const steps: string[] = [];
 
@@ -92,7 +83,8 @@ export function describeTransform(c: Coeffs, parentLabel: string): TransformRead
   else if (c.k < -EPS) steps.push(`Shifted down ${fmt(-c.k)}`);
 
   if (steps.length === 0) {
-    steps.push(`This is the parent function f(x) = ${parentLabel} — move a slider to transform it.`);
+    // No label here: the equation shown directly above already says what it is.
+    steps.push('This is the parent function — move a slider to transform it.');
   }
-  return { equation, steps };
+  return { steps };
 }

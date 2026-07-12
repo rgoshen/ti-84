@@ -60,7 +60,7 @@ test('picking a different parent reframes and resets', async ({ page }) => {
 
   // Scoped to the readout <li> (see comment on the first test) — avoids a race with
   // the debounced sr-only live-region echoing the same text.
-  await expect(page.locator('li').filter({ hasText: /This is the parent function f\(x\) = sin x/i })).toBeVisible();
+  await expect(page.locator('[data-testid="equation-readout"]')).toContainText('g(x) = sin x');
 
   // sin x's default window (x∈[−2π,2π]≈[−6.28,6.28]) differs from the square
   // parent's default [−10,10] — confirm the picker actually reframed the view,
@@ -74,7 +74,7 @@ test('the new parents are selectable and reframe the view', async ({ page }) => 
   await goto(page);
   await page.getByRole('combobox', { name: 'Parent function' }).click();
   await page.getByRole('option', { name: /cube root/i }).click();
-  await expect(page.locator('li').filter({ hasText: /This is the parent function f\(x\) = ∛x/i })).toBeVisible();
+  await expect(page.locator('[data-testid="equation-readout"]')).toContainText('g(x) = ∛x');
   await expect(page.locator(`${PLOT} g.graph`)).toHaveCount(2);
 });
 
@@ -208,15 +208,28 @@ test('the readout shows the real equation, not just f(x)', async ({ page }) => {
   await goto(page);
   const readout = page.locator('[data-testid="equation-readout"]');
 
-  // At the identity the two forms collapse — no more bare 'g(x) = f(x)' tautology.
-  await expect(readout).toContainText('g(x) = f(x) = x²');
+  // The readout names the function outright — no 'g(x) = f(x)' tautology.
+  await expect(readout).toContainText('g(x) = x²');
+  await expect(readout).not.toContainText('f(x)');
 
-  // A vertical stretch must show the ACTUAL equation, not only 'g(x) = 2·f(x)'.
+  // A vertical stretch shows the ACTUAL equation, never 'g(x) = 2·f(x)'.
   const a = page.getByRole('slider', { name: /a — vertical stretch/i });
   await a.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight'); // 1 → 2 at step 0.1
-  await expect(readout).toContainText('g(x) = 2·f(x)'); // abstract form kept
-  await expect(readout).toContainText('g(x) = 2x²'); // and the real one shown
+  await expect(readout).toContainText('g(x) = 2x²'); // the real equation…
+  await expect(readout).not.toContainText('f(x)'); // …and f(x) is gone entirely
+});
+
+test('even a custom typed function is written out, never as f(x)', async ({ page }) => {
+  await goto(page);
+  await page.locator('#fx-input').fill('x^4');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  // A custom f(x) has no notation template, so mathjs simplifies the composed
+  // expression instead. It must still be a real equation.
+  const readout = page.locator('[data-testid="equation-readout"]');
+  await expect(readout).toContainText('g(x) = x^4');
+  await expect(readout).not.toContainText('f(x)');
 });
 
 test('the concrete equation follows the parent and the shifts', async ({ page }) => {
@@ -225,7 +238,7 @@ test('the concrete equation follows the parent and the shifts', async ({ page })
   await page.getByRole('option', { name: /reciprocal/i }).click();
 
   const readout = page.locator('[data-testid="equation-readout"]');
-  await expect(readout).toContainText('g(x) = f(x) = 1/x');
+  await expect(readout).toContainText('g(x) = 1/x');
 
   // Shift right 3 → 1/(x − 3). Parenthesised: '1/x − 3' would be a different function.
   const h = page.getByRole('slider', { name: /h — horizontal shift/i });

@@ -7,7 +7,7 @@ import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
 import { PARENTS, parentById, defaultParent } from '@/scripts/explorer/parents';
-import { concreteEquation } from '@/scripts/explorer/equation';
+import { concreteEquation, customEquation } from '@/scripts/explorer/equation';
 import { parentDetails, transformedDetails, type FunctionDetails } from '@/scripts/explorer/details';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
@@ -74,7 +74,7 @@ export default function TransformationExplorer(): React.JSX.Element {
   const handleRef = useRef<TransformHandle | null>(null);
   const viewRef = useRef<Window2D>(appliedWindow); // latest view (preserves zoom on coeff change)
 
-  const readout = useMemo(() => describeTransform(coeffs, parentLabel), [coeffs, parentLabel]);
+  const readout = useMemo(() => describeTransform(coeffs), [coeffs]);
 
   // Points + table data are computed HERE and passed down precomputed: `evalAt` re-parses its
   // expression on every call, so it must stay out of the renderer's and the table's render path.
@@ -88,22 +88,12 @@ export default function TransformationExplorer(): React.JSX.Element {
     [parent, coeffs, composed],
   );
 
-  // The equation actually written out — 'g(x) = 2.1x²' — because 'g(x) = 2.1·f(x)'
-  // tells a student nothing unless they already know what f is. Null for a custom
-  // f(x) (no template) and for a collapsed transform (a = 0 or b = 0).
-  const concrete = useMemo(
-    () => (parent ? concreteEquation(parent, coeffs) : null),
-    [parent, coeffs],
-  );
-  // At the identity the abstract and concrete forms say the same thing, so they merge
-  // onto one line — otherwise the readout shows the tautology 'g(x) = f(x)' alone.
-  const isIdentity = useMemo(
-    () =>
-      Math.abs(coeffs.a - 1) < EPS &&
-      Math.abs(coeffs.b - 1) < EPS &&
-      Math.abs(coeffs.h) < EPS &&
-      Math.abs(coeffs.k) < EPS,
-    [coeffs],
+  // The one equation the readout shows — always written out, never 'g(x) = a·f(…)'.
+  // A catalog parent renders through its own notation template; a custom typed f(x)
+  // has no template, so mathjs simplifies the composed expression instead.
+  const equation = useMemo(
+    () => (parent ? concreteEquation(parent, coeffs) : customEquation(composed)),
+    [parent, coeffs, composed],
   );
 
   // Parent MARKERS follow `showParent`; the parent COLUMN below deliberately does not.
@@ -242,13 +232,14 @@ export default function TransformationExplorer(): React.JSX.Element {
     const id = setTimeout(() => {
       // The readout box is aria-hidden, so this live region is how the equation — both
       // forms — reaches a screen reader at all.
-      const equations = [readout.equation, concrete].filter(Boolean).join('. ');
-      const text = `${equations}. ${readout.steps.join('. ')}`;
+      // The readout box is aria-hidden, so this live region is how the equation reaches
+      // a screen reader at all.
+      const text = [equation, ...readout.steps].filter(Boolean).join('. ');
       const details = gDetails ? ` Domain ${gDetails.domain}. Range ${gDetails.range}.` : '';
       setAnnounced(`${text}${details}`);
     }, 250);
     return () => clearTimeout(id);
-  }, [readout, gDetails, concrete]);
+  }, [readout, gDetails, equation]);
 
   const setField = (key: keyof Window2D, value: string): void =>
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -329,22 +320,9 @@ export default function TransformationExplorer(): React.JSX.Element {
             data-testid="equation-readout"
             aria-hidden="true"
           >
-            {isIdentity && parent ? (
-              <p className="font-mono text-sm font-medium text-accent-foreground">
-                g(x) = f(x) = {parent.label}
-              </p>
-            ) : (
-              <>
-                <p className="font-mono text-sm font-medium text-accent-foreground">
-                  {readout.equation}
-                </p>
-                {concrete ? (
-                  <p className="font-mono text-sm font-medium text-accent-foreground">
-                    {concrete}
-                  </p>
-                ) : null}
-              </>
-            )}
+            {equation ? (
+              <p className="font-mono text-sm font-medium text-accent-foreground">{equation}</p>
+            ) : null}
             <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
               {readout.steps.map((s) => <li key={s}>{s}</li>)}
             </ul>
@@ -403,7 +381,7 @@ export default function TransformationExplorer(): React.JSX.Element {
             ref={plotRef}
             data-testid="transform-plot"
             role="img"
-            aria-label={`Graph of parent f(x) = ${parentLabel} (dashed) and transformed ${concrete ?? readout.equation}`}
+            aria-label={`Graph of the parent ${parentLabel} (dashed) and the transformed ${equation ?? 'function'}`}
             className="w-full"
             style={{ minHeight: 480 }}
           />

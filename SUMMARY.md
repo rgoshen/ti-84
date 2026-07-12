@@ -1332,3 +1332,30 @@ added there rather than left sighted-only.
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 22:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+The readout now shows ONLY the real equation — `g(x) = 2.1x²`. The abstract form
+(`g(x) = 2.1·f(x)`) is removed entirely, not shown alongside it. `formatEquation` and
+`TransformReadout.equation` are deleted as dead code, and `describeTransform` no longer
+takes a `parentLabel` (its step text dropped the redundant "f(x) = x²" caption).
+
+A custom typed f(x) has no notation template, so mathjs `simplify` collapses the
+composed machine string into a readable equation instead — so `f(x)` never appears
+anywhere in the UI, for any input.
+
+**Rationale:**
+The user could not read `g(x) = 2.1·f(x)`: "i don't know what f(x) means in this."
+Showing both forms was the first attempt; they asked for replacement, not addition.
+Abstract placeholders are a defect in a tool that teaches, not a style choice.
+
+Degenerate transforms now also produce a real equation rather than a blank line:
+a = 0 gives `g(x) = k`, and b = 0 gives the constant a·f(0) + k — returning null only
+when f(0) genuinely does not exist (ln, 1/x), where nothing is the honest answer.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
