@@ -24,6 +24,7 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
   const bytes = await readDownload(download);
   expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect(bytes.readUInt32BE(16)).toBe(1440);
+  expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
 
   await page.getByLabel('xMin', { exact: true }).fill('0');
   await page.getByLabel('xMax', { exact: true }).fill('201');

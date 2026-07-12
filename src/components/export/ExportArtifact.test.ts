@@ -20,6 +20,14 @@ const MODEL: ExportArtifactModel = {
         { label: 'Functions', value: '1' },
       ],
     },
+    {
+      title: 'Analysis',
+      facts: [{ label: 'Domain', value: 'All real numbers' }],
+    },
+    {
+      title: 'Visible settings',
+      facts: [{ label: 'Grid', value: 'Shown' }],
+    },
   ],
   table: {
     title: 'Selected values',
@@ -43,6 +51,10 @@ describe('ExportArtifact', () => {
     expect(html).toContain('y = x²');
     expect(html).toContain('x [-10.46, 11.572]');
     expect(html).toContain('Graph information');
+    expect(html).toContain('data-testid="export-details"');
+    expect(html).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))');
+    expect(html).toContain('Analysis');
+    expect(html).toContain('Visible settings');
     expect(html).toContain('Selected values');
     expect(html).not.toMatch(/<(button|input|select|nav)\b/);
   });

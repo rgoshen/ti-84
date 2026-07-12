@@ -1672,3 +1672,27 @@ corrected tests require a wide PNG, representative values, readable notation, an
 **References:**
 - TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 15:57] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export artifact composition
+
+**Summary:**
+Kept the primary tool summary beside the graph and moved secondary analysis panels
+into a two-column details band below it. Added a browser assertion that the most
+content-heavy Transformation Explorer export remains wider than it is tall and
+ignored generated visual-QA files under `output/playwright`.
+
+**Rationale:**
+Real artifact inspection found that stacking every information panel in the narrow
+sidebar made the Transformation Explorer 1,470px tall. The horizontal details band
+preserves every required fact while restoring the approved desktop composition.
+
+**Bug Fix Context:**
+This issue was visible only in the downloaded Transformation Explorer PNG; unit and
+signature checks did not reveal that the sidebar was controlling the grid height.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Visual QA: output/playwright/*-corrected.png

@@ -6,6 +6,7 @@ import {
   EXPORT_GRAPH_WIDTH,
   formatExportBound,
   type ExportArtifactModel,
+  type ExportSection,
 } from '@/scripts/export/model';
 
 export interface ExportArtifactProps {
@@ -16,6 +17,40 @@ export interface ExportArtifactProps {
 
 const BORDER = '#cbd5e1';
 const MUTED = '#64748b';
+
+function InformationSection({ section }: { section: ExportSection }): React.JSX.Element {
+  return (
+    <section style={{ padding: 16, border: `1px solid ${BORDER}`, background: '#ffffff' }}>
+      <h2
+        style={{
+          margin: '0 0 8px',
+          color: '#475569',
+          fontSize: 12,
+          textTransform: 'uppercase',
+        }}
+      >
+        {section.title}
+      </h2>
+      {section.facts.map((fact, index) => (
+        <div
+          key={`${fact.label}-${index}`}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '7px 0',
+            borderBottom:
+              index === section.facts.length - 1 ? undefined : '1px solid #e2e8f0',
+            fontSize: 12,
+          }}
+        >
+          <span style={{ color: MUTED }}>{fact.label}</span>
+          <strong style={{ textAlign: 'right' }}>{fact.value}</strong>
+        </div>
+      ))}
+    </section>
+  );
+}
 
 export default function ExportArtifact({
   model,
@@ -126,42 +161,25 @@ export default function ExportArtifact({
             </section>
           ) : null}
 
-          {model.sections.map((section) => (
-            <section
-              key={section.title}
-              style={{ padding: 16, border: `1px solid ${BORDER}`, background: '#ffffff' }}
-            >
-              <h2
-                style={{
-                  margin: '0 0 8px',
-                  color: '#475569',
-                  fontSize: 12,
-                  textTransform: 'uppercase',
-                }}
-              >
-                {section.title}
-              </h2>
-              {section.facts.map((fact, index) => (
-                <div
-                  key={`${fact.label}-${index}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    padding: '7px 0',
-                    borderBottom:
-                      index === section.facts.length - 1 ? undefined : '1px solid #e2e8f0',
-                    fontSize: 12,
-                  }}
-                >
-                  <span style={{ color: MUTED }}>{fact.label}</span>
-                  <strong style={{ textAlign: 'right' }}>{fact.value}</strong>
-                </div>
-              ))}
-            </section>
-          ))}
+          {model.sections[0] ? <InformationSection section={model.sections[0]} /> : null}
         </aside>
       </div>
+
+      {model.sections.length > 1 ? (
+        <div
+          data-testid="export-details"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${Math.min(2, model.sections.length - 1)}, minmax(0, 1fr))`,
+            gap: 16,
+            marginTop: 24,
+          }}
+        >
+          {model.sections.slice(1).map((section) => (
+            <InformationSection key={section.title} section={section} />
+          ))}
+        </div>
+      ) : null}
 
       <section style={{ marginTop: 24 }}>
         <h2
