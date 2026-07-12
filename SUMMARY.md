@@ -1511,3 +1511,25 @@ from changing an export in progress.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 4
+
+## [2026-07-12 13:58] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer export
+
+**Summary:**
+Integrated immutable Function Explorer exports containing the function, current
+point/readout, precise vertical asymptote and tail behavior, visible guide/marker
+settings, fixed light graph, and complete value table. Added Playwright coverage for
+mobile dark-mode capture during an active limit animation, light output, fixed PNG
+width/signature, and the 201-row limit; extracted shared download-test helpers.
+
+**Rationale:**
+Copying the moving point, analysis objects, overlay points, and table inputs before
+off-screen rendering prevents the live sweep loop from changing the artifact during
+capture. The export deliberately omits the transient sweep trail while preserving the
+mathematical readout at the snapshot moment.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 5

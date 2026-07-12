@@ -1,4 +1,6 @@
-import { test, expect, type Download, type Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+import { downloadExport, readDownload } from './export-helpers';
 
 /**
  * Geometric, library-agnostic on-curve check: samples the function curve path in
@@ -77,20 +79,6 @@ async function plotWithPoints(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
   await page.getByRole('checkbox').click();
   await expect(page.locator('[data-testid="plot"] .points-overlay circle').first()).toBeVisible();
-}
-
-async function readDownload(download: Download): Promise<Buffer> {
-  const stream = await download.createReadStream();
-  const chunks: Buffer[] = [];
-  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks);
-}
-
-async function downloadExport(page: Page, format: 'PNG' | 'PDF') {
-  await page.getByRole('button', { name: 'Export' }).click();
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('menuitem', { name: `Download ${format}` }).click();
-  return downloadPromise;
 }
 
 test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) => {

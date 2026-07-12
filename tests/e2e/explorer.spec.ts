@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { downloadExport, readDownload } from './export-helpers';
+
 const POINT = '[data-testid="explorer-point"]';
 const PLOT = '[data-testid="explorer-plot"]';
 
@@ -27,6 +29,48 @@ async function gotoExplorer(page: Page, fn = '1/x^2'): Promise<void> {
   await expect(page.locator(`${PLOT} svg`)).toBeVisible();
   await plot(page, fn);
 }
+
+test('exports a fixed light PNG from mobile dark mode while a limit animation runs', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await page.goto('/explorers/function');
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await plot(page, '1/x^2');
+
+  await page.getByRole('button', { name: 'x → 0⁺' }).click();
+  const download = await downloadExport(page, 'PNG');
+  expect(download.suggestedFilename()).toMatch(/^function-explorer-\d{4}-\d{2}-\d{2}\.png$/);
+  const bytes = await readDownload(download);
+  expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+
+  const topLeft = await page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('2D canvas unavailable');
+    context.drawImage(image, 0, 0);
+    return Array.from(context.getImageData(0, 0, 1, 1).data);
+  }, bytes.toString('base64'));
+  expect(topLeft.slice(0, 3)).toEqual([248, 250, 252]);
+});
+
+test('disables Function Explorer export above the complete-table row limit', async ({ page }) => {
+  await gotoExplorer(page, 'x');
+  const windowInputs = page.locator('input[type="number"]');
+  await windowInputs.nth(0).fill('0');
+  await windowInputs.nth(1).fill('201');
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+});
 
 test('starts with no function and no point until one is plotted', async ({ page }) => {
   await page.goto('/explorers/function');
