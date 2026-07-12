@@ -55,17 +55,27 @@ test('reset returns to the parent identity message', async ({ page }) => {
 
 test('picking a different parent reframes and resets', async ({ page }) => {
   await goto(page);
-  await page.getByRole('button', { name: 'sin x', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'sin x', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // Scoped to the readout <li> (see comment above) — avoids a race with the
-  // debounced sr-only live-region echoing the same text.
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /sin x/i }).click();
+
+  // Scoped to the readout <li> (see comment on the first test) — avoids a race with
+  // the debounced sr-only live-region echoing the same text.
   await expect(page.locator('li').filter({ hasText: /This is the parent function f\(x\) = sin x/i })).toBeVisible();
+
   // sin x's default window (x∈[−2π,2π]≈[−6.28,6.28]) differs from the square
   // parent's default [−10,10] — confirm the picker actually reframed the view,
-  // not just its own pressed state and readout text.
+  // not just its own label and readout text.
   const xMinInput = page.getByLabel('xMin', { exact: true });
   await expect(xMinInput).not.toHaveValue('-10');
   expect(Number(await xMinInput.inputValue())).toBeCloseTo(-6.283185, 3);
+});
+
+test('the new parents are selectable and reframe the view', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /cube root/i }).click();
+  await expect(page.locator('li').filter({ hasText: /This is the parent function f\(x\) = ∛x/i })).toBeVisible();
+  await expect(page.locator(`${PLOT} g.graph`)).toHaveCount(2);
 });
 
 test('a custom function plots and transforms', async ({ page }) => {
@@ -142,7 +152,7 @@ test('the point shape picker changes the markers on both curves', async ({ page 
     page.locator('circle[data-testid="crossing-marker-transformed"]').first(),
   ).toBeVisible();
 
-  await page.getByRole('combobox').click();
+  await page.getByRole('combobox', { name: 'Point shape' }).click();
   await page.getByRole('option', { name: 'Triangle' }).click();
 
   // Both curves follow the picked shape; colour is what separates them (same as graph).

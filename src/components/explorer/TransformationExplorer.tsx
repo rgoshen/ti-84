@@ -220,20 +220,20 @@ export default function TransformationExplorer(): React.JSX.Element {
       <div className="space-y-4">
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Parent function</h3>
-          <div className="flex flex-wrap gap-2">
-            {PARENTS.map((p) => (
-              <Button
-                key={p.id}
-                type="button"
-                size="sm"
-                variant={parentId === p.id ? 'default' : 'outline'}
-                aria-pressed={parentId === p.id}
-                onClick={() => selectParent(p.id)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
+          <Select value={parentId ?? ''} onValueChange={selectParent}>
+            <SelectTrigger id="parent-select" aria-label="Parent function" className="w-full">
+              {/* A custom f(x) clears parentId, so no item matches and the placeholder shows. */}
+              <SelectValue placeholder="Custom function" />
+            </SelectTrigger>
+            <SelectContent>
+              {PARENTS.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  <span className="font-mono">{p.label}</span>
+                  <span className="ml-2 text-muted-foreground">{p.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Label htmlFor="fx-input" className="mt-2">Or a custom f(x)</Label>
           <div className="flex gap-2">
             <Input
@@ -316,7 +316,7 @@ export default function TransformationExplorer(): React.JSX.Element {
               <label className="inline-flex items-center gap-1.5">
                 <span className="text-muted-foreground">Shape:</span>
                 <Select value={pointShape} onValueChange={(v) => setPointShape(v as PointShape)}>
-                  <SelectTrigger size="sm" className="capitalize">
+                  <SelectTrigger size="sm" className="capitalize" aria-label="Point shape">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -1131,3 +1131,46 @@ files, 133 passed, 0 failed (up from 130).
 **References:**
 - Code review finding on `src/scripts/explorer/details.test.ts`
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+
+## [2026-07-11 20:38] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+Replaced the Transformation Explorer's parent-function picker — a `PARENTS.map` row
+of toggle `Button`s — with a shadcn `Select` dropdown, since 11 catalog entries no
+longer fit as a button row. The dropdown reuses the existing `selectParent(id)`
+handler unchanged as `onValueChange`; each `SelectItem` shows the math glyph
+(`p.label`, monospace) and the spoken name (`p.name`, muted) side by side. The
+trigger's value falls back to `parentId ?? ''`, and its placeholder ("Custom
+function") surfaces automatically when a typed f(x) clears `parentId` to `null` —
+no extra state needed.
+
+**Rationale:**
+A second `Select` on the page made the pre-existing shape-picker's unscoped
+`page.getByRole('combobox')` e2e selector ambiguous under Playwright's strict mode
+(now two comboboxes match). Fixed at the source instead of routing around it: gave
+both `SelectTrigger`s an `aria-label` (`"Point shape"`, `"Parent function"`) so every
+combobox on the page is addressable by name, keeping the shape-picker test's
+assertions intact rather than weakening them. This was flagged as a known risk when
+the catalog was grown to 11 parents (see TODO.md reference below).
+
+**Tests:**
+Rewrote `tests/e2e/transformation.spec.ts`'s `'picking a different parent reframes
+and resets'` test for the dropdown (click the named combobox, pick the `option` by
+name) — it still asserts the reframe is real by checking `xMin` moves off `-10` and
+lands within 3 decimals of sin x's `-2π`, not merely that a label or pressed-state
+changed. Added `'the new parents are selectable and reframe the view'`, picking
+"cube root" and asserting both the readout text and the rendered curve count.
+Scoped the shape-picker test's combobox query to `{ name: 'Point shape' }`. Swept
+the other e2e spec files for unscoped `combobox` selectors — `explorer.spec.ts` has
+one, but it targets the unrelated `/explorers/function` page (a different
+component, still exactly one combobox there), so it was left as-is.
+`npm test`: 10 files, 133 passed, 0 failed (unchanged). `npx playwright test
+tests/e2e/transformation.spec.ts`: 13/13 passed. Full `npm run test:e2e`: 39/39
+passed. `npm run build`: clean, 6 pages, 0 type errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-4-brief.md` (Task 4 of the plan)
