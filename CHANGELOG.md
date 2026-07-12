@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+## [0.2.1](https://github.com/rgoshen/ti-84/compare/v0.2.0...v0.2.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* **release:** keep the changelog title on top, backfill 0.1.0, and stop compose pulling a local image ([81105d9](https://github.com/rgoshen/ti-84/commit/81105d92ef893cba0167e29d33dfdaa68dcbde23))
+
 # [0.2.0](https://github.com/rgoshen/ti-84/compare/v0.1.0...v0.2.0) (2026-07-11)
 
 ### Bug Fixes
