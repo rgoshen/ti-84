@@ -1359,3 +1359,26 @@ when f(0) genuinely does not exist (ln, 1/x), where nothing is the honest answer
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-12 12:41] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export design
+
+**Summary:**
+Documented the approved content-only, desktop-width export experience for the
+Graphing Calculator and both Explorers. Defined one-file PNG/PDF artifacts, exact
+tool-specific content, a shared read-only capture architecture, error handling,
+accessibility, dependency boundaries, and a strict TDD verification strategy. Added
+the required TODO entry and ignored temporary visual-companion output.
+
+**Rationale:**
+The existing page layouts mix result readouts with interactive controls, so hiding
+controls in place would lose useful mathematical context. A temporary read-only
+surface fed by current tool state preserves the website's style while excluding UI
+that cannot function in a downloaded file. Capturing that surface once and reusing it
+for PNG and PDF guarantees that both formats remain a single, equivalent artifact.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md

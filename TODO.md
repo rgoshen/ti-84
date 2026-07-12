@@ -350,3 +350,41 @@ Re-enable the two currently-red assertions in `tests/e2e/transformation.spec.ts`
 `slider.tsx` is a shared primitive used by both explorers — verify the visual/`data-slot` styling hooks (`slider-thumb` class, focus ring) are unaffected by moving the prop. Low risk, single-file change, but touches every existing slider consumer.
 
 **Status:** ✅ RESOLVED (2026-07-11, commit 8fcddea). Forwarded `aria-label`/`aria-labelledby` to `SliderPrimitive.Thumb`; both explorers' sliders now resolve by accessible name (Function Explorer's "x value" slider fixed as a bonus). The two transformation e2e assertions pass (9/9 transformation, 24/24 full e2e, no regression); styling/`data-slot` hooks unaffected. Optional follow-up remaining: add a named-role query for the Function Explorer slider in `explorer.spec.ts` (currently `[role="slider"]`).
+
+## [2026-07-12] Feature: Graph Result Export
+
+**Objective:**
+Allow users to preserve a completed graph from the Graphing Calculator, Function
+Explorer, or Transformation Explorer as one self-contained artifact. The exported
+file must retain the graph and its relevant mathematical information while omitting
+navigation, buttons, inputs, sliders, and other editing controls. The TI-84 remains
+out of scope.
+
+**Approach:**
+- Add an accessible Export menu to each supported React island with PNG and PDF
+  choices.
+- Render a shared, read-only export surface at a fixed desktop width using current
+  tool state and a captured image of the existing SVG graph.
+- Keep one artifact per action: PNG downloads the complete surface; PDF embeds that
+  same surface on one custom-sized landscape page.
+- Use pinned, MIT-licensed `html-to-image` and `jsPDF` dependencies behind a small
+  export adapter so browser conversion can be stubbed in unit tests.
+
+**Tests:**
+- Unit tests first for filenames, dimensions, export state, and the PNG/PDF adapter.
+- Playwright tests for each supported tool: menu availability, successful PNG/PDF
+  download, correct extension/signature, and absence from the TI-84 page.
+- Visual verification at desktop and mobile browser widths to confirm the artifact
+  always uses desktop proportions and contains no interactive controls.
+- Run Vitest, Astro typecheck, production build, and the complete Playwright suite.
+
+**Risks & Tradeoffs:**
+- DOM capture relies on SVG `foreignObject`; current Chrome, Firefox, and Safari are
+  supported, but very large tables may approach browser canvas limits.
+- The PDF is a raster rendering of the same PNG surface. This guarantees visual
+  parity and a single page, but its text is not selectable.
+- Export uses a light presentation palette for predictable sharing and printing,
+  independent of the active application theme.
+
+**Status:** Design approved visually; implementation pending on
+`feature/graph-result-export`.
