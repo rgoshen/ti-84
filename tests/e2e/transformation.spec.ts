@@ -1,11 +1,36 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { downloadExport, readDownload } from './export-helpers';
+
 const PLOT = '[data-testid="transform-plot"]';
 
 async function goto(page: Page): Promise<void> {
   await page.goto('/explorers/transformations');
   await expect(page.locator(`${PLOT} svg`)).toBeVisible();
 }
+
+test('exports one fixed transformation artifact and enforces the table row limit', async ({
+  page,
+}) => {
+  await goto(page);
+  const h = page.getByRole('slider', { name: /h — horizontal shift/i });
+  await h.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+
+  const download = await downloadExport(page, 'PNG');
+  expect(download.suggestedFilename()).toMatch(
+    /^transformation-explorer-\d{4}-\d{2}-\d{2}\.png$/,
+  );
+  const bytes = await readDownload(download);
+  expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+
+  await page.getByLabel('xMin', { exact: true }).fill('0');
+  await page.getByLabel('xMax', { exact: true }).fill('201');
+  await page.getByRole('button', { name: 'Apply window' }).click();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+});
 
 test('renders a dashed parent and a solid transformed curve by default', async ({ page }) => {
   await goto(page);

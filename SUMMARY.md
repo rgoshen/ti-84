@@ -1533,3 +1533,25 @@ mathematical readout at the snapshot moment.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 5
+
+## [2026-07-12 14:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Transformation Explorer export
+
+**Summary:**
+Integrated Transformation Explorer exports containing the selected parent, concrete
+transformed equation, a/b/h/k values, transformation steps, parent/transformed
+details, visibility and marker state, fixed light graph, and both value-table columns.
+Added Playwright coverage for real PNG output after a coefficient change, the row
+limit, and explicit TI-84 export exclusion.
+
+**Rationale:**
+The tool-specific adapter keeps transformation domain knowledge out of the shared
+export shell while copying every renderer input before capture. Hidden parent curves
+and their suppressed markers are reported explicitly instead of being silently absent
+from the artifact.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 6
