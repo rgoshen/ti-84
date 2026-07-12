@@ -1174,3 +1174,43 @@ passed. `npm run build`: clean, 6 pages, 0 type errors.
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Plan: `.superpowers/sdd/task-4-brief.md` (Task 4 of the plan)
+
+## [2026-07-11 20:44] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+Added the read-only "Function details" panel to the Transformation Explorer: a
+`<table>` between the plot and the value table showing domain, range,
+x/y-intercepts, and vertical/horizontal asymptotes for f(x) and the live g(x) side
+by side. Two new memos (`parent`, `fDetails`, `gDetails`) derive from the existing
+`parentId`/`coeffs` state and reuse the island's already-memoised `composed`
+expression (never recomputed) via `parentDetails`/`transformedDetails` from
+`scripts/explorer/details`. A typed custom f(x) clears `parentId` to `null`, so both
+memos go `null` and the panel renders a fallback message instead of attempting to
+compute details for a function with no declared properties.
+
+**Rationale:**
+The pedagogical point of the panel is that the g(x) column updates live as sliders
+move while the f(x) column stays fixed — proving the transformation only shifts/
+scales the parent, it doesn't change its qualitative shape. Building the table as a
+real `<table>` with `<caption>` (sr-only) and `<th scope="col">`/`<th scope="row">`
+(rather than a div grid) keeps it WCAG 2.1 AA compliant; it is intentionally
+read-only with no inputs or controls.
+
+**Tests:**
+TDD: appended 3 failing e2e tests to `tests/e2e/transformation.spec.ts` first,
+confirmed all 3 failed (`[data-testid="function-details"]` not found) via
+`npx playwright test tests/e2e/transformation.spec.ts -g "details|ln shows|custom
+function reports"`, then implemented and reran the same filter to green. Tests
+cover: x² domain/range for both columns plus k=+2 lifting only g's range; switching
+to natural log shows `x > 0` domain and the vertical asymptote following an h shift
+(`x = 0` → `x = 2`); a custom f(x) shows the "not available" fallback text.
+`npm test`: 10 files, 133 passed. Full `npm run test:e2e`: 42/42 passed (39
+pre-existing + 3 new), no regressions. `npm run build`: clean, 6 pages, 0 type
+errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-5-brief.md` (Task 5 of the plan, final task)

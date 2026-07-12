@@ -7,6 +7,7 @@ import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
 import { PARENTS, parentById, defaultParent } from '@/scripts/explorer/parents';
+import { parentDetails, transformedDetails, type FunctionDetails } from '@/scripts/explorer/details';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,15 @@ const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 const A_RANGE = { min: -5, max: 5, step: 0.1 };
 const H_RANGE = { min: -10, max: 10, step: 0.1 };
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+const DETAIL_ROWS: Array<{ key: keyof FunctionDetails; label: string }> = [
+  { key: 'domain', label: 'Domain' },
+  { key: 'range', label: 'Range' },
+  { key: 'xIntercepts', label: 'x-intercept' },
+  { key: 'yIntercept', label: 'y-intercept' },
+  { key: 'verticalAsymptote', label: 'Vertical asymptote' },
+  { key: 'horizontalAsymptote', label: 'Horizontal asymptote' },
+];
 
 const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
@@ -69,6 +79,13 @@ export default function TransformationExplorer(): React.JSX.Element {
   // expression on every call, so it must stay out of the renderer's and the table's render path.
   const eColors = useMemo(() => explorerColors(dark), [dark]);
   const composed = useMemo(() => (baseExpr ? composeExpr(baseExpr, coeffs) : ''), [baseExpr, coeffs]);
+
+  const parent = useMemo(() => (parentId ? parentById(parentId) : undefined), [parentId]);
+  const fDetails = useMemo(() => (parent ? parentDetails(parent) : null), [parent]);
+  const gDetails = useMemo(
+    () => (parent ? transformedDetails(parent, coeffs, composed) : null),
+    [parent, coeffs, composed],
+  );
 
   // Parent MARKERS follow `showParent`; the parent COLUMN below deliberately does not.
   const parentPoints = useMemo(
@@ -343,6 +360,43 @@ export default function TransformationExplorer(): React.JSX.Element {
             className="w-full"
             style={{ minHeight: 480 }}
           />
+        </Card>
+
+        <Card className="gap-3 p-4">
+          <h3 className="text-sm font-medium">Function details</h3>
+          {fDetails && gDetails ? (
+            <table data-testid="function-details" className="w-full text-xs">
+              <caption className="sr-only">
+                Domain, range, intercepts and asymptotes of the parent and the transformed function
+              </caption>
+              <thead>
+                <tr className="border-b">
+                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
+                    Property
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">
+                    f(x) = {parentLabel}
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DETAIL_ROWS.map(({ key, label }) => (
+                  <tr key={key} data-row={key} className="border-b last:border-0">
+                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
+                      {label}
+                    </th>
+                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
+                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Not available for a custom function — pick a parent function to see its details.
+            </p>
+          )}
         </Card>
 
         <ValueTable

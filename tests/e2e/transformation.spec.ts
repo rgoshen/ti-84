@@ -162,3 +162,44 @@ test('the point shape picker changes the markers on both curves', async ({ page 
   ).toBeVisible();
   await expect(page.locator('circle[data-testid="crossing-marker-transformed"]')).toHaveCount(0);
 });
+
+test('function details describe the parent and the transformed curve', async ({ page }) => {
+  await goto(page);
+  const details = page.locator('[data-testid="function-details"]');
+
+  // Parent x²: domain all reals, range y ≥ 0.
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('all real numbers');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 0');
+
+  // k = +2 lifts only g's range, leaving f's alone — the whole point of the panel.
+  const k = page.getByRole('slider', { name: /k — vertical shift/i });
+  await k.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 2');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
+});
+
+test('ln shows its domain and its asymptote moves with h', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /natural log/i }).click();
+
+  const details = page.locator('[data-testid="function-details"]');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('x > 0');
+  await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 0');
+
+  // Shift right 2 → the vertical asymptote follows.
+  const h = page.getByRole('slider', { name: /h — horizontal shift/i });
+  await h.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
+  await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 2');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="gx"]')).toHaveText('x > 2');
+});
+
+test('a custom function reports that details are unavailable', async ({ page }) => {
+  await goto(page);
+  await page.locator('#fx-input').fill('x^4');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.getByText(/not available for a custom function/i)).toBeVisible();
+});
