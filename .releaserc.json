@@ -5,7 +5,10 @@
     "@semantic-release/release-notes-generator",
     [
       "@semantic-release/changelog",
-      { "changelogFile": "CHANGELOG.md" }
+      {
+        "changelogFile": "CHANGELOG.md",
+        "changelogTitle": "# Changelog\n\nAll notable changes to this project are documented in this file. It is generated\nautomatically by [semantic-release](https://github.com/semantic-release/semantic-release)\nfrom [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand."
+      }
     ],
     [
       "@semantic-release/npm",

@@ -886,3 +886,23 @@ Built the image with an override — `docker build --build-arg PUBLIC_SITE_TITLE
 
 **References:**
 - Dockerfile, docker-compose.yml, .env.example
+
+## [2026-07-11 17:07] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Release — changelog title/ordering, backfilled 0.1.0; compose pull warning
+
+**Summary:**
+Three related fixes surfaced by the first automated release (v0.2.0).
+(1) **Changelog title stranded at the bottom.** `@semantic-release/changelog` *prepends* new notes to the top of the file (it never overwrites), but it only preserves an existing header if `changelogTitle` is configured. It wasn't, so the 0.2.0 notes were inserted above the hand-written `# Changelog` header, pushing it to the foot of the file. Added `changelogTitle` to `.releaserc.json` (matching the header byte-for-byte, since the plugin uses `currentFile.startsWith(changelogTitle)`) and repaired the current file.
+(2) **No 0.1.0 entry.** `v0.1.0` was a baseline tag cut *before* the changelog plugin existed, and semantic-release only writes notes for releases it creates — so the changelog began at 0.2.0. Backfilled a `# 0.1.0` section generated from the actual commits reachable from that tag (25 entries, same format as the generated 0.2.0 section), placed beneath 0.2.0 so newest stays first.
+(3) **Misleading compose warning.** `docker compose up` printed `pull access denied for ti-84` on every run — compose tries to pull `image: ti-84:latest` before falling back to the local build, which reads as though a stale image was used. Set `pull_policy: build` so compose never attempts the pull.
+
+**Bug Fix Context:**
+Root cause of (1) is in the plugin's `lib/prepare.js`: `changelogTitle && currentFile.startsWith(changelogTitle) ? currentFile.slice(changelogTitle.length).trim() : currentFile`, then `writeFile(path, changelogTitle ? `${changelogTitle}\n\n${content}` : content)`. Without `changelogTitle` it blindly prepends above all existing content, header included.
+
+**Verification:**
+Replayed the plugin's exact `prepare.js` logic against the real repaired file and the real config, simulating a future 0.3.0 release: the title matches (`startsWith` → true), stays on top, is not duplicated, and both 0.2.0 and the backfilled 0.1.0 survive beneath it — final order `# Changelog → 0.3.0 → 0.2.0 → 0.1.0`. `docker compose config -q` valid, `.releaserc.json` parses, and `docker compose up -d` now builds with no pull warning; container serves `/`, `/explorers`, `/explorers/transformations` (200).
+
+**References:**
+- Reported by user: "is it overwriting or appending?", "there is no v0.1.0 entry"

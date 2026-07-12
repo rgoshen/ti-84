@@ -1,5 +1,10 @@
-# [0.2.0](https://github.com/rgoshen/ti-84/compare/v0.1.0...v0.2.0) (2026-07-11)
+# Changelog
 
+All notable changes to this project are documented in this file. It is generated
+automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
+from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
+
+# [0.2.0](https://github.com/rgoshen/ti-84/compare/v0.1.0...v0.2.0) (2026-07-11)
 
 ### Bug Fixes
 
@@ -9,7 +14,6 @@
 * **nav:** close the hover gap so the Explorers dropdown items are reachable ([cdff6a7](https://github.com/rgoshen/ti-84/commit/cdff6a76b697a7f6b9d5dd3c69240d03f43b9bd1))
 * **nav:** put the caret inside the Explorers nav item and fix intro text spacing ([ce63544](https://github.com/rgoshen/ti-84/commit/ce63544849542cd7c15a277f68e7bcb5537f8e10))
 * **ui:** forward slider accessible name to the thumb (role=slider) ([8fcddea](https://github.com/rgoshen/ti-84/commit/8fcddea6cfc099b773f2f940b8da57daf786c796))
-
 
 ### Features
 
@@ -33,8 +37,35 @@
 * **explorer:** render dashed parent + solid transformed curve ([0601f8d](https://github.com/rgoshen/ti-84/commit/0601f8ddc7fcbe6b409abcaecd2fb649b9dc86ca))
 * **nav:** add Explorers dropdown and point the home card at the hub ([62205d7](https://github.com/rgoshen/ti-84/commit/62205d7eb88020c1d1dcb243788b302c3063510c))
 
-# Changelog
+# 0.1.0 (2026-06-30)
 
-All notable changes to this project are documented in this file. It is generated
-automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
-from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
+### Bug Fixes
+
+* **graphing:** tighten hover e2e discrimination and address review nits ([09e5896](https://github.com/rgoshen/ti-84/commit/09e589621a3b15c88fc42612ce51e54db2182b19))
+* **graphing:** make dark-mode grid and x/y axes legible ([60db54a](https://github.com/rgoshen/ti-84/commit/60db54a1ce16cd35c68a31dcd30a03c16120289a))
+* **docker:** serve clean URLs without a port-dropping 301 redirect ([fda6834](https://github.com/rgoshen/ti-84/commit/fda6834f1f8f3a18cfe331d91efe35583ccf9a8b))
+* keep point markers on the curve during zoom and pan ([558898c](https://github.com/rgoshen/ti-84/commit/558898c9e91e32a978649b33bd98fba589fa403b))
+* align point markers by appending overlay into Function Plot canvas group ([6c6d663](https://github.com/rgoshen/ti-84/commit/6c6d6636a1d74e76714428ba0c49e2570f465b80))
+* make existing x=0/y=0 grid lines bolder instead of drawing new ones ([4e8dce4](https://github.com/rgoshen/ti-84/commit/4e8dce4b574e2668c9030885c8ae280eba046ed9))
+* read real axis tick positions so points and origin axes align with plot ([1d31348](https://github.com/rgoshen/ti-84/commit/1d3134820f9b0324e48881c56f885884ede29b14))
+* bold origin axes, correct inverted points, render triangles via path ([357f45b](https://github.com/rgoshen/ti-84/commit/357f45b44bc687a76aac704acf3780eecb6e12e9))
+* make dark-mode lines visible and pretty-print equations with KaTeX ([0a69505](https://github.com/rgoshen/ti-84/commit/0a69505e4c8a0aeae87f706ec9aa6d8494afb7b7))
+* simplify theme default logic so THEME_DEFAULT env var applies cleanly ([bb141da](https://github.com/rgoshen/ti-84/commit/bb141daa8c892801a7e9d2566e642933999487a3))
+* restore default host port to 8084 across compose and docs ([90e7846](https://github.com/rgoshen/ti-84/commit/90e7846d78cb128ef705b40bef670d2a9b8585dc))
+* remove stray HOST_PORT env var that broke compose port mapping ([c7e5463](https://github.com/rgoshen/ti-84/commit/c7e54638a0024a3a87441b74b7408726a80d700c))
+* replace text page with functional graphing calculator using function-plot ([e15e607](https://github.com/rgoshen/ti-84/commit/e15e60728f67ad8fb0ee50bde5ce9de2850e347b))
+
+### Features
+
+* **graphing:** floating coordinate tooltip on marker hover ([d139f1c](https://github.com/rgoshen/ti-84/commit/d139f1c9d9224cdd6e260ec6cd590f1b16962e98))
+* **graphing:** suppress function-plot native crosshair tip ([2b8da84](https://github.com/rgoshen/ti-84/commit/2b8da8420b30b207301b0e5982bce29910914b43))
+* **graphing:** add pure hover-readout helpers and constants ([7b229f8](https://github.com/rgoshen/ti-84/commit/7b229f8d2644cf2120698486f6a29fa8b7c02f36))
+* **graphing:** restore bold zero-axis gridlines ([806129c](https://github.com/rgoshen/ti-84/commit/806129c4af0eee6872949bacb107aaf24ae65c1a))
+* complete Astro migration — shared shell, /ti-84 page, Docker cutover ([2badec2](https://github.com/rgoshen/ti-84/commit/2badec24a82e932cdb5104f9c218ae13bd9c1edf))
+* **graphing:** port graphing calculator to a React island ([881a901](https://github.com/rgoshen/ti-84/commit/881a901914eb311381580c9471867d9dfb7d98a4))
+* **build:** Astro + TS + Tailwind scaffold and tested math core ([512d87f](https://github.com/rgoshen/ti-84/commit/512d87fafc518d49d8758ed2115785bb93c7f912))
+* plot point markers at whole-number gridline crossings ([05e7ca7](https://github.com/rgoshen/ti-84/commit/05e7ca7ba8d2bc1faa2a6baee985fe765bfe8ff0))
+* add docker-compose with env-var-driven site defaults via envsubst ([fe782ec](https://github.com/rgoshen/ti-84/commit/fe782ec73598493f601feeb56a11707b3a3d79bd))
+* fix dark mode lines, add color picker, value table, and point shapes ([bb1c7cf](https://github.com/rgoshen/ti-84/commit/bb1c7cf37728315baff5cc1d51111376c22a438e))
+* add nav menu and Graphing Calculator Online page with themed content ([ba36a41](https://github.com/rgoshen/ti-84/commit/ba36a41559f2c873fd9e569c1a4015a74c56dd06))
+* add TI-84 calculator website with theme toggle and Docker ([244b1e1](https://github.com/rgoshen/ti-84/commit/244b1e1ae1c5f3effb392da24ae737a2181f846c))
