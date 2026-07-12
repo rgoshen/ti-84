@@ -1770,3 +1770,24 @@ makes visual changes reviewable and prevents normal tests from approving regress
 **References:**
 - TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
 - Plan: docs/superpowers/plans/2026-07-12-export-raster-baselines.md
+
+## [2026-07-12 16:27] Commit Summary
+
+**Change Type:** Test
+**Scope:** Approved export raster baselines
+
+**Summary:**
+Added a dedicated Playwright visual suite that freezes the export date, downloads the
+real PNG from each supported graph tool, and compares it with a platform-independent
+approved baseline at a 0.1% differing-pixel tolerance. Pinned OFL-1.1 Inter 5.2.8 and
+loaded its regular, semibold, and bold weights so local macOS and Linux CI use the
+same export typography. Added separate read-only and explicit-update npm commands.
+
+**Rationale:**
+Structural checks explain artifact content but cannot protect visual hierarchy. The
+golden files encode the approved composition, while fixed time, font, graph geometry,
+theme, and Chromium version remove the major sources of irrelevant raster drift.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: Task 1
