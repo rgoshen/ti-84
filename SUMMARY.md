@@ -1468,3 +1468,24 @@ guarantees PNG/PDF visual parity and avoids loading the PDF library during norma
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 2
+
+## [2026-07-12 13:09] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Shared export artifact and controller
+
+**Summary:**
+Added the fixed-width, light read-only artifact shell; an accessible Radix Export menu
+with PNG/PDF commands; and the off-screen snapshot lifecycle with busy, success, and
+recoverable error states. Added static-markup TDD coverage proving audited dimensions,
+result content, disabled guidance, and the absence of interactive controls.
+
+**Rationale:**
+The shared shell owns presentation and conversion timing while each math tool retains
+ownership of its state mapping and plot renderer. Mounting only during export avoids
+duplicate accessible content, and the disabled/busy states prevent invalid or
+duplicate captures.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 3
