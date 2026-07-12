@@ -39,12 +39,22 @@ export interface TransformReadout {
 
 const fmt = (n: number): string => formatNumber(n);
 
+/**
+ * The inner argument b(x − h) as display text: 'x', 'x − 3', '−x', '2(x − 3)'.
+ * Shared by the abstract readout (`f(…)`) and the concrete equation in `equation.ts`,
+ * so the two lines can never disagree about the same quantity.
+ */
+export function innerArgument(c: Coeffs): string {
+  const hPart = Math.abs(c.h) < EPS ? 'x' : c.h > 0 ? `x − ${fmt(c.h)}` : `x + ${fmt(-c.h)}`;
+  const compound = Math.abs(c.h) >= EPS; // hPart is 'x − 3', not a bare 'x'
+  if (Math.abs(c.b - 1) < EPS) return hPart;
+  if (Math.abs(c.b + 1) < EPS) return compound ? `−(${hPart})` : '−x';
+  return compound ? `${fmt(c.b)}(${hPart})` : `${fmt(c.b)}x`;
+}
+
 /** Build the readable equation, simplifying identity terms. */
 function formatEquation(c: Coeffs): string {
-  const hPart = Math.abs(c.h) < EPS ? 'x' : c.h > 0 ? `x − ${fmt(c.h)}` : `x + ${fmt(-c.h)}`;
-  const inner =
-    Math.abs(c.b - 1) < EPS ? hPart : Math.abs(c.b + 1) < EPS ? `−(${hPart})` : `${fmt(c.b)}(${hPart})`;
-  const fPart = `f(${inner})`;
+  const fPart = `f(${innerArgument(c)})`;
   const aPart =
     Math.abs(c.a - 1) < EPS ? fPart : Math.abs(c.a + 1) < EPS ? `−${fPart}` : `${fmt(c.a)}·${fPart}`;
   const kPart = Math.abs(c.k) < EPS ? '' : c.k > 0 ? ` + ${fmt(c.k)}` : ` − ${fmt(-c.k)}`;

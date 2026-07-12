@@ -1287,3 +1287,27 @@ catalog-wide invariant that `render('x')` reproduces each parent's `label`.
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 21:48] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/equation
+
+**Summary:**
+New pure module `equation.ts` composing the concrete transformed equation
+(`g(x) = 2(x − 3)² + 1`) from a parent's `render` template and the coefficients.
+Extracted `innerArgument` out of `formatEquation` in transform.ts and exported it.
+
+**Rationale:**
+`innerArgument` is EXTRACTED rather than reimplemented so the abstract line
+(`g(x) = 2·f(x − 3) + 1`) and the concrete line derive the argument from one source and
+can never drift apart. It lives in transform.ts, not equation.ts as the spec sketched,
+because transform.ts already owns Coeffs and EPS — putting it in equation.ts would
+create a circular import for the same DRY outcome.
+
+Pretty-printing composeExpr's machine string ('(2) * ((x - (3))^2) + (1)') would need a
+real expression-tree formatter that re-derives precedence. Asking each parent to render
+its own notation is a dozen one-liners and no parser.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
