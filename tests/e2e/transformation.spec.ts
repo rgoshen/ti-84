@@ -55,17 +55,27 @@ test('reset returns to the parent identity message', async ({ page }) => {
 
 test('picking a different parent reframes and resets', async ({ page }) => {
   await goto(page);
-  await page.getByRole('button', { name: 'sin x', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'sin x', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  // Scoped to the readout <li> (see comment above) — avoids a race with the
-  // debounced sr-only live-region echoing the same text.
-  await expect(page.locator('li').filter({ hasText: /This is the parent function f\(x\) = sin x/i })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /sin x/i }).click();
+
+  // Scoped to the readout <li> (see comment on the first test) — avoids a race with
+  // the debounced sr-only live-region echoing the same text.
+  await expect(page.locator('[data-testid="equation-readout"]')).toContainText('g(x) = sin x');
+
   // sin x's default window (x∈[−2π,2π]≈[−6.28,6.28]) differs from the square
   // parent's default [−10,10] — confirm the picker actually reframed the view,
-  // not just its own pressed state and readout text.
+  // not just its own label and readout text.
   const xMinInput = page.getByLabel('xMin', { exact: true });
   await expect(xMinInput).not.toHaveValue('-10');
   expect(Number(await xMinInput.inputValue())).toBeCloseTo(-6.283185, 3);
+});
+
+test('the new parents are selectable and reframe the view', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /cube root/i }).click();
+  await expect(page.locator('[data-testid="equation-readout"]')).toContainText('g(x) = ∛x');
+  await expect(page.locator(`${PLOT} g.graph`)).toHaveCount(2);
 });
 
 test('a custom function plots and transforms', async ({ page }) => {
@@ -142,7 +152,7 @@ test('the point shape picker changes the markers on both curves', async ({ page 
     page.locator('circle[data-testid="crossing-marker-transformed"]').first(),
   ).toBeVisible();
 
-  await page.getByRole('combobox').click();
+  await page.getByRole('combobox', { name: 'Point shape' }).click();
   await page.getByRole('option', { name: 'Triangle' }).click();
 
   // Both curves follow the picked shape; colour is what separates them (same as graph).
@@ -151,4 +161,88 @@ test('the point shape picker changes the markers on both curves', async ({ page 
     page.locator('path[data-testid="crossing-marker-transformed"]').first(),
   ).toBeVisible();
   await expect(page.locator('circle[data-testid="crossing-marker-transformed"]')).toHaveCount(0);
+});
+
+test('function details describe the parent and the transformed curve', async ({ page }) => {
+  await goto(page);
+  const details = page.locator('[data-testid="function-details"]');
+
+  // Parent x²: domain all reals, range y ≥ 0.
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('all real numbers');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 0');
+
+  // k = +2 lifts only g's range, leaving f's alone — the whole point of the panel.
+  const k = page.getByRole('slider', { name: /k — vertical shift/i });
+  await k.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 2');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
+});
+
+test('ln shows its domain and its asymptote moves with h', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /natural log/i }).click();
+
+  const details = page.locator('[data-testid="function-details"]');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('x > 0');
+  await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 0');
+
+  // Shift right 2 → the vertical asymptote follows.
+  const h = page.getByRole('slider', { name: /h — horizontal shift/i });
+  await h.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
+  await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 2');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="gx"]')).toHaveText('x > 2');
+});
+
+test('a custom function reports that details are unavailable', async ({ page }) => {
+  await goto(page);
+  await page.locator('#fx-input').fill('x^4');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.getByText(/not available for a custom function/i)).toBeVisible();
+});
+
+test('the readout shows the real equation, not just f(x)', async ({ page }) => {
+  await goto(page);
+  const readout = page.locator('[data-testid="equation-readout"]');
+
+  // The readout names the function outright — no 'g(x) = f(x)' tautology.
+  await expect(readout).toContainText('g(x) = x²');
+  await expect(readout).not.toContainText('f(x)');
+
+  // A vertical stretch shows the ACTUAL equation, never 'g(x) = 2·f(x)'.
+  const a = page.getByRole('slider', { name: /a — vertical stretch/i });
+  await a.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight'); // 1 → 2 at step 0.1
+  await expect(readout).toContainText('g(x) = 2x²'); // the real equation…
+  await expect(readout).not.toContainText('f(x)'); // …and f(x) is gone entirely
+});
+
+test('even a custom typed function is written out, never as f(x)', async ({ page }) => {
+  await goto(page);
+  await page.locator('#fx-input').fill('x^4');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  // A custom f(x) has no notation template, so mathjs simplifies the composed
+  // expression instead. It must still be a real equation.
+  const readout = page.locator('[data-testid="equation-readout"]');
+  await expect(readout).toContainText('g(x) = x^4');
+  await expect(readout).not.toContainText('f(x)');
+});
+
+test('the concrete equation follows the parent and the shifts', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /reciprocal/i }).click();
+
+  const readout = page.locator('[data-testid="equation-readout"]');
+  await expect(readout).toContainText('g(x) = 1/x');
+
+  // Shift right 3 → 1/(x − 3). Parenthesised: '1/x − 3' would be a different function.
+  const h = page.getByRole('slider', { name: /h — horizontal shift/i });
+  await h.focus();
+  for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowRight'); // +3.0
+  await expect(readout).toContainText('g(x) = 1/(x − 3)');
 });

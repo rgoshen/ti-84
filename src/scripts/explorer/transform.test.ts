@@ -38,58 +38,59 @@ describe('composeExpr — numeric equivalence to a·f(b(x−h))+k', () => {
 const IDENT = { a: 1, b: 1, h: 0, k: 0 };
 
 describe('describeTransform — narration', () => {
-  it('identity names the parent and lists no transformations', () => {
-    const r = describeTransform(IDENT, 'x²');
-    expect(r.equation).toBe('g(x) = f(x)');
-    expect(r.steps).toEqual(['This is the parent function f(x) = x² — move a slider to transform it.']);
+  // The step text carries NO 'f(x) = x²' label: the concrete equation is rendered
+  // directly above it (by equation.ts) and already says what the function is.
+  it('identity lists no transformations and never mentions f(x)', () => {
+    const r = describeTransform(IDENT);
+    expect(r.steps).toEqual(['This is the parent function — move a slider to transform it.']);
+    expect(r.steps.join(' ')).not.toContain('f(x)');
   });
 
   it('does not report a phantom stretch at a floating-point identity [G2]', () => {
-    const r = describeTransform({ ...IDENT, a: 1 - EPS / 2 }, 'x²');
+    const r = describeTransform({ ...IDENT, a: 1 - EPS / 2 });
     expect(r.steps.some((s) => /stretch|compression/.test(s))).toBe(false);
   });
 
   it('vertical stretch and shift', () => {
-    const r = describeTransform({ a: 3, b: 1, h: 0, k: 2 }, 'x²');
+    const r = describeTransform({ a: 3, b: 1, h: 0, k: 2 });
     expect(r.steps).toEqual(['Vertical stretch by factor 3', 'Shifted up 2']);
   });
 
   it('x-axis reflection (|a|=1, no stretch)', () => {
-    expect(describeTransform({ a: -1, b: 1, h: 0, k: 0 }, 'x²').steps).toEqual(['Reflected over the x-axis']);
+    expect(describeTransform({ a: -1, b: 1, h: 0, k: 0 }).steps).toEqual(['Reflected over the x-axis']);
   });
 
   it('vertical compression uses the raw |a| factor', () => {
-    expect(describeTransform({ a: 0.5, b: 1, h: 0, k: 0 }, 'x²').steps).toEqual(['Vertical compression by factor 0.5']);
+    expect(describeTransform({ a: 0.5, b: 1, h: 0, k: 0 }).steps).toEqual(['Vertical compression by factor 0.5']);
   });
 
   it('horizontal compression vs stretch use the |b| convention', () => {
-    expect(describeTransform({ a: 1, b: 2, h: 0, k: 0 }, 'x²').steps).toEqual(['Horizontal compression by factor 2']);
-    expect(describeTransform({ a: 1, b: 0.5, h: 0, k: 0 }, 'x²').steps).toEqual(['Horizontal stretch by factor 2']);
+    expect(describeTransform({ a: 1, b: 2, h: 0, k: 0 }).steps).toEqual(['Horizontal compression by factor 2']);
+    expect(describeTransform({ a: 1, b: 0.5, h: 0, k: 0 }).steps).toEqual(['Horizontal stretch by factor 2']);
   });
 
   it('y-axis reflection and directional shifts', () => {
-    expect(describeTransform({ a: 1, b: -1, h: 0, k: 0 }, 'x²').steps).toEqual(['Reflected over the y-axis']);
-    expect(describeTransform({ a: 1, b: 1, h: 2, k: 0 }, 'x²').steps).toEqual(['Shifted right 2']);
-    expect(describeTransform({ a: 1, b: 1, h: -2, k: 0 }, 'x²').steps).toEqual(['Shifted left 2']);
-    expect(describeTransform({ a: 1, b: 1, h: 0, k: -3 }, 'x²').steps).toEqual(['Shifted down 3']);
+    expect(describeTransform({ a: 1, b: -1, h: 0, k: 0 }).steps).toEqual(['Reflected over the y-axis']);
+    expect(describeTransform({ a: 1, b: 1, h: 2, k: 0 }).steps).toEqual(['Shifted right 2']);
+    expect(describeTransform({ a: 1, b: 1, h: -2, k: 0 }).steps).toEqual(['Shifted left 2']);
+    expect(describeTransform({ a: 1, b: 1, h: 0, k: -3 }).steps).toEqual(['Shifted down 3']);
   });
 
   it('orders horizontal (inside-out) before vertical for combined transforms', () => {
-    const r = describeTransform({ a: 3, b: 2, h: 1, k: -4 }, 'x²');
+    const r = describeTransform({ a: 3, b: 2, h: 1, k: -4 });
     expect(r.steps).toEqual([
       'Horizontal compression by factor 2',
       'Shifted right 1',
       'Vertical stretch by factor 3',
       'Shifted down 4',
     ]);
-    expect(r.equation).toBe('g(x) = 3·f(2(x − 1)) − 4');
   });
 
   it('degenerate b=0 and a=0 replace the step list with an explanation [G3]', () => {
-    expect(describeTransform({ a: 1, b: 0, h: 0, k: 0 }, 'x²').steps).toEqual([
+    expect(describeTransform({ a: 1, b: 0, h: 0, k: 0 }).steps).toEqual([
       'b = 0: the graph collapses to a horizontal line.',
     ]);
-    expect(describeTransform({ a: 0, b: 1, h: 0, k: 0 }, 'x²').steps).toEqual([
+    expect(describeTransform({ a: 0, b: 1, h: 0, k: 0 }).steps).toEqual([
       'a = 0: the graph flattens to the line y = k.',
     ]);
   });

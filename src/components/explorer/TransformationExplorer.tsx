@@ -6,7 +6,9 @@ import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/g
 import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
-import { PARENTS, parentById } from '@/scripts/explorer/parents';
+import { PARENTS, parentById, defaultParent } from '@/scripts/explorer/parents';
+import { concreteEquation, customEquation } from '@/scripts/explorer/equation';
+import { parentDetails, transformedDetails, type FunctionDetails } from '@/scripts/explorer/details';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,10 +27,20 @@ import type { PointShape } from '@/scripts/graphing/plot';
 
 // Tunables, in one place.
 const IDENTITY: Coeffs = { a: 1, b: 1, h: 0, k: 0 };
+const DEFAULT_PARENT = defaultParent();
 const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 const A_RANGE = { min: -5, max: 5, step: 0.1 };
 const H_RANGE = { min: -10, max: 10, step: 0.1 };
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+const DETAIL_ROWS: Array<{ key: keyof FunctionDetails; label: string }> = [
+  { key: 'domain', label: 'Domain' },
+  { key: 'range', label: 'Range' },
+  { key: 'xIntercepts', label: 'x-intercepts' },
+  { key: 'yIntercept', label: 'y-intercept' },
+  { key: 'verticalAsymptote', label: 'Vertical asymptote' },
+  { key: 'horizontalAsymptote', label: 'Horizontal asymptote' },
+];
 
 const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
@@ -41,15 +53,15 @@ const windowToFields = (w: Window2D): WindowFields => ({
 });
 
 export default function TransformationExplorer(): React.JSX.Element {
-  const [baseExpr, setBaseExpr] = useState(PARENTS[0].expr);
-  const [exprInput, setExprInput] = useState(PARENTS[0].expr);
-  const [parentId, setParentId] = useState<string | null>(PARENTS[0].id);
-  const [parentLabel, setParentLabel] = useState(PARENTS[0].label);
+  const [baseExpr, setBaseExpr] = useState(DEFAULT_PARENT.expr);
+  const [exprInput, setExprInput] = useState(DEFAULT_PARENT.expr);
+  const [parentId, setParentId] = useState<string | null>(DEFAULT_PARENT.id);
+  const [parentLabel, setParentLabel] = useState(DEFAULT_PARENT.label);
   const [coeffs, setCoeffs] = useState<Coeffs>(IDENTITY);
   const [error, setError] = useState<string | null>(null);
-  const [appliedWindow, setAppliedWindow] = useState<Window2D>(PARENTS[0].window);
-  const [displayWindow, setDisplayWindow] = useState<Window2D>(PARENTS[0].window);
-  const [fields, setFields] = useState<WindowFields>(() => windowToFields(PARENTS[0].window));
+  const [appliedWindow, setAppliedWindow] = useState<Window2D>(DEFAULT_PARENT.window);
+  const [displayWindow, setDisplayWindow] = useState<Window2D>(DEFAULT_PARENT.window);
+  const [fields, setFields] = useState<WindowFields>(() => windowToFields(DEFAULT_PARENT.window));
   const [showParent, setShowParent] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [showPoints, setShowPoints] = useState(false);
@@ -62,12 +74,27 @@ export default function TransformationExplorer(): React.JSX.Element {
   const handleRef = useRef<TransformHandle | null>(null);
   const viewRef = useRef<Window2D>(appliedWindow); // latest view (preserves zoom on coeff change)
 
-  const readout = useMemo(() => describeTransform(coeffs, parentLabel), [coeffs, parentLabel]);
+  const readout = useMemo(() => describeTransform(coeffs), [coeffs]);
 
   // Points + table data are computed HERE and passed down precomputed: `evalAt` re-parses its
   // expression on every call, so it must stay out of the renderer's and the table's render path.
   const eColors = useMemo(() => explorerColors(dark), [dark]);
   const composed = useMemo(() => (baseExpr ? composeExpr(baseExpr, coeffs) : ''), [baseExpr, coeffs]);
+
+  const parent = useMemo(() => (parentId ? parentById(parentId) : undefined), [parentId]);
+  const fDetails = useMemo(() => (parent ? parentDetails(parent) : null), [parent]);
+  const gDetails = useMemo(
+    () => (parent ? transformedDetails(parent, coeffs, composed) : null),
+    [parent, coeffs, composed],
+  );
+
+  // The one equation the readout shows — always written out, never 'g(x) = a·f(…)'.
+  // A catalog parent renders through its own notation template; a custom typed f(x)
+  // has no template, so mathjs simplifies the composed expression instead.
+  const equation = useMemo(
+    () => (parent ? concreteEquation(parent, coeffs) : customEquation(composed)),
+    [parent, coeffs, composed],
+  );
 
   // Parent MARKERS follow `showParent`; the parent COLUMN below deliberately does not.
   const parentPoints = useMemo(
@@ -197,12 +224,22 @@ export default function TransformationExplorer(): React.JSX.Element {
     return () => window.removeEventListener('resize', onResize);
   }, [drawPlot]);
 
-  // Coalesced screen-reader announcement.
+  // Coalesced screen-reader announcement. Includes g(x)'s domain/range when a parent
+  // is selected — otherwise a slider drag would silently change them with nothing
+  // spoken, defeating the entire teaching point of the details panel.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(`${readout.equation}. ${readout.steps.join('. ')}`), 250);
+    const id = setTimeout(() => {
+      // The readout box is aria-hidden, so this live region is how the equation — both
+      // forms — reaches a screen reader at all.
+      // The readout box is aria-hidden, so this live region is how the equation reaches
+      // a screen reader at all.
+      const text = [equation, ...readout.steps].filter(Boolean).join('. ');
+      const details = gDetails ? ` Domain ${gDetails.domain}. Range ${gDetails.range}.` : '';
+      setAnnounced(`${text}${details}`);
+    }, 250);
     return () => clearTimeout(id);
-  }, [readout]);
+  }, [readout, gDetails, equation]);
 
   const setField = (key: keyof Window2D, value: string): void =>
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -219,20 +256,20 @@ export default function TransformationExplorer(): React.JSX.Element {
       <div className="space-y-4">
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Parent function</h3>
-          <div className="flex flex-wrap gap-2">
-            {PARENTS.map((p) => (
-              <Button
-                key={p.id}
-                type="button"
-                size="sm"
-                variant={parentId === p.id ? 'default' : 'outline'}
-                aria-pressed={parentId === p.id}
-                onClick={() => selectParent(p.id)}
-              >
-                {p.label}
-              </Button>
-            ))}
-          </div>
+          <Select value={parentId ?? ''} onValueChange={selectParent}>
+            <SelectTrigger id="parent-select" aria-label="Parent function" className="w-full">
+              {/* A custom f(x) clears parentId, so no item matches and the placeholder shows. */}
+              <SelectValue placeholder="Custom function" />
+            </SelectTrigger>
+            <SelectContent>
+              {PARENTS.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  <span className="font-mono">{p.label}</span>
+                  <span className="ml-2 text-muted-foreground">{p.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Label htmlFor="fx-input" className="mt-2">Or a custom f(x)</Label>
           <div className="flex gap-2">
             <Input
@@ -278,8 +315,14 @@ export default function TransformationExplorer(): React.JSX.Element {
               onClick={() => setCoeff('b', -coeffs.b)}
             >⇄ Reflect y-axis</Button>
           </div>
-          <div className="rounded-md bg-accent/60 p-3" aria-hidden="true">
-            <p className="font-mono text-sm font-medium text-accent-foreground">{readout.equation}</p>
+          <div
+            className="rounded-md bg-accent/60 p-3"
+            data-testid="equation-readout"
+            aria-hidden="true"
+          >
+            {equation ? (
+              <p className="font-mono text-sm font-medium text-accent-foreground">{equation}</p>
+            ) : null}
             <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
               {readout.steps.map((s) => <li key={s}>{s}</li>)}
             </ul>
@@ -315,7 +358,7 @@ export default function TransformationExplorer(): React.JSX.Element {
               <label className="inline-flex items-center gap-1.5">
                 <span className="text-muted-foreground">Shape:</span>
                 <Select value={pointShape} onValueChange={(v) => setPointShape(v as PointShape)}>
-                  <SelectTrigger size="sm" className="capitalize">
+                  <SelectTrigger size="sm" className="capitalize" aria-label="Point shape">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -338,10 +381,47 @@ export default function TransformationExplorer(): React.JSX.Element {
             ref={plotRef}
             data-testid="transform-plot"
             role="img"
-            aria-label={`Graph of parent f(x) = ${parentLabel} (dashed) and transformed ${readout.equation}`}
+            aria-label={`Graph of the parent ${parentLabel} (dashed) and the transformed ${equation ?? 'function'}`}
             className="w-full"
             style={{ minHeight: 480 }}
           />
+        </Card>
+
+        <Card className="gap-3 p-4">
+          <h3 className="text-sm font-medium">Function details</h3>
+          {fDetails && gDetails ? (
+            <table data-testid="function-details" className="w-full text-xs">
+              <caption className="sr-only">
+                Domain, range, intercepts and asymptotes of the parent and the transformed function
+              </caption>
+              <thead>
+                <tr className="border-b">
+                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
+                    Property
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">
+                    f(x) = {parentLabel}
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DETAIL_ROWS.map(({ key, label }) => (
+                  <tr key={key} data-row={key} className="border-b last:border-0">
+                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
+                      {label}
+                    </th>
+                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
+                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Not available for a custom function — pick a parent function to see its details.
+            </p>
+          )}
         </Card>
 
         <ValueTable

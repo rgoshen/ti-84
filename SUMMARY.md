@@ -930,3 +930,432 @@ With no `ti-84` image cached: plain `docker compose up -d` reported `Pulling →
 - Reported by user: "why would you create a different docker compose file? ... why not just have the current docker compose file pull it"
 - Docker Compose Build Specification, "Using build and image"; `pull_policy` in the Services top-level element
 - docker-compose.yml, README.md, .env.example
+
+## [2026-07-11 20:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Grew the parent catalog from 8 to 11 — added identity (x), cube root (∛x) and natural
+log (ln x) — and reordered it into teaching sequence. Added `defaultParent()` so the
+explorer still opens on x² even though identity is now listed first.
+
+**Rationale:**
+Cube root is spelled `cbrt(x)`, not `x^(1/3)`: mathjs returns a complex number for
+negative x, which would have silently erased the left half of the curve. Natural log is
+`log(x)` — base-e in both mathjs and function-plot; `ln` does not exist in either.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Spec: docs/superpowers/specs/2026-07-11-parent-catalog-and-function-details-design.md
+
+## [2026-07-11 20:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Gave each of the 11 parents in the catalog an analytic `props` block — pure data,
+no consumer yet. Added the `Interval` union (`all` / `bound` / `exclude` / `between`)
+and `ParentProps` (`domain`, `range`, optional `verticalAsymptote`/
+`horizontalAsymptote`, and `solve(c)`), and `props: ParentProps` on `Parent`. `solve`
+is each parent's inverse — every u with f(u) = c — which is what will let the next
+task (a `details.ts` consumer) report exact x-intercepts instead of numerically
+root-found ones.
+
+**Rationale:**
+Followed strict TDD: appended the failing spec first (round-trip, asymptote, and
+domain-restriction assertions), watched it fail on the missing `props` field, then
+implemented. The round-trip test — for every parent and probe c, assert
+f(solve(c)) ≈ c — is the load-bearing check: it catches an inverted `solve` (e.g.
+swapping cube's `Math.cbrt(c)` with cube root's `c ** 3`) that would otherwise pass
+type-checking silently.
+
+**Tests:**
+5 new Vitest cases in `parents.test.ts` (props declared on all 11 parents,
+solve()/f() round-trip across 6 probes × 11 parents, recip/exp/ln asymptotes,
+sqrt/ln/recip domain restrictions, sin/cos periodic solve). Full suite: 112 Vitest
+passing (0 failing). `npm run build` clean (6 pages, 0 type errors).
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: docs/superpowers/plans referenced by .superpowers/sdd/task-2-brief.md (Task 2 of the plan)
+
+## [2026-07-11 20:17] Commit Summary
+
+**Change Type:** Test
+**Scope:** explorer/parents
+
+**Summary:**
+Closed a vacuous-test gap in `parents.test.ts` flagged by code review. The existing
+`solve() returns genuine solutions of f(u) = c` test only checks the solutions
+`solve()` returns, but never asserts it returns any — five parents (square, sqrt,
+recip, abs, exp) legitimately return `[]` on some branches, so if one of those
+`solve` implementations regressed to unconditionally return `[]`, the round-trip
+loop would simply never execute and the suite would still pass. Added
+`solve() is reachable: returns a non-empty result for a probe in the parent's range`,
+a table of one in-range probe `c` per parent (all 11), asserting `solve(c)` is
+`'infinite'` (sin/cos) or a non-empty array — plus an assertion that the table's id
+list matches `PARENTS` exactly, so a parent silently dropped from the table would
+also fail.
+
+**Rationale:**
+Considered folding a "reachable" assertion into the existing round-trip test instead
+of adding a new one, but that would re-couple the two concerns (round-trip validity
+vs. reachability) the review called out as separately load-bearing; a standalone
+test keeps the failure message unambiguous about which invariant broke.
+
+**Bug Fix Context (if applicable):**
+Not a runtime bug — `parents.ts` was verified correct by hand in review and was not
+modified. This is a test-coverage gap: the round-trip test is structurally unable to
+catch a `solve` that regresses to always returning `[]`.
+
+**Tests:**
+Added 1 Vitest case (14 total in the file, up from 13). Verified the new test is not
+itself vacuous by temporarily sabotaging `sqrt`'s `solve` to unconditionally return
+`[]`: the new test failed (`sqrt: solve(2) should not be empty: expected 0 to be
+greater than 0`) while the pre-existing round-trip test kept passing, exactly
+reproducing the gap under review. Reverted the sabotage (confirmed via `git diff`
+showing no changes to `parents.ts`) and reran: 14/14 passing. Full suite (`npm test`):
+9 files, 113 passed, 0 failed (up from 112).
+
+**References:**
+- Code review finding on `src/scripts/explorer/parents.test.ts`
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+
+## [2026-07-11 20:23] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/details
+
+**Summary:**
+Added `src/scripts/explorer/details.ts`, a pure module that maps a parent's
+declared domain/range/asymptotes/inverse (from `parents.ts`) through the
+transform g(x) = a·f(b(x − h)) + k, producing display-ready `FunctionDetails`
+(domain, range, x-intercepts, y-intercept, vertical/horizontal asymptote) for
+both the untransformed parent and the live transformed curve. `mapInterval`
+pushes an `Interval` through the affine map t ↦ m·t + c, flipping a `bound`'s
+direction when the multiplier is negative; `formatInterval` renders each
+interval shape as text; `xInterceptsOf` asks the parent's own `solve(−k/a)`
+and maps solutions back via x = u/b + h — no numeric root-finding anywhere.
+Degenerate transforms (|a| < EPS or |b| < EPS) render every field as "—".
+
+**Rationale:**
+Followed strict TDD: wrote the full test file first (17 cases covering
+`mapInterval`, `formatInterval`, `parentDetails`, and `transformedDetails`),
+confirmed it failed on the missing `./details` module, then implemented.
+The transform is invertible by construction, so domain/range/intercepts are
+derived algebraically from each parent's declared properties rather than
+sampled or numerically searched — this keeps the panel's numbers exact and
+stable as sliders move, and keeps the module dependency-free (no DOM, no
+function-plot). The sign-flip rule for `mapInterval` (reflecting √x over the
+y-axis must take x ≥ 0 to x ≤ 0; reflecting eˣ over the x-axis must take
+y > 0 to y < 0) has dedicated tests since it's the part most likely to be
+gotten backwards. All coefficient comparisons use `EPS` from `transform.ts`,
+never `===`, since slider steps land on values like 0.9999999. All numbers
+are formatted via `formatNumber` (ASCII hyphen) to keep ranges and intercepts
+visually consistent with each other.
+
+**Tests:**
+17 new Vitest cases in `details.test.ts`: `mapInterval` (identity passthrough,
+translate/scale, sign-flip on `bound`, re-sort on `between`, `exclude`
+translation), `formatInterval` (all four interval shapes), `parentDetails`
+(1/x, x², ln untransformed), and `transformedDetails` (the a=2,b=1,h=3,k=1
+worked example on 1/x; √x and eˣ reflections; ln shifted right; eˣ shifted up
+killing its x-intercept; x² shifted down/up gaining/losing x-intercepts;
+periodic sin reporting "infinitely many"; degenerate a=0/b=0 collapsing every
+field to "—"). Full suite (`npm test`): 10 files, 130 passed, 0 failed (up
+from 113). `npm run build`: clean, 6 pages, 0 type errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-3-brief.md` (Task 3 of the plan)
+
+## [2026-07-11 20:32] Commit Summary
+
+**Change Type:** Test
+**Scope:** explorer/details
+
+**Summary:**
+Strengthened `details.test.ts` against a class of latent bugs the existing
+suite could not detect: every catalog domain/range/asymptote is anchored at
+0, where the affine map `t ↦ m·t + c` reduces to `m·0 + c === c` for ANY `m`
+— making the multiplier unobservable — and every prior `transformedDetails`
+test used `b ∈ {1, −1, 0}`, so a `b` vs `1/b` mix-up in the domain map would
+pass unnoticed. Added three tests that each pin a previously-unobservable
+multiplier: (1) `sin`'s range (the only non-zero-anchored catalog interval)
+under `a = 3, k = 1`, killing a `c.a` → `1/c.a` swap in the range map; (2)
+`square`'s x-intercepts under `b = 2`, killing a `u / c.b` → `u * c.b` swap
+in the intercept back-map; (3) a synthetic `Parent` (spread from `ln`, with
+`props.domain` and `props.verticalAsymptote` overridden to a non-zero anchor
+of 2) under `b = 2, h = 1`, killing a `1 / c.b` → `c.b` swap in the domain
+map — `transformedDetails` accepts any `Parent`, so this needed no change to
+the real catalog. Also rewrote the degenerate-transform test to assert an
+explicit named-field object instead of `Object.values(d)`, which silently
+depended on property declaration order and named no field.
+
+Also hardened `details.ts` purity per the same review: `transformedDetails`
+now returns a fresh `{ ...DEGENERATE }` instead of the module-level singleton
+(so a consumer can't mutate it and corrupt every future degenerate result),
+and `mapInterval`'s `'all'` case returns a fresh `{ kind: 'all' }` instead of
+the caller's object (which for a real parent is the shared `ALL` constant in
+`parents.ts`). Both are copy-only changes with no behavioral effect.
+
+**Rationale:**
+Math was already correct; the review's point was that the tests couldn't
+prove it, since every anchor in the catalog was 0. Rather than add a new
+catalog parent just to get a non-zero anchor (`parents.ts` is out of scope
+for this fix), the third test builds a synthetic `Parent` on the fly by
+spreading a real one — `transformedDetails` only depends on the `Parent`
+shape, not catalog membership. Each new test was verified against its
+target mutation by hand (mutate → confirm the new test alone fails → revert
+→ confirm `git diff details.ts` is empty) rather than assumed to be
+effective, per the review's explicit ask. The two purity fixes were bundled
+in because they touch the same file and are provably behavior-preserving
+(structural equality, not identity, is all any test checks).
+
+**Tests:**
+Added 3 Vitest cases to `details.test.ts` (20 total, up from 17) and
+rewrote 1 existing assertion for order-independence. Mutation-verified all
+three: swapping `c.a` → `1/c.a` in the range map broke only the new sin
+range test ('0.667 ≤ y ≤ 1.333' instead of '-2 ≤ y ≤ 4'); swapping
+`u / c.b` → `u * c.b` in the intercept back-map broke only the new square
+test ('x = -4, x = 4' instead of 'x = -1, x = 1'); swapping `1 / c.b` →
+`c.b` in the domain map broke only the new synthetic-parent test ('x ≥ 5'
+instead of 'x ≥ 2'), exactly matching the review's predicted mutant output
+in all three cases. `git diff src/scripts/explorer/details.ts` confirmed
+clean before applying the two purity fixes. Full suite (`npm test`): 10
+files, 133 passed, 0 failed (up from 130).
+
+**References:**
+- Code review finding on `src/scripts/explorer/details.test.ts`
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+
+## [2026-07-11 20:38] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+Replaced the Transformation Explorer's parent-function picker — a `PARENTS.map` row
+of toggle `Button`s — with a shadcn `Select` dropdown, since 11 catalog entries no
+longer fit as a button row. The dropdown reuses the existing `selectParent(id)`
+handler unchanged as `onValueChange`; each `SelectItem` shows the math glyph
+(`p.label`, monospace) and the spoken name (`p.name`, muted) side by side. The
+trigger's value falls back to `parentId ?? ''`, and its placeholder ("Custom
+function") surfaces automatically when a typed f(x) clears `parentId` to `null` —
+no extra state needed.
+
+**Rationale:**
+A second `Select` on the page made the pre-existing shape-picker's unscoped
+`page.getByRole('combobox')` e2e selector ambiguous under Playwright's strict mode
+(now two comboboxes match). Fixed at the source instead of routing around it: gave
+both `SelectTrigger`s an `aria-label` (`"Point shape"`, `"Parent function"`) so every
+combobox on the page is addressable by name, keeping the shape-picker test's
+assertions intact rather than weakening them. This was flagged as a known risk when
+the catalog was grown to 11 parents (see TODO.md reference below).
+
+**Tests:**
+Rewrote `tests/e2e/transformation.spec.ts`'s `'picking a different parent reframes
+and resets'` test for the dropdown (click the named combobox, pick the `option` by
+name) — it still asserts the reframe is real by checking `xMin` moves off `-10` and
+lands within 3 decimals of sin x's `-2π`, not merely that a label or pressed-state
+changed. Added `'the new parents are selectable and reframe the view'`, picking
+"cube root" and asserting both the readout text and the rendered curve count.
+Scoped the shape-picker test's combobox query to `{ name: 'Point shape' }`. Swept
+the other e2e spec files for unscoped `combobox` selectors — `explorer.spec.ts` has
+one, but it targets the unrelated `/explorers/function` page (a different
+component, still exactly one combobox there), so it was left as-is.
+`npm test`: 10 files, 133 passed, 0 failed (unchanged). `npx playwright test
+tests/e2e/transformation.spec.ts`: 13/13 passed. Full `npm run test:e2e`: 39/39
+passed. `npm run build`: clean, 6 pages, 0 type errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-4-brief.md` (Task 4 of the plan)
+
+## [2026-07-11 20:44] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+Added the read-only "Function details" panel to the Transformation Explorer: a
+`<table>` between the plot and the value table showing domain, range,
+x/y-intercepts, and vertical/horizontal asymptotes for f(x) and the live g(x) side
+by side. Two new memos (`parent`, `fDetails`, `gDetails`) derive from the existing
+`parentId`/`coeffs` state and reuse the island's already-memoised `composed`
+expression (never recomputed) via `parentDetails`/`transformedDetails` from
+`scripts/explorer/details`. A typed custom f(x) clears `parentId` to `null`, so both
+memos go `null` and the panel renders a fallback message instead of attempting to
+compute details for a function with no declared properties.
+
+**Rationale:**
+The pedagogical point of the panel is that the g(x) column updates live as sliders
+move while the f(x) column stays fixed — proving the transformation only shifts/
+scales the parent, it doesn't change its qualitative shape. Building the table as a
+real `<table>` with `<caption>` (sr-only) and `<th scope="col">`/`<th scope="row">`
+(rather than a div grid) keeps it WCAG 2.1 AA compliant; it is intentionally
+read-only with no inputs or controls.
+
+**Tests:**
+TDD: appended 3 failing e2e tests to `tests/e2e/transformation.spec.ts` first,
+confirmed all 3 failed (`[data-testid="function-details"]` not found) via
+`npx playwright test tests/e2e/transformation.spec.ts -g "details|ln shows|custom
+function reports"`, then implemented and reran the same filter to green. Tests
+cover: x² domain/range for both columns plus k=+2 lifting only g's range; switching
+to natural log shows `x > 0` domain and the vertical asymptote following an h shift
+(`x = 0` → `x = 2`); a custom f(x) shows the "not available" fallback text.
+`npm test`: 10 files, 133 passed. Full `npm run test:e2e`: 42/42 passed (39
+pre-existing + 3 new), no regressions. `npm run build`: clean, 6 pages, 0 type
+errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-5-brief.md` (Task 5 of the plan, final task)
+
+## [2026-07-11 21:05] Commit Summary
+
+**Change Type:** Fix
+**Scope:** explorer
+
+**Summary:**
+Five Minor polish fixes from the whole-branch review of the Function Details panel.
+(1) Rewrote `details.ts`'s stale `FunctionDetails` doc comment, which claimed '—'
+meant "genuinely absent" — backwards from what the code does ('—' = not
+applicable/collapsed transform; 'none' = applies but no such point). (2)
+Pluralized `TransformationExplorer.tsx`'s x-intercepts row label ("x-intercept" →
+"x-intercepts"), which mismatched plural data like "x = -2, x = 2"; the `key`
+stays `xIntercepts` since e2e's `data-row` selectors depend on it. (3) Fixed an
+accessibility gap: the sr-only live region announced the transform readout
+("Shifted up 2") but never the resulting domain/range, so a screen-reader user
+never heard that dragging `k` changed the range to "y ≥ 2" — the entire teaching
+point of the panel. The 250ms-debounced announcement effect now appends
+` Domain {gDetails.domain}. Range {gDetails.range}.` when a parent is selected,
+with `gDetails` added to its dependency array. (4) Added a pinned regression test
+in `details.test.ts` for a transformed function's out-of-domain y-intercept
+(`sqrt(x − 3)` at x = 0), since mathjs returns a Complex there, not NaN, and
+`evalAt`'s `typeof v === 'number'` guard is the only thing rejecting it. (5) Added
+a test covering the two newest catalog parents (`identity`, `cbrt`), which had no
+`details.test.ts` coverage at all, asserting hand-derived transformed values for
+both.
+
+**Rationale:**
+All five were flagged Minor by the whole-branch review (no Critical/Important
+findings) and each had a concrete, reviewer-specified fix. Grouping them into one
+commit keeps the fix atomic and scoped to exactly what the review called out — no
+math in `details.ts` changed, and the deliberate a=0/b=0 degenerate-collapse
+behavior (all six rows '—') is unchanged.
+
+**Bug Fix Context:**
+(3) is the only behavior-affecting fix; the announcement effect previously omitted
+`gDetails` from its own state and its dependency array, so `setAnnounced` never
+saw a domain/range update no matter how many times a slider moved.
+
+**Tests:**
+Added 2 Vitest cases to `details.test.ts` (135 total, up from 133): the transformed
+`sqrt` y-intercept-under-complex regression, and the identity/cbrt coverage test
+(hand-derived: identity `g(x)=2·4·(x−1)+6=8x−2` → root x=0.25, y(0)=-2; cbrt
+`g(x)=∛(8(x−1))−2` → root x=2, y(0)=-4; both domain/range "all real numbers", both
+asymptote rows '—'). `npm test`: 10 files, 135 passed, 0 failed. `npm run build`:
+clean, 6 pages, 0 type errors. Full `npm run test:e2e`: 42/42 passed, no
+regressions — confirmed no e2e test depended on the old singular label text or
+the announcement string (both are matched via `data-row`/`data-testid`, not
+visible text).
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Whole-branch review: 5 Minor findings, no Critical/Important
+
+## [2026-07-11 21:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Gave each of the 11 parents a `render(inner)` display template — its own notation
+applied to an argument other than a bare `x` (`x²` → `(x − 3)²`). The reciprocal also
+gets a `renderScaled` so a coefficient folds into its numerator.
+
+**Rationale:**
+Every template must return an ATOMIC string, safe to prefix with a coefficient. This is
+why `identity` parenthesises a compound argument: returning `x − 3` would let a caller
+build `2x − 3`, which is a different function from `2(x − 3)`. A plausible-but-wrong
+equation is worse than no equation in a teaching tool. Pinned by a test, plus a
+catalog-wide invariant that `render('x')` reproduces each parent's `label`.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 21:48] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/equation
+
+**Summary:**
+New pure module `equation.ts` composing the concrete transformed equation
+(`g(x) = 2(x − 3)² + 1`) from a parent's `render` template and the coefficients.
+Extracted `innerArgument` out of `formatEquation` in transform.ts and exported it.
+
+**Rationale:**
+`innerArgument` is EXTRACTED rather than reimplemented so the abstract line
+(`g(x) = 2·f(x − 3) + 1`) and the concrete line derive the argument from one source and
+can never drift apart. It lives in transform.ts, not equation.ts as the spec sketched,
+because transform.ts already owns Coeffs and EPS — putting it in equation.ts would
+create a circular import for the same DRY outcome.
+
+Pretty-printing composeExpr's machine string ('(2) * ((x - (3))^2) + (1)') would need a
+real expression-tree formatter that re-derives precedence. Asking each parent to render
+its own notation is a dozen one-liners and no parser.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 21:52] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+The readout now shows the concrete equation beneath the abstract one — 'g(x) = 2.1·f(x)'
+followed by 'g(x) = 2.1x²'. At the identity the two merge into 'g(x) = f(x) = x²'.
+The concrete form also joins the plot's aria-label and the sr-only live region.
+
+**Rationale:**
+'g(x) = 2.1·f(x)' is meaningless to a student who does not already know what f is, and at
+the identity it degenerated to the tautology 'g(x) = f(x)'. Both forms are kept because
+the abstract one shows WHICH slider produced which part of the equation, while the
+concrete one shows the result — connecting the two is the lesson. The readout box is
+aria-hidden, so the live region is the only path to a screen reader; the equation was
+added there rather than left sighted-only.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 22:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+The readout now shows ONLY the real equation — `g(x) = 2.1x²`. The abstract form
+(`g(x) = 2.1·f(x)`) is removed entirely, not shown alongside it. `formatEquation` and
+`TransformReadout.equation` are deleted as dead code, and `describeTransform` no longer
+takes a `parentLabel` (its step text dropped the redundant "f(x) = x²" caption).
+
+A custom typed f(x) has no notation template, so mathjs `simplify` collapses the
+composed machine string into a readable equation instead — so `f(x)` never appears
+anywhere in the UI, for any input.
+
+**Rationale:**
+The user could not read `g(x) = 2.1·f(x)`: "i don't know what f(x) means in this."
+Showing both forms was the first attempt; they asked for replacement, not addition.
+Abstract placeholders are a defect in a tool that teaches, not a style choice.
+
+Degenerate transforms now also produce a real equation rather than a blank line:
+a = 0 gives `g(x) = k`, and b = 0 gives the constant a·f(0) + k — returning null only
+when f(0) genuinely does not exist (ln, 1/x), where nothing is the honest answer.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
