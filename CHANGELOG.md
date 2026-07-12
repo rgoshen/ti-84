@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+## [0.2.2](https://github.com/rgoshen/ti-84/compare/v0.2.1...v0.2.2) (2026-07-12)
+
+
+### Bug Fixes
+
+* **docker:** make compose pull the released GHCR image instead of only building ([89aa966](https://github.com/rgoshen/ti-84/commit/89aa966540e1a6343c498ede9fea3e2b697aee38))
+
 ## [0.2.1](https://github.com/rgoshen/ti-84/compare/v0.2.0...v0.2.1) (2026-07-12)
 
 
