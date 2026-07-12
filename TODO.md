@@ -302,6 +302,28 @@ Reuse `gridlineCrossings` / `integerXs` / `evalAt`; export `plot.ts`'s private `
 
 **Status:** Done on `feature/function-explorer` — brainstormed → spec-gap-auditor'd (G1–G7 closed) → 5-task plan → implemented, with the visual + perf gate passed. 36 e2e, 103 Vitest, astro check clean.
 
+## [2026-07-11] Feature: Parent Catalog Expansion + Function Details
+
+**Objective:**
+Grow the Transformation Explorer's parent catalog from 8 to 11 (adding identity, cube
+root, natural log), move the picker from buttons to a dropdown, and add a read-only
+panel showing domain, range, intercepts, and asymptotes for f(x) and the live g(x).
+
+**Approach:**
+Parents declare their domain/range/asymptotes/inverse as data. A new pure module
+`details.ts` maps those through g(x) = a·f(b(x − h)) + k by affine interval mapping,
+so x-intercepts are exact (solve f(u) = −k/a) rather than numerically root-found.
+
+**Tests:**
+Unit: catalog integrity + inverse round-trip; details mapping (sign flips under
+reflection, asymptote translation, intercepts, degenerate a=0/b=0).
+E2E: dropdown selection reframes; ln shows domain x > 0; dragging h moves the VA.
+
+**Risks & Tradeoffs:**
+A second combobox breaks the existing unscoped `getByRole('combobox')` e2e selector —
+must be scoped. Values render as decimals, not fractions. sin/cos report "infinitely
+many" x-intercepts rather than enumerating nπ.
+
 ## [2026-07-11] Fix: Accessible name missing on shadcn Slider thumbs
 
 **Objective:**
