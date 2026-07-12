@@ -129,7 +129,49 @@ describe('transformedDetails', () => {
   it('renders every row as — when the transform collapses (a = 0 or b = 0)', () => {
     for (const c of [C(0, 1, 0, 0), C(1, 0, 0, 0)]) {
       const d = G('square', c);
-      expect(Object.values(d)).toEqual(['—', '—', '—', '—', '—', '—']);
+      expect(d).toEqual({
+        domain: '—',
+        range: '—',
+        xIntercepts: '—',
+        yIntercept: '—',
+        verticalAsymptote: '—',
+        horizontalAsymptote: '—',
+      });
     }
+  });
+
+  // sin's range (−1 ≤ y ≤ 1) is the only catalog interval anchored away from 0,
+  // so it's the only existing case that can observe the range multiplier `c.a`.
+  // Every other domain/range/asymptote in the catalog is anchored at 0, where
+  // m·0 + c === c for ANY m — making the multiplier unobservable there.
+  it('scales the range by a with a non-zero-anchored interval (sin)', () => {
+    // g(x) = 3·sin(x) + 1 ⟹ range [3·(−1)+1, 3·1+1] = [−2, 4]
+    expect(G('sin', C(3, 1, 0, 1)).range).toBe('-2 ≤ y ≤ 4');
+  });
+
+  // Pins the x-intercept back-map's `u / c.b`, distinguishing it from `u * c.b`
+  // (indistinguishable when |b| = 1, which every prior test used).
+  it('back-maps x-intercepts through division by b when |b| ≠ 1', () => {
+    // g(x) = (2x)² − 4 = 4x² − 4 ⟹ x = ±1
+    expect(G('square', C(1, 2, 0, -4)).xIntercepts).toBe('x = -1, x = 1');
+  });
+
+  // Pins the domain map's `1 / c.b` using a synthetic parent whose domain/VA are
+  // anchored away from 0 — the real catalog has no such parent with |b| ≠ 1 in
+  // its existing tests, so a `b` vs `1/b` bug would go undetected otherwise.
+  it('maps a non-zero-anchored domain and vertical asymptote through 1/b, not b', () => {
+    const synthetic: Parent = {
+      ...P('ln'),
+      props: {
+        ...P('ln').props,
+        domain: { kind: 'bound', value: 2, dir: 'ge', strict: false },
+        verticalAsymptote: 2,
+      },
+    };
+    const c = C(1, 2, 1, 0);
+    // domain u ≥ 2 and VA at u = 2, under b = 2, h = 1 ⟹ x = u/2 + 1 ⟹ x ≥ 2
+    const d = transformedDetails(synthetic, c, composeExpr(synthetic.expr, c));
+    expect(d.domain).toBe('x ≥ 2');
+    expect(d.verticalAsymptote).toBe('x = 2');
   });
 });

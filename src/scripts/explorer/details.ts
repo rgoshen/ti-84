@@ -35,7 +35,7 @@ const fmt = (n: number): string => formatNumber(n);
 export function mapInterval(iv: Interval, m: number, c: number): Interval {
   switch (iv.kind) {
     case 'all':
-      return iv;
+      return { kind: 'all' };
     case 'bound':
       return {
         kind: 'bound',
@@ -93,7 +93,7 @@ const DEGENERATE: FunctionDetails = {
 export function transformedDetails(p: Parent, c: Coeffs, composedExpr: string): FunctionDetails {
   // a = 0 flattens the curve to a line, b = 0 collapses it to a point. The transform
   // readout already explains both; every row here would be a degenerate special case.
-  if (Math.abs(c.a) < EPS || Math.abs(c.b) < EPS) return DEGENERATE;
+  if (Math.abs(c.a) < EPS || Math.abs(c.b) < EPS) return { ...DEGENERATE };
 
   const { domain, range, verticalAsymptote, horizontalAsymptote } = p.props;
   const y0 = evalAt(composedExpr, 0);

@@ -1071,3 +1071,63 @@ from 113). `npm run build`: clean, 6 pages, 0 type errors.
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Plan: `.superpowers/sdd/task-3-brief.md` (Task 3 of the plan)
+
+## [2026-07-11 20:32] Commit Summary
+
+**Change Type:** Test
+**Scope:** explorer/details
+
+**Summary:**
+Strengthened `details.test.ts` against a class of latent bugs the existing
+suite could not detect: every catalog domain/range/asymptote is anchored at
+0, where the affine map `t ↦ m·t + c` reduces to `m·0 + c === c` for ANY `m`
+— making the multiplier unobservable — and every prior `transformedDetails`
+test used `b ∈ {1, −1, 0}`, so a `b` vs `1/b` mix-up in the domain map would
+pass unnoticed. Added three tests that each pin a previously-unobservable
+multiplier: (1) `sin`'s range (the only non-zero-anchored catalog interval)
+under `a = 3, k = 1`, killing a `c.a` → `1/c.a` swap in the range map; (2)
+`square`'s x-intercepts under `b = 2`, killing a `u / c.b` → `u * c.b` swap
+in the intercept back-map; (3) a synthetic `Parent` (spread from `ln`, with
+`props.domain` and `props.verticalAsymptote` overridden to a non-zero anchor
+of 2) under `b = 2, h = 1`, killing a `1 / c.b` → `c.b` swap in the domain
+map — `transformedDetails` accepts any `Parent`, so this needed no change to
+the real catalog. Also rewrote the degenerate-transform test to assert an
+explicit named-field object instead of `Object.values(d)`, which silently
+depended on property declaration order and named no field.
+
+Also hardened `details.ts` purity per the same review: `transformedDetails`
+now returns a fresh `{ ...DEGENERATE }` instead of the module-level singleton
+(so a consumer can't mutate it and corrupt every future degenerate result),
+and `mapInterval`'s `'all'` case returns a fresh `{ kind: 'all' }` instead of
+the caller's object (which for a real parent is the shared `ALL` constant in
+`parents.ts`). Both are copy-only changes with no behavioral effect.
+
+**Rationale:**
+Math was already correct; the review's point was that the tests couldn't
+prove it, since every anchor in the catalog was 0. Rather than add a new
+catalog parent just to get a non-zero anchor (`parents.ts` is out of scope
+for this fix), the third test builds a synthetic `Parent` on the fly by
+spreading a real one — `transformedDetails` only depends on the `Parent`
+shape, not catalog membership. Each new test was verified against its
+target mutation by hand (mutate → confirm the new test alone fails → revert
+→ confirm `git diff details.ts` is empty) rather than assumed to be
+effective, per the review's explicit ask. The two purity fixes were bundled
+in because they touch the same file and are provably behavior-preserving
+(structural equality, not identity, is all any test checks).
+
+**Tests:**
+Added 3 Vitest cases to `details.test.ts` (20 total, up from 17) and
+rewrote 1 existing assertion for order-independence. Mutation-verified all
+three: swapping `c.a` → `1/c.a` in the range map broke only the new sin
+range test ('0.667 ≤ y ≤ 1.333' instead of '-2 ≤ y ≤ 4'); swapping
+`u / c.b` → `u * c.b` in the intercept back-map broke only the new square
+test ('x = -4, x = 4' instead of 'x = -1, x = 1'); swapping `1 / c.b` →
+`c.b` in the domain map broke only the new synthetic-parent test ('x ≥ 5'
+instead of 'x ≥ 2'), exactly matching the review's predicted mutant output
+in all three cases. `git diff src/scripts/explorer/details.ts` confirmed
+clean before applying the two purity fixes. Full suite (`npm test`): 10
+files, 133 passed, 0 failed (up from 130).
+
+**References:**
+- Code review finding on `src/scripts/explorer/details.test.ts`
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
