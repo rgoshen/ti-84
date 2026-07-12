@@ -7,6 +7,7 @@ import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
 import { PARENTS, parentById, defaultParent } from '@/scripts/explorer/parents';
+import { concreteEquation } from '@/scripts/explorer/equation';
 import { parentDetails, transformedDetails, type FunctionDetails } from '@/scripts/explorer/details';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,24 @@ export default function TransformationExplorer(): React.JSX.Element {
   const gDetails = useMemo(
     () => (parent ? transformedDetails(parent, coeffs, composed) : null),
     [parent, coeffs, composed],
+  );
+
+  // The equation actually written out — 'g(x) = 2.1x²' — because 'g(x) = 2.1·f(x)'
+  // tells a student nothing unless they already know what f is. Null for a custom
+  // f(x) (no template) and for a collapsed transform (a = 0 or b = 0).
+  const concrete = useMemo(
+    () => (parent ? concreteEquation(parent, coeffs) : null),
+    [parent, coeffs],
+  );
+  // At the identity the abstract and concrete forms say the same thing, so they merge
+  // onto one line — otherwise the readout shows the tautology 'g(x) = f(x)' alone.
+  const isIdentity = useMemo(
+    () =>
+      Math.abs(coeffs.a - 1) < EPS &&
+      Math.abs(coeffs.b - 1) < EPS &&
+      Math.abs(coeffs.h) < EPS &&
+      Math.abs(coeffs.k) < EPS,
+    [coeffs],
   );
 
   // Parent MARKERS follow `showParent`; the parent COLUMN below deliberately does not.
@@ -221,12 +240,15 @@ export default function TransformationExplorer(): React.JSX.Element {
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
     const id = setTimeout(() => {
-      const text = `${readout.equation}. ${readout.steps.join('. ')}`;
+      // The readout box is aria-hidden, so this live region is how the equation — both
+      // forms — reaches a screen reader at all.
+      const equations = [readout.equation, concrete].filter(Boolean).join('. ');
+      const text = `${equations}. ${readout.steps.join('. ')}`;
       const details = gDetails ? ` Domain ${gDetails.domain}. Range ${gDetails.range}.` : '';
       setAnnounced(`${text}${details}`);
     }, 250);
     return () => clearTimeout(id);
-  }, [readout, gDetails]);
+  }, [readout, gDetails, concrete]);
 
   const setField = (key: keyof Window2D, value: string): void =>
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -302,8 +324,27 @@ export default function TransformationExplorer(): React.JSX.Element {
               onClick={() => setCoeff('b', -coeffs.b)}
             >⇄ Reflect y-axis</Button>
           </div>
-          <div className="rounded-md bg-accent/60 p-3" aria-hidden="true">
-            <p className="font-mono text-sm font-medium text-accent-foreground">{readout.equation}</p>
+          <div
+            className="rounded-md bg-accent/60 p-3"
+            data-testid="equation-readout"
+            aria-hidden="true"
+          >
+            {isIdentity && parent ? (
+              <p className="font-mono text-sm font-medium text-accent-foreground">
+                g(x) = f(x) = {parent.label}
+              </p>
+            ) : (
+              <>
+                <p className="font-mono text-sm font-medium text-accent-foreground">
+                  {readout.equation}
+                </p>
+                {concrete ? (
+                  <p className="font-mono text-sm font-medium text-accent-foreground">
+                    {concrete}
+                  </p>
+                ) : null}
+              </>
+            )}
             <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
               {readout.steps.map((s) => <li key={s}>{s}</li>)}
             </ul>
@@ -362,7 +403,7 @@ export default function TransformationExplorer(): React.JSX.Element {
             ref={plotRef}
             data-testid="transform-plot"
             role="img"
-            aria-label={`Graph of parent f(x) = ${parentLabel} (dashed) and transformed ${readout.equation}`}
+            aria-label={`Graph of parent f(x) = ${parentLabel} (dashed) and transformed ${concrete ?? readout.equation}`}
             className="w-full"
             style={{ minHeight: 480 }}
           />

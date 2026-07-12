@@ -203,3 +203,33 @@ test('a custom function reports that details are unavailable', async ({ page }) 
   await page.getByRole('button', { name: 'Plot' }).click();
   await expect(page.getByText(/not available for a custom function/i)).toBeVisible();
 });
+
+test('the readout shows the real equation, not just f(x)', async ({ page }) => {
+  await goto(page);
+  const readout = page.locator('[data-testid="equation-readout"]');
+
+  // At the identity the two forms collapse — no more bare 'g(x) = f(x)' tautology.
+  await expect(readout).toContainText('g(x) = f(x) = x²');
+
+  // A vertical stretch must show the ACTUAL equation, not only 'g(x) = 2·f(x)'.
+  const a = page.getByRole('slider', { name: /a — vertical stretch/i });
+  await a.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight'); // 1 → 2 at step 0.1
+  await expect(readout).toContainText('g(x) = 2·f(x)'); // abstract form kept
+  await expect(readout).toContainText('g(x) = 2x²'); // and the real one shown
+});
+
+test('the concrete equation follows the parent and the shifts', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('combobox', { name: 'Parent function' }).click();
+  await page.getByRole('option', { name: /reciprocal/i }).click();
+
+  const readout = page.locator('[data-testid="equation-readout"]');
+  await expect(readout).toContainText('g(x) = f(x) = 1/x');
+
+  // Shift right 3 → 1/(x − 3). Parenthesised: '1/x − 3' would be a different function.
+  const h = page.getByRole('slider', { name: /h — horizontal shift/i });
+  await h.focus();
+  for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowRight'); // +3.0
+  await expect(readout).toContainText('g(x) = 1/(x − 3)');
+});

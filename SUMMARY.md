@@ -1311,3 +1311,24 @@ its own notation is a dozen one-liners and no parser.
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-11 21:52] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/ui
+
+**Summary:**
+The readout now shows the concrete equation beneath the abstract one — 'g(x) = 2.1·f(x)'
+followed by 'g(x) = 2.1x²'. At the identity the two merge into 'g(x) = f(x) = x²'.
+The concrete form also joins the plot's aria-label and the sr-only live region.
+
+**Rationale:**
+'g(x) = 2.1·f(x)' is meaningless to a student who does not already know what f is, and at
+the identity it degenerated to the tautology 'g(x) = f(x)'. Both forms are kept because
+the abstract one shows WHICH slider produced which part of the equation, while the
+concrete one shows the result — connecting the two is the lesson. The readout box is
+aria-hidden, so the live region is the only path to a screen reader; the equation was
+added there rather than left sighted-only.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
