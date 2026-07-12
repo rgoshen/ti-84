@@ -138,3 +138,45 @@ describe('parent properties', () => {
     expect(parentById('sin')?.props.solve(2)).toEqual([]); // |c| > 1: unreachable
   });
 });
+
+describe('parent display templates', () => {
+  // The catalog-wide invariant: a parent's notation applied to a bare `x` IS the
+  // label it already advertises in the dropdown. Catches any future parent whose
+  // template disagrees with its own label.
+  it('render("x") reproduces the label, for every parent', () => {
+    for (const p of PARENTS) {
+      expect(p.render('x'), p.id).toBe(p.label);
+    }
+  });
+
+  it('renders each parent around a compound argument', () => {
+    const got = Object.fromEntries(PARENTS.map((p) => [p.id, p.render('x − 3')]));
+    expect(got).toEqual({
+      identity: '(x − 3)',
+      square: '(x − 3)²',
+      sqrt: '√(x − 3)',
+      cube: '(x − 3)³',
+      cbrt: '∛(x − 3)',
+      recip: '1/(x − 3)',
+      abs: '|x − 3|',
+      exp: 'e^(x − 3)',
+      ln: 'ln(x − 3)',
+      sin: 'sin(x − 3)',
+      cos: 'cos(x − 3)',
+    });
+  });
+
+  // ATOMICITY. Every template must return a string safe to prefix with a coefficient.
+  // `identity` must parenthesise itself — returning 'x − 3' would let the caller build
+  // '2x − 3', a DIFFERENT function from 2(x − 3). Plausible-but-wrong is worse than none.
+  it('identity parenthesises a compound argument so a coefficient cannot bind wrongly', () => {
+    expect(parentById('identity')?.render('x − 3')).toBe('(x − 3)');
+    expect(parentById('identity')?.render('x')).toBe('x');
+  });
+
+  // Only the reciprocal overrides scaling: '2·1/(x − 3)' is not how anyone writes it.
+  it('the reciprocal folds a coefficient into its numerator', () => {
+    expect(parentById('recip')?.renderScaled?.('2', 'x − 3')).toBe('2/(x − 3)');
+    expect(parentById('square')?.renderScaled).toBeUndefined();
+  });
+});

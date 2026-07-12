@@ -1267,3 +1267,23 @@ visible text).
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Whole-branch review: 5 Minor findings, no Critical/Important
+
+## [2026-07-11 21:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Gave each of the 11 parents a `render(inner)` display template — its own notation
+applied to an argument other than a bare `x` (`x²` → `(x − 3)²`). The reciprocal also
+gets a `renderScaled` so a coefficient folds into its numerator.
+
+**Rationale:**
+Every template must return an ATOMIC string, safe to prefix with a coefficient. This is
+why `identity` parenthesises a compound argument: returning `x − 3` would let a caller
+build `2x − 3`, which is a different function from `2(x − 3)`. A plausible-but-wrong
+equation is worse than no equation in a teaching tool. Pinned by a test, plus a
+catalog-wide invariant that `render('x')` reproduces each parent's `label`.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
