@@ -1428,3 +1428,23 @@ duplicated graph math and a generic shared module coupled to explorer internals.
 - TODO.md: [2026-07-12] Graph Result Export
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
 - Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md
+
+## [2026-07-12 13:05] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export contract and dependencies
+
+**Summary:**
+Added the pure graph-export contract with fixed artifact/graph dimensions, the
+201-row eligibility boundary, deterministic input-free filenames, numeric display
+formatting, and typed artifact/snapshot models. Added four TDD unit tests and pinned
+`html-to-image` 1.11.13 plus `jsPDF` 4.2.1.
+
+**Rationale:**
+Keeping export policy in a browser-free module makes the user-visible limits and file
+contract independently testable. Tool components can supply domain-specific content
+without redefining dimensions, eligibility messages, or filename behavior.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 1
