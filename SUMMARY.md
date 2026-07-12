@@ -1023,3 +1023,51 @@ showing no changes to `parents.ts`) and reran: 14/14 passing. Full suite (`npm t
 **References:**
 - Code review finding on `src/scripts/explorer/parents.test.ts`
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+
+## [2026-07-11 20:23] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/details
+
+**Summary:**
+Added `src/scripts/explorer/details.ts`, a pure module that maps a parent's
+declared domain/range/asymptotes/inverse (from `parents.ts`) through the
+transform g(x) = a·f(b(x − h)) + k, producing display-ready `FunctionDetails`
+(domain, range, x-intercepts, y-intercept, vertical/horizontal asymptote) for
+both the untransformed parent and the live transformed curve. `mapInterval`
+pushes an `Interval` through the affine map t ↦ m·t + c, flipping a `bound`'s
+direction when the multiplier is negative; `formatInterval` renders each
+interval shape as text; `xInterceptsOf` asks the parent's own `solve(−k/a)`
+and maps solutions back via x = u/b + h — no numeric root-finding anywhere.
+Degenerate transforms (|a| < EPS or |b| < EPS) render every field as "—".
+
+**Rationale:**
+Followed strict TDD: wrote the full test file first (17 cases covering
+`mapInterval`, `formatInterval`, `parentDetails`, and `transformedDetails`),
+confirmed it failed on the missing `./details` module, then implemented.
+The transform is invertible by construction, so domain/range/intercepts are
+derived algebraically from each parent's declared properties rather than
+sampled or numerically searched — this keeps the panel's numbers exact and
+stable as sliders move, and keeps the module dependency-free (no DOM, no
+function-plot). The sign-flip rule for `mapInterval` (reflecting √x over the
+y-axis must take x ≥ 0 to x ≤ 0; reflecting eˣ over the x-axis must take
+y > 0 to y < 0) has dedicated tests since it's the part most likely to be
+gotten backwards. All coefficient comparisons use `EPS` from `transform.ts`,
+never `===`, since slider steps land on values like 0.9999999. All numbers
+are formatted via `formatNumber` (ASCII hyphen) to keep ranges and intercepts
+visually consistent with each other.
+
+**Tests:**
+17 new Vitest cases in `details.test.ts`: `mapInterval` (identity passthrough,
+translate/scale, sign-flip on `bound`, re-sort on `between`, `exclude`
+translation), `formatInterval` (all four interval shapes), `parentDetails`
+(1/x, x², ln untransformed), and `transformedDetails` (the a=2,b=1,h=3,k=1
+worked example on 1/x; √x and eˣ reflections; ln shifted right; eˣ shifted up
+killing its x-intercept; x² shifted down/up gaining/losing x-intercepts;
+periodic sin reporting "infinitely many"; degenerate a=0/b=0 collapsing every
+field to "—"). Full suite (`npm test`): 10 files, 130 passed, 0 failed (up
+from 113). `npm run build`: clean, 6 pages, 0 type errors.
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: `.superpowers/sdd/task-3-brief.md` (Task 3 of the plan)
