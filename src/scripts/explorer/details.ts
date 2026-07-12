@@ -13,7 +13,11 @@ import { formatNumber } from '@/scripts/graphing/hover';
 import { EPS, type Coeffs } from './transform';
 import type { Interval, Parent } from './parents';
 
-/** Every field is display-ready text. '—' = not applicable; 'none' = genuinely absent. */
+/**
+ * Every field is display-ready text. '—' means the property doesn't apply — no such
+ * asymptote, or the transform has collapsed (a = 0 or b = 0). 'none' means the
+ * property applies but there is no such point, e.g. a curve with no x-intercept.
+ */
 export interface FunctionDetails {
   domain: string;
   range: string;

@@ -35,7 +35,7 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 const DETAIL_ROWS: Array<{ key: keyof FunctionDetails; label: string }> = [
   { key: 'domain', label: 'Domain' },
   { key: 'range', label: 'Range' },
-  { key: 'xIntercepts', label: 'x-intercept' },
+  { key: 'xIntercepts', label: 'x-intercepts' },
   { key: 'yIntercept', label: 'y-intercept' },
   { key: 'verticalAsymptote', label: 'Vertical asymptote' },
   { key: 'horizontalAsymptote', label: 'Horizontal asymptote' },
@@ -215,12 +215,18 @@ export default function TransformationExplorer(): React.JSX.Element {
     return () => window.removeEventListener('resize', onResize);
   }, [drawPlot]);
 
-  // Coalesced screen-reader announcement.
+  // Coalesced screen-reader announcement. Includes g(x)'s domain/range when a parent
+  // is selected — otherwise a slider drag would silently change them with nothing
+  // spoken, defeating the entire teaching point of the details panel.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(`${readout.equation}. ${readout.steps.join('. ')}`), 250);
+    const id = setTimeout(() => {
+      const text = `${readout.equation}. ${readout.steps.join('. ')}`;
+      const details = gDetails ? ` Domain ${gDetails.domain}. Range ${gDetails.range}.` : '';
+      setAnnounced(`${text}${details}`);
+    }, 250);
     return () => clearTimeout(id);
-  }, [readout]);
+  }, [readout, gDetails]);
 
   const setField = (key: keyof Window2D, value: string): void =>
     setFields((prev) => ({ ...prev, [key]: value }));

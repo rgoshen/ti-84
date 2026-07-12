@@ -117,6 +117,34 @@ describe('transformedDetails', () => {
     expect(d.xIntercepts).toBe('none'); // the curve never reaches y = 0
   });
 
+  it('reports no y-intercept for a transformed domain that excludes x=0', () => {
+    // √(x − 3) is undefined at x = 0 — mathjs returns a Complex there, not NaN.
+    expect(G('sqrt', C(1, 1, 3, 0)).yIntercept).toBe('none');
+  });
+
+  // The two newest catalog parents (identity, cube root) had no coverage here.
+  it('covers identity and cube root under a real transform', () => {
+    // identity: f(u) = u ⟹ g(x) = a·b·(x−h)+k = 2·4·(x−1)+6 = 8x − 2.
+    // Root at x = 0.25; g(0) = -2.
+    const identityDetails = G('identity', C(2, 4, 1, 6));
+    expect(identityDetails.domain).toBe('all real numbers');
+    expect(identityDetails.range).toBe('all real numbers');
+    expect(identityDetails.xIntercepts).toBe('x = 0.25');
+    expect(identityDetails.yIntercept).toBe('y = -2');
+    expect(identityDetails.verticalAsymptote).toBe('—');
+    expect(identityDetails.horizontalAsymptote).toBe('—');
+
+    // cube root: f(u) = ∛u ⟹ g(x) = ∛(8(x−1)) − 2.
+    // g(2) = ∛8 − 2 = 0 (root); g(0) = ∛(−8) − 2 = −4.
+    const cbrtDetails = G('cbrt', C(1, 8, 1, -2));
+    expect(cbrtDetails.domain).toBe('all real numbers');
+    expect(cbrtDetails.range).toBe('all real numbers');
+    expect(cbrtDetails.xIntercepts).toBe('x = 2');
+    expect(cbrtDetails.yIntercept).toBe('y = -4');
+    expect(cbrtDetails.verticalAsymptote).toBe('—');
+    expect(cbrtDetails.horizontalAsymptote).toBe('—');
+  });
+
   it('x² shifted down 4 has two x-intercepts; shifted up 4 has none', () => {
     expect(G('square', C(1, 1, 0, -4)).xIntercepts).toBe('x = -2, x = 2');
     expect(G('square', C(1, 1, 0, 4)).xIntercepts).toBe('none');

@@ -1214,3 +1214,56 @@ errors.
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Plan: `.superpowers/sdd/task-5-brief.md` (Task 5 of the plan, final task)
+
+## [2026-07-11 21:05] Commit Summary
+
+**Change Type:** Fix
+**Scope:** explorer
+
+**Summary:**
+Five Minor polish fixes from the whole-branch review of the Function Details panel.
+(1) Rewrote `details.ts`'s stale `FunctionDetails` doc comment, which claimed '—'
+meant "genuinely absent" — backwards from what the code does ('—' = not
+applicable/collapsed transform; 'none' = applies but no such point). (2)
+Pluralized `TransformationExplorer.tsx`'s x-intercepts row label ("x-intercept" →
+"x-intercepts"), which mismatched plural data like "x = -2, x = 2"; the `key`
+stays `xIntercepts` since e2e's `data-row` selectors depend on it. (3) Fixed an
+accessibility gap: the sr-only live region announced the transform readout
+("Shifted up 2") but never the resulting domain/range, so a screen-reader user
+never heard that dragging `k` changed the range to "y ≥ 2" — the entire teaching
+point of the panel. The 250ms-debounced announcement effect now appends
+` Domain {gDetails.domain}. Range {gDetails.range}.` when a parent is selected,
+with `gDetails` added to its dependency array. (4) Added a pinned regression test
+in `details.test.ts` for a transformed function's out-of-domain y-intercept
+(`sqrt(x − 3)` at x = 0), since mathjs returns a Complex there, not NaN, and
+`evalAt`'s `typeof v === 'number'` guard is the only thing rejecting it. (5) Added
+a test covering the two newest catalog parents (`identity`, `cbrt`), which had no
+`details.test.ts` coverage at all, asserting hand-derived transformed values for
+both.
+
+**Rationale:**
+All five were flagged Minor by the whole-branch review (no Critical/Important
+findings) and each had a concrete, reviewer-specified fix. Grouping them into one
+commit keeps the fix atomic and scoped to exactly what the review called out — no
+math in `details.ts` changed, and the deliberate a=0/b=0 degenerate-collapse
+behavior (all six rows '—') is unchanged.
+
+**Bug Fix Context:**
+(3) is the only behavior-affecting fix; the announcement effect previously omitted
+`gDetails` from its own state and its dependency array, so `setAnnounced` never
+saw a domain/range update no matter how many times a slider moved.
+
+**Tests:**
+Added 2 Vitest cases to `details.test.ts` (135 total, up from 133): the transformed
+`sqrt` y-intercept-under-complex regression, and the identity/cbrt coverage test
+(hand-derived: identity `g(x)=2·4·(x−1)+6=8x−2` → root x=0.25, y(0)=-2; cbrt
+`g(x)=∛(8(x−1))−2` → root x=2, y(0)=-4; both domain/range "all real numbers", both
+asymptote rows '—'). `npm test`: 10 files, 135 passed, 0 failed. `npm run build`:
+clean, 6 pages, 0 type errors. Full `npm run test:e2e`: 42/42 passed, no
+regressions — confirmed no e2e test depended on the old singular label text or
+the announcement string (both are matched via `data-row`/`data-testid`, not
+visible text).
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Whole-branch review: 5 Minor findings, no Critical/Important
