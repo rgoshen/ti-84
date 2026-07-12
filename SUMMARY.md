@@ -949,3 +949,35 @@ negative x, which would have silently erased the left half of the curve. Natural
 **References:**
 - TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
 - Spec: docs/superpowers/specs/2026-07-11-parent-catalog-and-function-details-design.md
+
+## [2026-07-11 20:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** explorer/parents
+
+**Summary:**
+Gave each of the 11 parents in the catalog an analytic `props` block — pure data,
+no consumer yet. Added the `Interval` union (`all` / `bound` / `exclude` / `between`)
+and `ParentProps` (`domain`, `range`, optional `verticalAsymptote`/
+`horizontalAsymptote`, and `solve(c)`), and `props: ParentProps` on `Parent`. `solve`
+is each parent's inverse — every u with f(u) = c — which is what will let the next
+task (a `details.ts` consumer) report exact x-intercepts instead of numerically
+root-found ones.
+
+**Rationale:**
+Followed strict TDD: appended the failing spec first (round-trip, asymptote, and
+domain-restriction assertions), watched it fail on the missing `props` field, then
+implemented. The round-trip test — for every parent and probe c, assert
+f(solve(c)) ≈ c — is the load-bearing check: it catches an inverted `solve` (e.g.
+swapping cube's `Math.cbrt(c)` with cube root's `c ** 3`) that would otherwise pass
+type-checking silently.
+
+**Tests:**
+5 new Vitest cases in `parents.test.ts` (props declared on all 11 parents,
+solve()/f() round-trip across 6 probes × 11 parents, recip/exp/ln asymptotes,
+sqrt/ln/recip domain restrictions, sin/cos periodic solve). Full suite: 112 Vitest
+passing (0 failing). `npm run build` clean (6 pages, 0 type errors).
+
+**References:**
+- TODO.md: [2026-07-11] Parent Catalog Expansion + Function Details
+- Plan: docs/superpowers/plans referenced by .superpowers/sdd/task-2-brief.md (Task 2 of the plan)

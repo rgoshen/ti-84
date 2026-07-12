@@ -57,3 +57,53 @@ describe('parent catalog', () => {
     expect(parentById('nope')).toBeUndefined();
   });
 });
+
+describe('parent properties', () => {
+  it('every parent declares props', () => {
+    for (const p of PARENTS) {
+      expect(p.props, p.id).toBeDefined();
+      expect(p.props.domain.kind, p.id).toBeTruthy();
+      expect(p.props.range.kind, p.id).toBeTruthy();
+    }
+  });
+
+  // The strongest invariant we have: solve() must actually be f's inverse.
+  // For every u it returns, f(u) must equal the c we asked about.
+  it('solve() returns genuine solutions of f(u) = c', () => {
+    const probes = [-2, -0.5, 0, 0.5, 1, 2];
+    for (const p of PARENTS) {
+      for (const c of probes) {
+        const sol = p.props.solve(c);
+        if (sol === 'infinite') continue;
+        for (const u of sol) {
+          const back = evalAt(p.expr, u);
+          expect(back, `${p.id}: f(${u}) should be ${c}`).not.toBeNull();
+          expect(back as number, `${p.id}: f(solve(${c})) round-trip`).toBeCloseTo(c, 6);
+        }
+      }
+    }
+  });
+
+  it('declares the asymptotes of the two parents that have them', () => {
+    expect(parentById('recip')?.props.verticalAsymptote).toBe(0);
+    expect(parentById('recip')?.props.horizontalAsymptote).toBe(0);
+    expect(parentById('exp')?.props.horizontalAsymptote).toBe(0);
+    expect(parentById('exp')?.props.verticalAsymptote).toBeUndefined();
+    expect(parentById('ln')?.props.verticalAsymptote).toBe(0);
+    expect(parentById('ln')?.props.horizontalAsymptote).toBeUndefined();
+    expect(parentById('square')?.props.verticalAsymptote).toBeUndefined();
+  });
+
+  it('restricts the domains of sqrt, ln and 1/x only', () => {
+    expect(parentById('sqrt')?.props.domain).toEqual({ kind: 'bound', value: 0, dir: 'ge', strict: false });
+    expect(parentById('ln')?.props.domain).toEqual({ kind: 'bound', value: 0, dir: 'ge', strict: true });
+    expect(parentById('recip')?.props.domain).toEqual({ kind: 'exclude', value: 0 });
+    expect(parentById('square')?.props.domain).toEqual({ kind: 'all' });
+  });
+
+  it('sin and cos have no finite solution list', () => {
+    expect(parentById('sin')?.props.solve(0)).toBe('infinite');
+    expect(parentById('cos')?.props.solve(0.5)).toBe('infinite');
+    expect(parentById('sin')?.props.solve(2)).toEqual([]); // |c| > 1: unreachable
+  });
+});
