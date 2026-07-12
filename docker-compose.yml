@@ -1,10 +1,24 @@
+# Runs the site either from the published release or from your working tree.
+#
+#   docker compose up -d              # PULL the released image from GHCR and run it
+#   docker compose up -d --build      # BUILD from this working tree instead
+#   TAG=0.2.1 docker compose up -d    # pull an exact release (default: latest)
+#
+# `image` does double duty: it is the tag a local build gets stamped with AND the image a
+# plain `up` pulls. `pull_policy: always` is what keeps those two honest — a local
+# `--build` overwrites the tag, and without it the next plain `up` would happily reuse
+# that stale build instead of the release (Compose's default policy only asks whether the
+# image is *cached*, not whether it is *current*). `--build` still wins when passed.
+# Trade-off: a plain `up` therefore needs network. Use `--build` to work offline.
 services:
   graphing-calculator:
+    image: ghcr.io/rgoshen/ti-84:${TAG:-latest}
+    pull_policy: always
     build:
       context: .
-      # Build-time site config is baked into the static output. Override via a
-      # .env file or the shell; changing a value requires a rebuild
-      # (`docker compose up -d --build`).
+      # Build-time site config is baked into the static output, so it only applies on
+      # the `--build` path — the released image is built by CI with the defaults.
+      # Override via a .env file or the shell; changing a value requires a rebuild.
       args:
         PUBLIC_SITE_TITLE_TI84: ${PUBLIC_SITE_TITLE_TI84:-TI-84 Calculator}
         PUBLIC_SITE_TITLE_GRAPHING: ${PUBLIC_SITE_TITLE_GRAPHING:-Graphing Calculator Online}
@@ -13,11 +27,6 @@ services:
         PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER: ${PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER:-Transformation Explorer}
         PUBLIC_TI84_IFRAME_SRC: ${PUBLIC_TI84_IFRAME_SRC:-https://ti84calc.com/ti84calc}
         PUBLIC_THEME_DEFAULT: ${PUBLIC_THEME_DEFAULT:-dark}
-    image: ti-84:latest
-    # This image is built locally and never published under this name, so tell compose
-    # not to try pulling it first — otherwise every `up` prints a misleading
-    # "pull access denied for ti-84" warning before falling back to the build.
-    pull_policy: build
     container_name: graphing-calculator
     ports:
       - "${HOST_PORT:-8084}:80"
