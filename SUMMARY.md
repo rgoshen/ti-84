@@ -906,3 +906,27 @@ Replayed the plugin's exact `prepare.js` logic against the real repaired file an
 
 **References:**
 - Reported by user: "is it overwriting or appending?", "there is no v0.1.0 entry"
+
+## [2026-07-11 17:58] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Docker — `docker-compose.yml` could never pull the released image
+
+**Summary:**
+Pointed the Compose service at the published image (`image: ghcr.io/rgoshen/ti-84:${TAG:-latest}`) and set `pull_policy: always`, replacing the local-only tag `ti-84:latest` and the `pull_policy: build` that had disabled pulling outright. One file now serves both flows: `docker compose up -d` **pulls** the release, `docker compose up -d --build` **builds** the working tree, and `TAG` pins a version. Documented in the README and added `TAG` to `.env.example`.
+
+**Bug Fix Context:**
+`docker-compose.yml` tagged its build `ti-84:latest` — an unqualified name that Docker resolves to Docker Hub, not GHCR — so `up` emitted `pull access denied for ti-84` and fell back to building. That warning was Compose genuinely trying to pull; the name was simply wrong. The earlier "fix" of adding `pull_policy: build` silenced the warning by *amputating the pull path*, encoding the bug into the config and making a separate pull-only compose file look necessary. Correcting the image name restores Compose's documented `build` + `image` behaviour, where `image` is both the pull source and the local build's tag, and one file covers both.
+
+`pull_policy: always` is load-bearing, not decoration. Under the default policy Compose only asks whether the image is *cached*, not whether it is *current* — so after any `--build` (which overwrites the release tag locally) a subsequent plain `up -d` silently re-serves the stale local build. That is the same "why isn't it pulling the latest" symptom that opened this thread. `always` forces the refresh; an explicit `--build` still wins, so the dev path is unaffected. Trade-off: a plain `up -d` now requires network (use `--build` offline).
+
+**Rationale:**
+Chose to repair the existing file over keeping `docker-compose.ghcr.yml` (reverted). Two compose files for one service is not standard practice, duplicates `HOST_PORT`/`container_name`/`ports`, and invites drift; the `build`+`image` pair is Docker's documented mechanism for exactly this dev-vs-release split.
+
+**Verification:**
+With no `ti-84` image cached: plain `docker compose up -d` reported `Pulling → Pulled`, ran `ghcr.io/rgoshen/ti-84:latest` @ `sha256:6c50e8a2…`, and served all six routes 200. `up -d --build` reported `Building → Built` and honoured a `PUBLIC_SITE_TITLE_GRAPHING` override (baked into `<title>`), proving the build args still work. `TAG=0.2.0 up -d` pulled the pinned tag. The stale-build trap was reproduced directly: after a `--build` the site served `<title>STALE-LOCAL-BUILD</title>`, and a plain `up -d` re-pulled and recovered to `<title>Graphing Calculator Online</title>` — confirmed failing without `pull_policy: always` (Compose skipped the pull entirely and kept serving the stale build) and passing with it. `docker compose config -q` valid.
+
+**References:**
+- Reported by user: "why would you create a different docker compose file? ... why not just have the current docker compose file pull it"
+- Docker Compose Build Specification, "Using build and image"; `pull_policy` in the Services top-level element
+- docker-compose.yml, README.md, .env.example

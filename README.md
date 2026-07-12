@@ -73,7 +73,7 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 │   └── styles/global.css       # @import "tailwindcss" + theme tokens
 ├── public/favicon.svg          # Site icon
 ├── Dockerfile, nginx.conf      # Multi-stage build (Node build → nginx serves dist/)
-├── docker-compose.yml          # Compose service with PUBLIC_* build args
+├── docker-compose.yml          # One service: pulls the GHCR release, or builds with --build
 ├── TODO.md, SUMMARY.md         # Plan and change log
 └── README.md
 ```
@@ -92,23 +92,36 @@ docker run --rm -p 8080:80 ghcr.io/rgoshen/ti-84:latest   # http://localhost:808
 
 ## Deployment (Docker)
 
-The image is a **multi-stage build**: a `node:24-alpine` stage runs `npm ci` and
+`docker-compose.yml` covers both ways to run the site — **pulling the release** or
+**building your working tree** — and which one you get is decided by `--build`:
+
+```bash
+docker compose up -d                # PULL the released image from GHCR  → http://localhost:8084
+docker compose up -d --build        # BUILD from this working tree instead
+TAG=0.2.1 docker compose up -d      # pull an exact release (default: latest)
+```
+
+The service sets both `image:` and `build:`, so `image:` acts as the pull source *and* as
+the tag a local build is stamped with — no separate "pull" compose file is needed.
+`pull_policy: always` keeps the two from colliding: a `--build` overwrites the local tag,
+and without it the next plain `up -d` would silently reuse that stale build instead of the
+release. The trade-off is that a plain `up -d` needs network; use `--build` offline.
+
+The image itself is a **multi-stage build**: a `node:24-alpine` stage runs `npm ci` and
 `npm run build`, then an `nginx:alpine` stage serves the static `dist/` output
 (`nginx.conf` enables clean URLs via `try_files`, so `/ti-84` and `/graphing`
 resolve without the `.html` suffix).
+
+### Configuration
 
 Site configuration (page titles, default theme, the TI-84 iframe source) is applied
 at **build time** through `PUBLIC_*` environment variables — read by `src/config.ts`
 via `import.meta.env` and baked into the static output. This replaces the old runtime
 `envsubst` approach, so there is no entrypoint script.
 
-```bash
-# Build and run with the defaults.
-docker compose up -d --build      # serves on http://localhost:8084
-```
-
-To override the defaults, copy `.env.example` to `.env` and edit the values, then
-rebuild (the values are compiled in, so a rebuild is required for changes to apply):
+Because the values are compiled in, the `PUBLIC_*` overrides only take effect on the
+`--build` path; the released image is built by CI with the defaults. To customise them,
+copy `.env.example` to `.env`, edit, and rebuild:
 
 ```bash
 cp .env.example .env
@@ -118,14 +131,16 @@ docker compose up -d --build
 | Variable | Purpose | Default |
 |---|---|---|
 | `HOST_PORT` | Host port mapped to the container's port 80. | `8084` |
+| `TAG` | Which released image a plain `up -d` pulls (`latest`, `0.2`, `0.2.1`). | `latest` |
 | `PUBLIC_SITE_TITLE_TI84` | Title/heading for the TI-84 page. | `TI-84 Calculator` |
 | `PUBLIC_SITE_TITLE_GRAPHING` | Title/heading for the graphing page. | `Graphing Calculator Online` |
 | `PUBLIC_SITE_TITLE_EXPLORERS` | Title/heading for the Explorers hub page. | `Explorers` |
 | `PUBLIC_SITE_TITLE_FUNCTION_EXPLORER` | Title/heading for the Function Explorer page. | `Function Explorer` |
+| `PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER` | Title/heading for the Transformation Explorer page. | `Transformation Explorer` |
 | `PUBLIC_TI84_IFRAME_SRC` | Source URL for the embedded TI-84 iframe. | `https://ti84calc.com/ti84calc` |
 | `PUBLIC_THEME_DEFAULT` | First-visit theme (`dark` or `light`). | `dark` |
 
-`HOST_PORT` is consumed by Compose's port mapping; the `PUBLIC_*` variables are
+`HOST_PORT` and `TAG` are consumed by Compose directly; the `PUBLIC_*` variables are
 passed to the build as build args. The same image can be rebuilt per environment
 with different titles, default theme, or iframe source.
 
