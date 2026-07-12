@@ -52,6 +52,8 @@ npm run dev         # start the Astro dev server (http://localhost:4321)
 | `npm run test:coverage` | Run Vitest with V8 coverage. |
 | `npm run test:watch` | Run Vitest in watch mode. |
 | `npm run test:e2e` | Run the Playwright end-to-end tests (added during the UI port). |
+| `npm run test:e2e:visual` | Compare downloaded graph PNGs with approved baselines. |
+| `npm run test:e2e:update-snapshots` | Intentionally replace the three approved export baselines. |
 
 ## Exporting graph results
 
@@ -65,6 +67,18 @@ light presentation palette even when the site is dark or opened on mobile.
 PNG downloads preserve the wide 1,440px artifact. PDF downloads fit the same content
 within margins on one standard Letter landscape page. The embedded TI-84 does not
 support exports.
+
+### Reviewing export baselines
+
+`npm run test:e2e:visual` is read-only. It compares the actual downloaded PNG from
+each supported graph tool with the reviewed files under
+`tests/e2e/__snapshots__/export-visual.spec.ts/`. A mismatch fails with expected,
+actual, and diff evidence under the ignored `test-results/` directory; subsequent
+test-generated PNGs are never committed.
+
+Use `npm run test:e2e:update-snapshots` only after an intentional export-design
+change. Review all three replacement PNGs visually before committing them. Ordinary
+`npm run test:e2e` and CI runs never update approved images.
 
 ## Project structure
 

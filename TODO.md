@@ -464,4 +464,11 @@ artifact while still passing structural tests.
 - The 0.1% pixel tolerance absorbs minor antialiasing but intentionally rejects
   meaningful composition or content drift.
 
-**Status:** In progress.
+**Status:** Done on `feature/graph-result-export`. The TDD red run failed three times
+only because baselines were absent; the explicit update command generated the reviewed
+1,440px PNGs, and two subsequent read-only runs passed 3/3 without changing Git state.
+Final verification: 164/164 Vitest tests, 54/54 Playwright tests, zero Astro
+diagnostics, six production pages built, 86.13% statements / 82.14% branches / 87.69%
+functions / 88.33% lines, and zero production vulnerabilities. Only the three
+approved baselines are tracked; subsequent actual/expected/diff PNGs remain under the
+ignored `test-results/` path.

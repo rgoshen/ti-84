@@ -1791,3 +1791,23 @@ theme, and Chromium version remove the major sources of irrelevant raster drift.
 **References:**
 - TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
 - Plan: Task 1
+
+## [2026-07-12 16:32] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export visual baseline review
+
+**Summary:**
+Documented the read-only comparison and explicit replacement commands, baseline
+location, required human review, and ignored mismatch evidence. Marked the raster
+baseline task complete with exact unit, browser, coverage, typecheck, build, audit,
+and clean-worktree evidence.
+
+**Rationale:**
+Maintainers need a clear distinction between running visual tests and approving a new
+design. Normal and CI runs now have an explicit documented guarantee that they cannot
+modify or add tracked PNG expectations.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: Task 2
