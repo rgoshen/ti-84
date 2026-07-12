@@ -61,6 +61,8 @@ export interface RenderExplorerOptions {
   expr: string;
   dark: boolean;
   grid: boolean;
+  /** Optional fixed render height; interactive callers use the existing default. */
+  height?: number;
   getScene: () => OverlayScene;
   onViewChange: (w: Window2D) => void;
 }
@@ -229,7 +231,7 @@ function drawExplorerOverlay(
 }
 
 export function renderExplorer(opts: RenderExplorerOptions): ExplorerHandle {
-  const { target, window: win, expr, dark, grid, getScene, onViewChange } = opts;
+  const { target, window: win, expr, dark, grid, height = PLOT_HEIGHT, getScene, onViewChange } = opts;
   const colors = themeColors(dark);
   const eColors = explorerColors(dark);
 
@@ -240,7 +242,7 @@ export function renderExplorer(opts: RenderExplorerOptions): ExplorerHandle {
   const instance = functionPlot({
     target,
     width: target.clientWidth,
-    height: PLOT_HEIGHT,
+    height,
     grid,
     disableZoom: false,
     xAxis: { domain: [win.xMin, win.xMax], label: 'x' },

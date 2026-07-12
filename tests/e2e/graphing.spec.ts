@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Download, type Page } from '@playwright/test';
 
 /**
  * Geometric, library-agnostic on-curve check: samples the function curve path in
@@ -78,6 +78,54 @@ async function plotWithPoints(page: Page): Promise<void> {
   await page.getByRole('checkbox').click();
   await expect(page.locator('[data-testid="plot"] .points-overlay circle').first()).toBeVisible();
 }
+
+async function readDownload(download: Download): Promise<Buffer> {
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+
+async function downloadExport(page: Page, format: 'PNG' | 'PDF') {
+  await page.getByRole('button', { name: 'Export' }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: `Download ${format}` }).click();
+  return downloadPromise;
+}
+
+test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) => {
+  await page.goto('/graphing');
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+
+  const png = await downloadExport(page, 'PNG');
+  expect(png.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.png$/);
+  const pngBytes = await readDownload(png);
+  expect(pngBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(pngBytes.readUInt32BE(16)).toBe(1440);
+
+  const pdf = await downloadExport(page, 'PDF');
+  expect(pdf.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const pdfBytes = await readDownload(pdf);
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+});
+
+test('disables graph export above the complete-table row limit', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  const windowInputs = page.locator('input[type="number"]');
+  await windowInputs.nth(0).fill('0');
+  await windowInputs.nth(1).fill('201');
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByText('Narrow the x window to 201 whole-number values or fewer.')).toBeVisible();
+});
 
 test('dark mode renders a visible grid and a bold, light-colored origin cross', async ({
   page,

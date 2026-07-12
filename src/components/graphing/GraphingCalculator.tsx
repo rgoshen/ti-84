@@ -23,6 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import GraphResultExport from '@/components/export/GraphResultExport';
+import {
+  EXPORT_GRAPH_HEIGHT,
+  formatExportValue,
+  type ExportSnapshot,
+} from '@/scripts/export/model';
 
 const DEFAULT_WINDOW: Window2D = { xMin: -10, xMax: 10, yMin: -5, yMax: 5 };
 const PALETTE = [
@@ -277,6 +283,56 @@ export default function GraphingCalculator(): React.JSX.Element {
   const tableXs = integerXs(displayWindow);
   const showTable = equations.length > 0 && tableXs.length > 0;
 
+  const createExportSnapshot = (): ExportSnapshot => {
+    const snapshotWindow = { ...displayWindow };
+    const snapshotEquations = equations.map((equation) => ({ ...equation }));
+    const snapshotXs = [...tableXs];
+
+    return {
+      model: {
+        slug: 'graphing-calculator',
+        title: 'Graphing Calculator',
+        exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
+        window: snapshotWindow,
+        legend: snapshotEquations.map((equation) => ({
+          label: `y = ${equation.expr}`,
+          color: equation.color,
+          detail: equation.showPoints
+            ? `Points shown (${equation.pointShape})`
+            : 'Points hidden',
+        })),
+        sections: [
+          {
+            title: 'Graph information',
+            facts: [
+              { label: 'x range', value: `${snapshotWindow.xMin} to ${snapshotWindow.xMax}` },
+              { label: 'y range', value: `${snapshotWindow.yMin} to ${snapshotWindow.yMax}` },
+              { label: 'Functions', value: String(snapshotEquations.length) },
+            ],
+          },
+        ],
+        table: {
+          title: 'Value table (whole-number x)',
+          headers: ['x', ...snapshotEquations.map((equation) => `y = ${equation.expr}`)],
+          rows: snapshotXs.map((x) => [
+            String(x),
+            ...snapshotEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
+          ]),
+        },
+      },
+      renderGraph: (target) => {
+        renderGraph({
+          target,
+          window: snapshotWindow,
+          equations: snapshotEquations,
+          dark: false,
+          height: EXPORT_GRAPH_HEIGHT,
+          onViewChange: () => {},
+        });
+      },
+    };
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       {/* Controls column */}
@@ -439,6 +495,13 @@ export default function GraphingCalculator(): React.JSX.Element {
 
       {/* Plot + table column */}
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <GraphResultExport
+            hasGraph={equations.length > 0}
+            rowCount={tableXs.length}
+            createSnapshot={createExportSnapshot}
+          />
+        </div>
         <Card className="overflow-hidden p-2">
           <div ref={plotRef} data-testid="plot" className="w-full" style={{ minHeight: 560 }} />
         </Card>

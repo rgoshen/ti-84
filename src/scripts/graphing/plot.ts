@@ -35,6 +35,8 @@ export interface RenderGraphOptions {
   window: Window2D;
   equations: PlotEquation[];
   dark: boolean;
+  /** Optional fixed render height; interactive callers use the existing default. */
+  height?: number;
   /** Called after an interactive zoom/pan with the new visible domain. */
   onViewChange: (w: Window2D) => void;
   /** Called on pointer move with the coordinate readout, or null when none. */
@@ -319,7 +321,7 @@ function attachHoverReadout(opts: AttachHoverOptions): () => void {
  * and call renderGraph again to rebuild; function-plot has no explicit destroy).
  */
 export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
-  const { target, window: win, equations, dark, onViewChange, onHover } = opts;
+  const { target, window: win, equations, dark, height = PLOT_HEIGHT, onViewChange, onHover } = opts;
   const colors = themeColors(dark);
 
   const data: FunctionPlotDatum[] = equations.map((eq) => ({
@@ -331,7 +333,7 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
   const instance = functionPlot({
     target,
     width: target.clientWidth,
-    height: PLOT_HEIGHT,
+    height,
     grid: true,
     disableZoom: false,
     xAxis: { domain: [win.xMin, win.xMax], label: 'x' },

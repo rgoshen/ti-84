@@ -1489,3 +1489,25 @@ duplicate captures.
 **References:**
 - TODO.md: [2026-07-12] Graph Result Export
 - Plan: Task 3
+
+## [2026-07-12 13:55] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator export
+
+**Summary:**
+Added optional plot heights without changing interactive defaults and integrated the
+Graphing Calculator with immutable, light export snapshots. The artifact includes
+every equation, per-equation marker state, current zoom window, and complete value
+table. Added Playwright coverage for empty/oversized disabling, PNG signature and
+1,440px width, deterministic filename, and PDF signature.
+
+**Rationale:**
+Rendering into a fixed off-screen target through the existing graph renderer preserves
+curve and marker correctness while making mobile and desktop output deterministic.
+Copying equations/window/table inputs before rendering prevents live edits or zoom
+from changing an export in progress.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 4
