@@ -2011,3 +2011,25 @@ and explicit visual approval reproducible for future maintainers.
 - TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
 - Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
 - Plan: Task 3
+## [2026-07-12 18:58] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph export domain and range contract
+
+**Summary:**
+Corrected the specifications and task record so domain and range are always global
+properties. Defined exact support for reciprocal powers of linear expressions and
+required `Not determined` instead of viewport-derived domain/range for unsupported
+expressions.
+
+**Rationale:**
+Visible-window sampling can provide evidence about displayed crossings and asymptotes,
+but it cannot prove a function's global domain or range.
+
+**Bug Fix Context:**
+The implementation labeled sampled x/y viewport bounds as domain/range, causing
+mathematically incorrect report facts for expressions outside exact analysis support.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md

@@ -53,21 +53,25 @@ Function Details use a structured result state for every property:
 
 - `exact`: render the mathematical value without a qualifier;
 - `approximate`: prefix the value with `Approx.` and include `in visible window` for
-  viewport-bounded domain, range, intercept, and vertical-asymptote results;
+  viewport-bounded intercept and vertical-asymptote results;
 - `not-applicable`: omit the row because analysis proved the property does not apply;
 - `not-determined`: render `Not determined` when neither exact nor numerical analysis
   can support a reliable statement.
 
 Exact analysis supports the curated parent catalog (`x`, `x^2`, `sqrt(x)`, `x^3`,
 `cbrt(x)`, `1/x`, `abs(x)`, `exp(x)`, `log(x)`, `sin(x)`, and `cos(x)`) plus constant,
-linear, and quadratic polynomial expressions recognized from the `mathjs` syntax tree.
+linear, and quadratic polynomial expressions recognized from the `mathjs` syntax tree,
+plus supported reciprocal powers of a linear expression such as `1/x^2` and
+`1/(x - 2)`.
 If displaying an analytically derived polynomial value requires decimal rounding, that
 property is downgraded to `approximate` rather than displaying a rounded value as exact.
 Other valid expressions use deterministic sampling across the visible x-window,
 existing bisection for intercepts, existing divergence checks for vertical asymptotes,
 and existing end-behavior classification for possible horizontal asymptotes. A
 numerical intercept candidate must not cross a detected vertical asymptote and must
-evaluate within the root tolerance before it can be reported.
+evaluate within the root tolerance before it can be reported. Viewport sampling never
+defines domain or range: when global analysis is unsupported, those properties render
+`Not determined`.
 
 The prior `Graph information` panel containing x-range, y-range, and function count is
 removed. Window bounds remain concise export metadata in the artifact header.

@@ -548,3 +548,31 @@ tests, 56/56 Playwright tests including 3/3 read-only visual baselines, zero Ast
 diagnostics, six production pages built, 87.12% statements / 82.5% branches / 89.77%
 functions / 89.98% lines, and zero production vulnerabilities. Only the reviewed
 Graphing baseline changed; generated actual/diff PNGs remain ignored.
+## [2026-07-12] Fix: Global Domain and Range Semantics
+
+**Objective:**
+Stop presenting viewport coverage as mathematical domain/range and add exact global
+analysis for reciprocal powers such as `1/x^2` and `1/(x - 2)`.
+
+**Approach:**
+- Recognize nonzero constants divided by a positive integer power of a linear
+  expression before numerical fallback.
+- Return exact global domain, range, intercept, and asymptote results for supported
+  reciprocal forms.
+- Return `Not determined` for unsupported global domain/range while retaining clearly
+  scoped visible-window evidence for intercepts and vertical asymptotes.
+- Correct the specifications and artifact assertions that encoded viewport semantics.
+
+**Tests:**
+- TDD cases for `1/x^2`, `1/(x - 2)`, odd/even reciprocal powers, and unsupported
+  `sin(x^2)` fallback.
+- Mounted artifact and reviewed Graphing raster coverage.
+- Full unit, coverage, Astro, build, Playwright, visual, and production-audit gates.
+
+**Risks & Tradeoffs:**
+- Exact support remains deliberately bounded; unsupported expressions prefer
+  `Not determined` over plausible but false global claims.
+- A reciprocal denominator root is excluded from the domain even when it lies outside
+  the current graph window.
+
+**Status:** In progress.

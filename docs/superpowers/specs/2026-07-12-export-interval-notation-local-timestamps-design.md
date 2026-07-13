@@ -42,19 +42,11 @@ Curated parent functions use their existing structured `Interval` metadata. Exac
 constant, linear, and quadratic analysis creates interval or singleton-set output
 directly. A rounded analytic bound retains its existing `Approx.` confidence label.
 
-Numerical fallback remains explicitly limited to the visible window:
-
-- a function sampled as defined across the full x-window reports an approximate
-  closed interval using the visible x bounds;
-- detected vertical asymptotes split that visible domain into interval pieces with
-  open endpoints at the approximate asymptote positions;
-- sampled range reports an approximate closed interval from the observed minimum to
-  maximum;
-- every numerical result remains prefixed `Approx.` and suffixed
-  `in visible window`.
-
-If reliable interval endpoints cannot be determined, the existing `Not determined`
-state remains unchanged. Properties proven not applicable remain omitted.
+Numerical viewport sampling does not produce domain or range. Those are global
+properties, so an expression outside exact global-analysis support renders
+`Not determined` for both. Sampling remains available for visible-window intercept and
+vertical-asymptote evidence, with every numerical result prefixed `Approx.` and
+suffixed `in visible window`. Properties proven not applicable remain omitted.
 
 ## Local Filename Timestamp
 
@@ -110,8 +102,8 @@ Strict Red -> Green -> Refactor applies.
 
 1. Exact Graphing Calculator domain and range facts use interval notation where
    appropriate and singleton-set notation for constants.
-2. Approximate domain and range facts use interval notation, `Approx.`, and visible
-   window scope.
+2. Unsupported global domain and range facts render `Not determined`; they are never
+   inferred from viewport bounds or sampled extrema.
 3. Intercepts, asymptotes, omission rules, and `Not determined` behavior are preserved.
 4. Every supported PNG and PDF filename includes the user's local date and time
    through seconds in a portable 24-hour format.
