@@ -111,4 +111,4 @@
 - [x] Run `npm run test:coverage`, remove `coverage/`, `npx astro check`, `npm run build`, `npm run test:e2e`, and `npm audit --omit=dev`.
 - [x] Mark spec/TODO/plan complete with exact results and append `SUMMARY.md`.
 - [x] Commit `docs(details): record live and export parity verification`.
-- [ ] Push `feature/graph-result-export`; verify clean status and matching local/upstream SHA.
+- [x] Push `feature/graph-result-export`; verify clean status and matching local/upstream SHA.
