@@ -4,6 +4,11 @@ import { parentDetails } from '@/scripts/explorer/details';
 import { classifyEndBehavior, findVerticalAsymptotes } from '@/scripts/explorer/limits';
 import { PARENTS } from '@/scripts/explorer/parents';
 import { formatNumber } from './hover';
+import {
+  formatClosedInterval,
+  formatIntervalNotation,
+  formatVisibleDomainInterval,
+} from './interval-notation';
 import { bisect, evalAt, type Window2D } from './math';
 
 export type AnalysisValue =
@@ -65,8 +70,8 @@ function exactParentAnalysis(expression: string): FunctionAnalysis | null {
     return EXACT(value);
   };
   return {
-    domain: convert(details.domain),
-    range: convert(details.range),
+    domain: EXACT(formatIntervalNotation(parent.props.domain)),
+    range: EXACT(formatIntervalNotation(parent.props.range)),
     xIntercepts: convert(details.xIntercepts),
     yIntercept: convert(details.yIntercept),
     verticalAsymptotes: convert(details.verticalAsymptote),
@@ -163,15 +168,17 @@ function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
   }
 
   const [c = 0, b = 0, a = 0] = coefficients;
-  let range: AnalysisValue = EXACT('all real numbers');
+  let range: AnalysisValue = EXACT('(-∞, ∞)');
   if (coefficients.length === 1) {
-    range = formattedPolynomialValue(c, `y = ${formatNumber(c)}`);
+    range = formattedPolynomialValue(c, `{${formatNumber(c)}}`);
   }
   if (coefficients.length === 3) {
     const vertexY = c - (b * b) / (4 * a);
     range = formattedPolynomialValue(
       vertexY,
-      `y ${a > 0 ? '≥' : '≤'} ${formatNumber(vertexY)}`,
+      a > 0
+        ? `[${formatNumber(vertexY)}, ∞)`
+        : `(-∞, ${formatNumber(vertexY)}]`,
     );
   }
 
@@ -199,7 +206,7 @@ function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
       : NOT_APPLICABLE;
 
   return {
-    domain: EXACT('all real numbers'),
+    domain: EXACT('(-∞, ∞)'),
     range,
     xIntercepts,
     yIntercept: formattedPolynomialValue(c, `y = ${formatNumber(c)}`),
@@ -286,11 +293,11 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
   }
 
   const vertical = findVerticalAsymptotes(expression, window);
-  const domain = vertical.length
-    ? `defined except near ${vertical.map((wall) => `x = ${formatNumber(wall.x)}`).join(', ')} in visible window`
+  const domainInterval = vertical.length
+    ? formatVisibleDomainInterval(window, vertical.map((wall) => wall.x))
     : finite.length === samples.length
-      ? 'defined across visible window'
-      : `defined from approximately x = ${formatNumber(finite[0].x)} to x = ${formatNumber(finite.at(-1)?.x ?? finite[0].x)} in visible window`;
+      ? formatClosedInterval(window.xMin, window.xMax)
+      : formatClosedInterval(finite[0].x, finite.at(-1)?.x ?? finite[0].x);
   const ys = finite.map((sample) => sample.y);
   const roots = approximateRoots(
     expression,
@@ -301,9 +308,9 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
   const yAtZero = evalAt(expression, 0);
 
   return {
-    domain: APPROXIMATE(domain),
+    domain: APPROXIMATE(`${domainInterval} in visible window`),
     range: APPROXIMATE(
-      `y from ${formatNumber(Math.min(...ys))} to ${formatNumber(Math.max(...ys))} in visible window`,
+      `${formatClosedInterval(Math.min(...ys), Math.max(...ys))} in visible window`,
     ),
     xIntercepts: roots.length
       ? APPROXIMATE(

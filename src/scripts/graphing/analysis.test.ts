@@ -9,8 +9,8 @@ describe('graphing function analysis', () => {
     const analysis = analyzeFunction('x^2', WINDOW);
 
     expect(analysis).toEqual({
-      domain: { kind: 'exact', value: 'all real numbers' },
-      range: { kind: 'exact', value: 'y ≥ 0' },
+      domain: { kind: 'exact', value: '(-∞, ∞)' },
+      range: { kind: 'exact', value: '[0, ∞)' },
       xIntercepts: { kind: 'exact', value: 'x = 0' },
       yIntercept: { kind: 'exact', value: 'y = 0' },
       verticalAsymptotes: { kind: 'not-applicable' },
@@ -18,8 +18,8 @@ describe('graphing function analysis', () => {
     });
 
     expect(functionAnalysisFacts(analysis)).toEqual([
-      { label: 'Domain', value: 'all real numbers' },
-      { label: 'Range', value: 'y ≥ 0' },
+      { label: 'Domain', value: '(-∞, ∞)' },
+      { label: 'Range', value: '[0, ∞)' },
       { label: 'x-intercepts', value: 'x = 0' },
       { label: 'y-intercept', value: 'y = 0' },
     ]);
@@ -28,8 +28,8 @@ describe('graphing function analysis', () => {
   it('omits proven-missing intercepts while retaining reciprocal asymptotes', () => {
     const analysis = analyzeFunction('1/x', WINDOW);
 
-    expect(analysis.domain).toEqual({ kind: 'exact', value: 'x ≠ 0' });
-    expect(analysis.range).toEqual({ kind: 'exact', value: 'y ≠ 0' });
+    expect(analysis.domain).toEqual({ kind: 'exact', value: '(-∞, 0) ∪ (0, ∞)' });
+    expect(analysis.range).toEqual({ kind: 'exact', value: '(-∞, 0) ∪ (0, ∞)' });
     expect(analysis.xIntercepts).toEqual({ kind: 'not-applicable' });
     expect(analysis.yIntercept).toEqual({ kind: 'not-applicable' });
     expect(analysis.verticalAsymptotes).toEqual({ kind: 'exact', value: 'x = 0' });
@@ -39,8 +39,8 @@ describe('graphing function analysis', () => {
   it('analyzes an expanded or factored quadratic exactly', () => {
     const analysis = analyzeFunction('(x - 2)^2 - 4', WINDOW);
 
-    expect(analysis.domain).toEqual({ kind: 'exact', value: 'all real numbers' });
-    expect(analysis.range).toEqual({ kind: 'exact', value: 'y ≥ -4' });
+    expect(analysis.domain).toEqual({ kind: 'exact', value: '(-∞, ∞)' });
+    expect(analysis.range).toEqual({ kind: 'exact', value: '[-4, ∞)' });
     expect(analysis.xIntercepts).toEqual({ kind: 'exact', value: 'x = 0, x = 4' });
     expect(analysis.yIntercept).toEqual({ kind: 'exact', value: 'y = 0' });
     expect(analysis.verticalAsymptotes).toEqual({ kind: 'not-applicable' });
@@ -50,8 +50,8 @@ describe('graphing function analysis', () => {
   it('labels polynomial values approximate when display rounding loses exactness', () => {
     const analysis = analyzeFunction('x^2 - 2', WINDOW);
 
-    expect(analysis.domain).toEqual({ kind: 'exact', value: 'all real numbers' });
-    expect(analysis.range).toEqual({ kind: 'exact', value: 'y ≥ -2' });
+    expect(analysis.domain).toEqual({ kind: 'exact', value: '(-∞, ∞)' });
+    expect(analysis.range).toEqual({ kind: 'exact', value: '[-2, ∞)' });
     expect(analysis.xIntercepts).toEqual({
       kind: 'approximate',
       value: 'x = -1.414, x = 1.414',
@@ -65,8 +65,16 @@ describe('graphing function analysis', () => {
   it('does not erase a small nonzero polynomial coefficient', () => {
     const analysis = analyzeFunction('1e-12*x', WINDOW);
 
-    expect(analysis.range).toEqual({ kind: 'exact', value: 'all real numbers' });
+    expect(analysis.range).toEqual({ kind: 'exact', value: '(-∞, ∞)' });
     expect(analysis.xIntercepts).toEqual({ kind: 'exact', value: 'x = 0' });
+  });
+
+  it('uses singleton and bounded interval notation where appropriate', () => {
+    expect(analyzeFunction('3', WINDOW).range).toEqual({ kind: 'exact', value: '{3}' });
+    expect(analyzeFunction('sin(x)', WINDOW).range).toEqual({
+      kind: 'exact',
+      value: '[-1, 1]',
+    });
   });
 
   it('clearly labels visible-window approximations for an unsupported rational form', () => {
@@ -75,6 +83,10 @@ describe('graphing function analysis', () => {
 
     expect(analysis.domain.kind).toBe('approximate');
     expect(analysis.range.kind).toBe('approximate');
+    expect(analysis.domain).toEqual({
+      kind: 'approximate',
+      value: '[-4, 2) ∪ (2, 4] in visible window',
+    });
     expect(analysis.xIntercepts).toEqual({ kind: 'not-determined' });
     expect(analysis.yIntercept).toEqual({
       kind: 'approximate',
@@ -103,9 +115,12 @@ describe('graphing function analysis', () => {
 
     expect(analysis.domain).toEqual({
       kind: 'approximate',
-      value: 'defined across visible window',
+      value: '[-4, 4] in visible window',
     });
-    expect(analysis.range.kind).toBe('approximate');
+    expect(analysis.range).toEqual({
+      kind: 'approximate',
+      value: '[-1, 1] in visible window',
+    });
     expect(analysis.xIntercepts.kind).toBe('approximate');
     if (analysis.xIntercepts.kind !== 'approximate') {
       throw new Error('Expected approximate x-intercepts');

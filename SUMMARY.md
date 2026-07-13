@@ -1955,3 +1955,22 @@ the existing explicit review command.
 - TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
 - Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
 - Plan: docs/superpowers/plans/2026-07-12-export-interval-notation-local-timestamps.md
+## [2026-07-12 18:29] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graph export interval notation
+
+**Summary:**
+Added a pure structured interval formatter for all-real, bounded, excluded-point,
+between, closed sampled, and visible-domain union notation. Integrated it into exact
+parent and polynomial analysis plus approximate visible-window domain/range facts,
+while preserving intercept, asymptote, omission, and confidence behavior.
+
+**Rationale:**
+Formatting structured sets avoids fragile inequality string parsing and prevents a
+finite sampled interval from being confused with a proven global domain. Singleton
+polynomial ranges use set notation because a single value is not an interval.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Plan: Task 1

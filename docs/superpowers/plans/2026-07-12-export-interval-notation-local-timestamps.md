@@ -36,7 +36,7 @@
 - Produces: `formatClosedInterval(lo: number, hi: number): string`.
 - Produces: `formatVisibleDomainInterval(window: Window2D, exclusions: number[]): string`.
 
-- [ ] **Step 1: Write failing formatter tests**
+- [x] **Step 1: Write failing formatter tests**
 
 Add tests covering the complete structured interval vocabulary:
 
@@ -51,25 +51,25 @@ expect(formatVisibleDomainInterval(WINDOW, [2])).toBe('[-4, 2) ∪ (2, 4]');
 expect(formatClosedInterval(-0.9998, 1)).toBe('[-1, 1]');
 ```
 
-- [ ] **Step 2: Run the formatter test and verify RED**
+- [x] **Step 2: Run the formatter test and verify RED**
 
 Run: `npx vitest run src/scripts/graphing/interval-notation.test.ts`
 
 Expected: FAIL because `interval-notation.ts` does not exist.
 
-- [ ] **Step 3: Implement the pure formatter**
+- [x] **Step 3: Implement the pure formatter**
 
 Create exhaustive `switch` formatting over `Interval`. Sort and de-duplicate visible
 exclusions, retain closed brackets at visible window edges, use open parentheses at
 excluded asymptotes, and join multiple pieces with ` ∪ `.
 
-- [ ] **Step 4: Run the formatter test and verify GREEN**
+- [x] **Step 4: Run the formatter test and verify GREEN**
 
 Run: `npx vitest run src/scripts/graphing/interval-notation.test.ts`
 
 Expected: all interval formatter tests pass.
 
-- [ ] **Step 5: Write failing graph-analysis expectations**
+- [x] **Step 5: Write failing graph-analysis expectations**
 
 Update analysis tests to require:
 
@@ -87,13 +87,13 @@ expect(analyzeFunction('1/(x - 2)', WINDOW).domain)
 Also require sampled range to match `[...] in visible window` and preserve existing
 intercept/asymptote facts.
 
-- [ ] **Step 6: Run analysis tests and verify RED**
+- [x] **Step 6: Run analysis tests and verify RED**
 
 Run: `npx vitest run src/scripts/graphing/analysis.test.ts`
 
 Expected: failures show the existing prose/inequality domain and range values.
 
-- [ ] **Step 7: Integrate interval notation into graph analysis**
+- [x] **Step 7: Integrate interval notation into graph analysis**
 
 For curated parents, format `parent.props.domain` and `parent.props.range` directly,
 while retaining `parentDetails(parent)` for intercepts and asymptotes. For polynomials:
@@ -111,7 +111,7 @@ For numerical fallback, use `formatVisibleDomainInterval` with detected vertical
 asymptotes and `formatClosedInterval` with sampled y-extrema, retaining `Approx.` and
 `in visible window` through the existing fact mapper.
 
-- [ ] **Step 8: Run focused and complete unit tests**
+- [x] **Step 8: Run focused and complete unit tests**
 
 Run: `npx vitest run src/scripts/graphing/interval-notation.test.ts src/scripts/graphing/analysis.test.ts`
 
@@ -119,7 +119,7 @@ Then run: `npm run test:coverage`
 
 Expected: all tests pass and changed-code aggregate coverage remains at least 80%.
 
-- [ ] **Step 9: Document and commit Task 1**
+- [x] **Step 9: Document and commit Task 1**
 
 Append `SUMMARY.md`, remove generated `coverage/`, stage only Task 1 files, and commit:
 

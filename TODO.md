@@ -540,4 +540,5 @@ filename.
 - Seconds reduce but do not eliminate collisions from repeated downloads.
 - Multi-interval domains must wrap within the fixed artifact width.
 
-**Status:** Design approved; implementation plan written; implementation pending.
+**Status:** In progress. Structured exact and visible-window interval notation is
+implemented under TDD; local filename timestamps and final artifact verification remain.
