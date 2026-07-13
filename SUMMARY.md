@@ -2237,3 +2237,20 @@ the visual layout while explicitly isolating export composition and mathematical
 **References:**
 - TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
 - Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+## [2026-07-12 20:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details placement plan
+
+**Summary:**
+Added the TDD implementation plan for moving all three live Function Details regions
+into their approved left-column positions while preserving export artifacts.
+
+**Rationale:**
+DOM ancestry and sibling-order assertions directly protect both visible placement and
+accessible reading order; unchanged visual export baselines protect the scope boundary.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
