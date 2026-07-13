@@ -125,6 +125,7 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
     expect(snapshot.text).toContain('x-interceptsx = 0');
     expect(snapshot.text).toContain('y-intercepty = 0');
     expect(snapshot.text).not.toContain('Graph information');
+    expect(snapshot.text).not.toContain('asymptote');
     expect(snapshot.functionDetails).toBe('4px solid rgb(96, 165, 250)');
     expect(snapshot.rows).toBe(9);
     expect(snapshot.controls).toBe(0);
@@ -144,6 +145,47 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
   expect(pdfBytes.toString('latin1')).toMatch(
     /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
   );
+});
+
+test('exports separate color-owned details for duplicate equations', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const detailSections = artifact.locator('[data-export-section]');
+    await expect(detailSections).toHaveCount(2);
+    const sections = await detailSections.evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        id: node.getAttribute('data-export-section'),
+        borderLeft: node instanceof HTMLElement ? node.style.borderLeft : '',
+      })),
+    );
+
+    expect(sections).toEqual([
+      { id: expect.any(String), borderLeft: '4px solid rgb(96, 165, 250)' },
+      { id: expect.any(String), borderLeft: '4px solid rgb(248, 113, 113)' },
+    ]);
+    expect(new Set(sections.map((section) => section.id)).size).toBe(2);
+  });
+});
+
+test('exports visible-window approximation and unresolved states', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('sin(x^2)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.textContent();
+
+    expect(text).toContain('DomainApprox. defined across visible window');
+    expect(text).toContain('RangeApprox.');
+    expect(text).toContain('in visible window');
+    expect(text).toContain('Vertical asymptotesNot determined');
+    expect(text).toContain('Horizontal asymptotesNot determined');
+  });
 });
 
 test('keeps graph export available for a wide window', async ({ page }) => {

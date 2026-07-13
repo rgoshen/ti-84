@@ -1873,3 +1873,29 @@ are exported, while omitted and not-determined states avoid misleading `N/A` row
 **References:**
 - TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
 - Plan: Tasks 2 and 3
+
+## [2026-07-12 18:01] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph export Function Details confidence
+
+**Summary:**
+Prevented discontinuities from being reported as numerical x-intercepts by excluding
+detected asymptote intervals and verifying each bisection result against the function.
+Changed polynomial properties from exact to approximate whenever three-decimal display
+rounding loses information, retained legitimate small coefficients, added required
+visible-window scope, and gave every equation-owned export section a stable ID.
+
+**Rationale:**
+Confidence labels are part of the mathematical result, not presentation decoration.
+Property-level confidence prevents a structurally analyzable polynomial from making an
+incorrect exact-value claim, while root verification distinguishes zero crossings from
+sign changes caused by poles. Stable IDs preserve color ownership for duplicate plots.
+
+**Bug Fix Context:**
+The spec-gap audit reproduced `1/(x - 2.0013)` as a false x-intercept and identified
+that `x^2 - 2` rendered `±1.414` without an approximation label.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Tasks 1 through 3

@@ -24,6 +24,7 @@ const MUTED = '#64748b';
 function InformationSection({ section }: { section: ExportSection }): React.JSX.Element {
   return (
     <section
+      data-export-section={section.id}
       style={{
         padding: 16,
         border: `1px solid ${BORDER}`,
@@ -186,8 +187,11 @@ export default function ExportArtifact({
             marginTop: 24,
           }}
         >
-          {model.sections.slice(1).map((section) => (
-            <InformationSection key={section.title} section={section} />
+          {model.sections.slice(1).map((section, index) => (
+            <InformationSection
+              key={section.id ?? `${section.title}-${index}`}
+              section={section}
+            />
           ))}
         </div>
       ) : null}

@@ -61,9 +61,13 @@ Function Details use a structured result state for every property:
 Exact analysis supports the curated parent catalog (`x`, `x^2`, `sqrt(x)`, `x^3`,
 `cbrt(x)`, `1/x`, `abs(x)`, `exp(x)`, `log(x)`, `sin(x)`, and `cos(x)`) plus constant,
 linear, and quadratic polynomial expressions recognized from the `mathjs` syntax tree.
+If displaying an analytically derived polynomial value requires decimal rounding, that
+property is downgraded to `approximate` rather than displaying a rounded value as exact.
 Other valid expressions use deterministic sampling across the visible x-window,
 existing bisection for intercepts, existing divergence checks for vertical asymptotes,
-and existing end-behavior classification for possible horizontal asymptotes.
+and existing end-behavior classification for possible horizontal asymptotes. A
+numerical intercept candidate must not cross a detected vertical asymptote and must
+evaluate within the root tolerance before it can be reported.
 
 The prior `Graph information` panel containing x-range, y-range, and function count is
 removed. Window bounds remain concise export metadata in the artifact header.

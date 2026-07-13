@@ -23,6 +23,7 @@ export interface ExportFact {
 }
 
 export interface ExportSection {
+  id?: string;
   title: string;
   color?: string;
   facts: ExportFact[];

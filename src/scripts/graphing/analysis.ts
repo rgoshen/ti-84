@@ -36,6 +36,8 @@ interface MathNodeLike {
 }
 
 const EPS = 1e-9;
+const POLYNOMIAL_EPS = Number.EPSILON * 16;
+const ROOT_VALUE_TOLERANCE = 1e-6;
 const SAMPLE_COUNT = 2000;
 const EXACT = (value: string): AnalysisValue => ({ kind: 'exact', value });
 const APPROXIMATE = (value: string): AnalysisValue => ({ kind: 'approximate', value });
@@ -74,8 +76,10 @@ function exactParentAnalysis(expression: string): FunctionAnalysis | null {
 
 function trimPolynomial(coefficients: number[]): number[] {
   const result = [...coefficients];
-  while (result.length > 1 && Math.abs(result[result.length - 1]) < EPS) result.pop();
-  return result.map((value) => (Math.abs(value) < EPS ? 0 : value));
+  while (result.length > 1 && Math.abs(result[result.length - 1]) <= POLYNOMIAL_EPS) {
+    result.pop();
+  }
+  return result.map((value) => (Math.abs(value) <= POLYNOMIAL_EPS ? 0 : value));
 }
 
 function addPolynomials(left: number[], right: number[], sign = 1): number[] {
@@ -115,7 +119,7 @@ function polynomialCoefficients(node: MathNodeLike): number[] | null {
   if (node.op === '+') return addPolynomials(first, second);
   if (node.op === '-') return addPolynomials(first, second, -1);
   if (node.op === '*') return multiplyPolynomials(first, second);
-  if (node.op === '/' && second.length === 1 && Math.abs(second[0]) >= EPS) {
+  if (node.op === '/' && second.length === 1 && Math.abs(second[0]) > POLYNOMIAL_EPS) {
     return first.map((value) => value / second[0]);
   }
   if (node.op === '^' && second.length === 1 && Number.isInteger(second[0])) {
@@ -132,6 +136,21 @@ function polynomialCoefficients(node: MathNodeLike): number[] | null {
   return null;
 }
 
+function formattedPolynomialValue(value: number, formatted: string): AnalysisValue {
+  const displayed = Number(formatNumber(value));
+  return Math.abs(displayed - value) <= POLYNOMIAL_EPS
+    ? EXACT(formatted)
+    : APPROXIMATE(formatted);
+}
+
+function formattedPolynomialValues(values: number[], formatted: string): AnalysisValue {
+  return values.every(
+    (value) => Math.abs(Number(formatNumber(value)) - value) <= POLYNOMIAL_EPS,
+  )
+    ? EXACT(formatted)
+    : APPROXIMATE(formatted);
+}
+
 function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
   let coefficients: number[];
   try {
@@ -144,21 +163,26 @@ function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
   }
 
   const [c = 0, b = 0, a = 0] = coefficients;
-  let range = 'all real numbers';
-  if (coefficients.length === 1) range = `y = ${formatNumber(c)}`;
+  let range: AnalysisValue = EXACT('all real numbers');
+  if (coefficients.length === 1) {
+    range = formattedPolynomialValue(c, `y = ${formatNumber(c)}`);
+  }
   if (coefficients.length === 3) {
     const vertexY = c - (b * b) / (4 * a);
-    range = `y ${a > 0 ? '≥' : '≤'} ${formatNumber(vertexY)}`;
+    range = formattedPolynomialValue(
+      vertexY,
+      `y ${a > 0 ? '≥' : '≤'} ${formatNumber(vertexY)}`,
+    );
   }
 
   let roots: number[] = [];
   let infiniteRoots = false;
-  if (coefficients.length === 1) infiniteRoots = Math.abs(c) < EPS;
+  if (coefficients.length === 1) infiniteRoots = Math.abs(c) <= POLYNOMIAL_EPS;
   if (coefficients.length === 2) roots = [-c / b];
   if (coefficients.length === 3) {
     const discriminant = b * b - 4 * a * c;
-    if (Math.abs(discriminant) < EPS) roots = [-b / (2 * a)];
-    if (discriminant > EPS) {
+    if (Math.abs(discriminant) <= POLYNOMIAL_EPS) roots = [-b / (2 * a)];
+    if (discriminant > POLYNOMIAL_EPS) {
       const squareRoot = Math.sqrt(discriminant);
       roots = [(-b - squareRoot) / (2 * a), (-b + squareRoot) / (2 * a)];
     }
@@ -168,14 +192,17 @@ function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
   const xIntercepts = infiniteRoots
     ? EXACT('infinitely many')
     : roots.length
-      ? EXACT(roots.map((root) => `x = ${formatNumber(root)}`).join(', '))
+      ? formattedPolynomialValues(
+          roots,
+          roots.map((root) => `x = ${formatNumber(root)}`).join(', '),
+        )
       : NOT_APPLICABLE;
 
   return {
     domain: EXACT('all real numbers'),
-    range: EXACT(range),
+    range,
     xIntercepts,
-    yIntercept: EXACT(`y = ${formatNumber(c)}`),
+    yIntercept: formattedPolynomialValue(c, `y = ${formatNumber(c)}`),
     verticalAsymptotes: NOT_APPLICABLE,
     horizontalAsymptotes: NOT_APPLICABLE,
   };
@@ -193,6 +220,7 @@ function approximateRoots(
   expression: string,
   samples: Array<{ x: number; y: number | null }>,
   window: Window2D,
+  verticalAsymptotes: number[],
 ): number[] {
   const roots: number[] = [];
   const tolerance = Math.max((window.xMax - window.xMin) / SAMPLE_COUNT, 1e-6);
@@ -206,8 +234,15 @@ function approximateRoots(
     if (previous.y === null || current.y === null) continue;
     if (Math.abs(previous.y) < EPS) push(previous.x);
     if (previous.y < 0 !== current.y < 0) {
+      const crossesAsymptote = verticalAsymptotes.some(
+        (x) => x >= previous.x - tolerance && x <= current.x + tolerance,
+      );
+      if (crossesAsymptote) continue;
       const root = bisect(expression, 0, previous.x, current.x);
-      if (root !== null) push(root);
+      const rootValue = root === null ? null : evalAt(expression, root);
+      if (root !== null && rootValue !== null && Math.abs(rootValue) <= ROOT_VALUE_TOLERANCE) {
+        push(root);
+      }
     }
   }
   const last = samples.at(-1);
@@ -257,7 +292,12 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
       ? 'defined across visible window'
       : `defined from approximately x = ${formatNumber(finite[0].x)} to x = ${formatNumber(finite.at(-1)?.x ?? finite[0].x)} in visible window`;
   const ys = finite.map((sample) => sample.y);
-  const roots = approximateRoots(expression, samples, window);
+  const roots = approximateRoots(
+    expression,
+    samples,
+    window,
+    vertical.map((wall) => wall.x),
+  );
   const yAtZero = evalAt(expression, 0);
 
   return {
@@ -271,9 +311,13 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
         )
       : NOT_DETERMINED,
     yIntercept:
-      yAtZero === null ? NOT_APPLICABLE : APPROXIMATE(`y = ${formatNumber(yAtZero)}`),
+      yAtZero === null
+        ? NOT_APPLICABLE
+        : APPROXIMATE(`y = ${formatNumber(yAtZero)} in visible window`),
     verticalAsymptotes: vertical.length
-      ? APPROXIMATE(vertical.map((wall) => `x = ${formatNumber(wall.x)}`).join(', '))
+      ? APPROXIMATE(
+          `${vertical.map((wall) => `x = ${formatNumber(wall.x)}`).join(', ')} in visible window`,
+        )
       : NOT_DETERMINED,
     horizontalAsymptotes: approximateHorizontalAsymptotes(expression),
   };

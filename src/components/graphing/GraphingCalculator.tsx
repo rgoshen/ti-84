@@ -305,6 +305,7 @@ export default function GraphingCalculator(): React.JSX.Element {
             : 'Points hidden',
         })),
         sections: snapshotEquations.map((equation) => ({
+          id: equation.id,
           title: `Function details · y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
           facts: functionAnalysisFacts(analyzeFunction(equation.expr, snapshotWindow)),

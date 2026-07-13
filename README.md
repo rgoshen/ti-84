@@ -66,9 +66,10 @@ light presentation palette even when the site is dark or opened on mobile.
 
 Graphing Calculator exports include one color-coded Function Details section per
 equation. Common parent functions and constant, linear, or quadratic polynomials show
-exact domain, range, intercept, and applicable asymptote results. Other expressions
-use visible-window numerical analysis labeled `Approx.`, while unreliable properties
-are marked `Not determined` and properties proven not applicable are omitted.
+exact properties where the value can be rendered without loss; rounded derived values
+are labeled `Approx.`. Other expressions use visible-window numerical analysis labeled
+`Approx.`, while unreliable properties are marked `Not determined` and properties
+proven not applicable are omitted.
 
 PNG downloads preserve the wide 1,440px artifact. PDF downloads fit the same content
 within margins on one standard Letter landscape page. The embedded TI-84 does not
