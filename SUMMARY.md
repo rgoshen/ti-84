@@ -2297,3 +2297,48 @@ Export builders were untouched.
 - TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
 - Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
 - Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+
+## [2026-07-12 20:53] Commit Summary
+
+**Change Type:** Fix
+**Scope:** e2e / export visual regression baselines
+
+**Summary:**
+Regenerated the three approved PNG baselines under
+`tests/e2e/__snapshots__/export-visual.spec.ts/` from a Linux/Chromium environment
+matching CI. No application code changed.
+
+**Rationale:**
+PR #9's `ci / verify` job failed all three `export-visual.spec.ts` tests with a
+deterministic ~1% pixel diff (10x the configured `maxDiffPixelRatio: 0.001`), identical
+across every retry. Reproduced the failure locally in the
+`mcr.microsoft.com/playwright:v1.61.1-noble` container (matching the pinned
+`@playwright/test` version and CI's `ubuntu-latest` family) while the same commit
+passed cleanly on macOS. Diff images showed antialiasing noise around every glyph
+across the exported report (headings, table cells, labels) with the plotted
+curve/grid untouched — the signature of cross-platform font rasterization (macOS
+CoreText vs Linux FreeType), not a layout or logic defect. Ruled out a competing
+hypothesis — staleness from the same-day "move live panels into control columns"
+change (13d3760) — by confirming `ExportArtifact.tsx` composes its own independent
+report layout, unaffected by that live-page reorder. Used the project's existing
+`test:e2e:update-snapshots` script inside the Linux container to regenerate baselines
+against the environment that actually gates PRs.
+
+**Bug Fix Context:**
+Root cause: approved snapshots were originally captured on macOS and committed as the
+sole baseline, but CI runs on Ubuntu Linux; Chromium defers glyph rasterization to the
+OS font stack, so the same self-hosted Inter font renders with slightly different
+antialiasing/hinting per platform, exceeding tolerance. Trade-off: running
+`export-visual.spec.ts` alone on macOS will now show the mirrored failure — future
+baseline updates should run via the same Docker image (or in CI), not natively on
+macOS.
+
+**Verification:**
+- Vitest: 178/178 passed (macOS)
+- Playwright full suite: 54 passed / 3 failed as expected on macOS (mirrored platform
+  diff); all 57 passed inside the Linux container
+- Export visuals: 3/3 pass against new baselines inside the Linux container
+
+**References:**
+- PR: #9
+- Workflow: `.github/workflows/_verify.yml` (`ci / verify`)
