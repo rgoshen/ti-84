@@ -612,3 +612,25 @@ interval notation.
 3/3 reviewed export baselines, zero Astro diagnostics, six production pages built,
 85.95% statements / 81.15% branches / 85.79% functions / 88.14% lines, and zero
 production vulnerabilities.
+
+## [2026-07-12] Feature: Interactive Function Details Placement
+
+**Objective:**
+Move live Function Details into the left control column at the user-approved position
+for each graph tool without changing exports or any other behavior.
+
+**Approach:**
+- Move existing JSX mount points without changing their data or presentation logic.
+- Place details after Plotted equations, Animate a limit, and Transform respectively.
+- Preserve export snapshot builders and artifact composition exactly.
+
+**Tests:**
+- Browser DOM-order assertions for all three approved placements.
+- Existing live/export parity coverage, full Playwright, Astro, and read-only export
+  visual verification.
+
+**Risks & Tradeoffs:**
+- The 340px control column requires existing long-value wrapping to remain intact.
+- DOM movement must not accidentally move details into export capture markup.
+
+**Status:** Approved; implementation pending.

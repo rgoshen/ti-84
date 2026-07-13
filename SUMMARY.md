@@ -2221,3 +2221,19 @@ traceable completion record without mixing publication bookkeeping into feature 
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Plan: Task 5
+## [2026-07-12 20:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details placement
+
+**Summary:**
+Documented the approved left-column placement for live Function Details across the
+Graphing Calculator, Function Explorer, and Transformation Explorer.
+
+**Rationale:**
+Treating this as a JSX mount-point change keeps interactive reading order aligned with
+the visual layout while explicitly isolating export composition and mathematical data.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
