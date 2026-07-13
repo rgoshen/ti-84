@@ -87,12 +87,12 @@
 - Produces one local details-entry builder reused for live UI and export.
 - Consumes: `analyzeFunction`, `functionAnalysisFacts`, `explorerColors`, and `FunctionDetailsPanels`.
 
-- [ ] Add failing browser tests: no details before plotting; `1/x^2` live/export fact parity; Current Readout and end-behavior sections remain exported.
-- [ ] Run focused Function Explorer tests and verify missing live/export detail failures.
-- [ ] Memoize live analysis on expression/display window and render below the graph.
-- [ ] Add the same fact entry to export sections without removing supplementary sections.
-- [ ] Run focused unit, Astro, and Function Explorer browser tests until green.
-- [ ] Append `SUMMARY.md` and commit `feat(explorer): share live and exported function details`.
+- [x] Add failing browser tests: no details before plotting; `1/x^2` live/export fact parity; Current Readout and end-behavior sections remain exported.
+- [x] Run focused Function Explorer tests and verify missing live/export detail failures.
+- [x] Memoize live analysis on expression/display window and render below the graph.
+- [x] Add the same fact entry to export sections without removing supplementary sections.
+- [x] Run focused unit, Astro, and Function Explorer browser tests until green.
+- [x] Append `SUMMARY.md` and commit `feat(explorer): share live and exported function details`.
 
 ### Task 5: Visual Approval and Completion
 

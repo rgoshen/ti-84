@@ -2161,3 +2161,20 @@ makes live/export drift structurally harder to introduce.
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Plan: Task 3
+## [2026-07-12 19:48] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer live and exported Function Details
+
+**Summary:**
+Added memoized Function Details below the Function Explorer graph and inserted the
+same entry into its export before the existing readout, asymptote, and guide sections.
+Browser coverage proves the empty state and exact `1/x^2` live/export text parity.
+
+**Rationale:**
+One local builder now owns the analyzed facts for both surfaces, preventing live and
+exported domain, range, intercept, and asymptote information from diverging.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 4

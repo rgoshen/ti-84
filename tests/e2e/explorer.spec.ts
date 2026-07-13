@@ -37,7 +37,14 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
   await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
   await page.goto('/explorers/function');
   await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByTestId('explorer-function-details')).toHaveCount(0);
   await plot(page, '1/x^2');
+
+  const liveDetails = page.getByTestId('explorer-function-details');
+  await expect(liveDetails).toContainText('Function details · f(x) = 1/x²');
+  await expect(liveDetails).toContainText('Domain(-∞, 0) ∪ (0, ∞)');
+  await expect(liveDetails).toContainText('Range(0, ∞)');
+  const liveText = (await liveDetails.textContent()) ?? '';
 
   await page.getByRole('button', { name: 'x → 0⁺' }).click();
   const download = await downloadExport(page, 'PNG', async (artifact) => {
@@ -54,6 +61,8 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
       };
     });
     expect(snapshot.text).toContain('f(x) = 1/x²');
+    expect(snapshot.text).toContain(liveText);
+    expect(snapshot.text).toContain('Current readout');
     expect(snapshot.text).toContain('Asymptotes and end behavior');
     expect(snapshot.rows).toBe(9);
     expect(snapshot.controls).toBe(0);
@@ -113,6 +122,7 @@ test('starts with no function and no point until one is plotted', async ({ page 
   await page.goto('/explorers/function');
   await expect(page.locator(`${PLOT} svg`)).toBeVisible();
   await expect(page.locator(POINT)).toHaveCount(0); // no default function
+  await expect(page.getByTestId('explorer-function-details')).toHaveCount(0);
   await expect(page.getByText('Enter a function to begin')).toBeVisible();
 
   await plot(page, '1/x^2');

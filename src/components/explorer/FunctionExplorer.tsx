@@ -6,6 +6,10 @@ import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/g
 import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
+import FunctionDetailsPanels, {
+  type FunctionDetailsPanelEntry,
+} from '@/components/FunctionDetailsPanels';
+import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
 import {
   renderExplorer,
   pointerToData,
@@ -71,6 +75,23 @@ const windowToFields = (w: Window2D): WindowFields => ({
 
 /** Strip a leading "y =" so "y = 1/x" and "1/x" both work. */
 const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
+
+const buildFunctionDetails = (
+  expression: string,
+  window: Window2D,
+  color: string,
+): FunctionDetailsPanelEntry[] => {
+  if (!expression.trim()) return [];
+
+  return [
+    {
+      id: 'function-explorer-function',
+      title: `Function details · f(x) = ${formatExportEquation(expression)}`,
+      color,
+      facts: functionAnalysisFacts(analyzeFunction(expression, window)),
+    },
+  ];
+};
 
 const prefersReducedMotion = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -148,6 +169,10 @@ export default function FunctionExplorer(): React.JSX.Element {
           ]
         : [],
     [hasFunction, expr, tableXs, dark],
+  );
+  const liveFunctionDetails = useMemo(
+    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve),
+    [expr, displayWindow, dark],
   );
 
   const sweepButtons = useMemo(() => {
@@ -446,6 +471,11 @@ export default function FunctionExplorer(): React.JSX.Element {
     const snapshotReadout = { ...readout };
     const snapshotFx = evalAt(snapshotExpr, snapshotX);
     const lightColors = explorerColors(false);
+    const snapshotDetails = buildFunctionDetails(
+      snapshotExpr,
+      snapshotWindow,
+      lightColors.curve,
+    );
 
     const asymptoteFacts = snapshotAsymptotes.length
       ? snapshotAsymptotes.map((asymptote) => ({
@@ -482,6 +512,7 @@ export default function FunctionExplorer(): React.JSX.Element {
           },
         ],
         sections: [
+          ...snapshotDetails,
           {
             title: 'Current readout',
             facts: [
@@ -712,6 +743,11 @@ export default function FunctionExplorer(): React.JSX.Element {
             style={{ minHeight: 480 }}
           />
         </Card>
+
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="explorer-function-details"
+        />
 
         <ValueTable
           xs={tableXs}
