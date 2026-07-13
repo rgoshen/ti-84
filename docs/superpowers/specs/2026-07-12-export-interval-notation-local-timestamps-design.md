@@ -13,7 +13,8 @@ including the user's current local date and time in every supported export filen
 
 - Change domain and range notation in Graphing Calculator export Function Details.
 - Preserve existing intercept and asymptote notation such as `x = 2` and `y = 0`.
-- Preserve the interactive Transformation Explorer's existing inequality notation.
+- Transformation Explorer interval notation is governed by the later shared live/export
+  Function Details specification.
 - Apply local date-time filenames to PNG and PDF exports from Graphing Calculator,
   Function Explorer, and Transformation Explorer.
 - Keep the embedded TI-84 excluded from exports.

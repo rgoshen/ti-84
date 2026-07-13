@@ -2072,3 +2072,20 @@ scoped viewport evidence so zooming cannot appear to redefine domain or range.
 **References:**
 - TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+## [2026-07-12 19:34] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live and export Function Details
+
+**Summary:**
+Defined the approved shared-data design for live Graphing and Function Explorer detail
+panels plus interval-notation parity across Transformation Explorer live and export
+surfaces. Added exact placement, ownership, accessibility, parity, and test contracts.
+
+**Rationale:**
+All user-visible surfaces must consume the same mathematical result data; sharing only
+visual markup would leave duplicate analysis and allow live/export facts to drift again.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md

@@ -582,3 +582,30 @@ renders `Not determined` for domain/range. Final verification: 176/176 Vitest te
 baselines, zero Astro diagnostics, six production pages built, 86.52% statements /
 81.44% branches / 88.43% functions / 88.87% lines, and zero production
 vulnerabilities. No approved raster baseline changed for this correction.
+## [2026-07-12] Feature: Shared Live and Export Function Details
+
+**Objective:**
+Show Function Details in the interactive Graphing Calculator and Function Explorer,
+and make live/export details across all three graph tools use the same values and proper
+interval notation.
+
+**Approach:**
+- Reuse `analyzeFunction` facts for Graphing Calculator and Function Explorer live and
+  export surfaces.
+- Add compact equation-colored live detail sections after each graph.
+- Change Transformation Explorer's shared structured interval formatter so its live
+  comparison table and export update together.
+- Preserve explorer-specific readouts and custom/degenerate unavailable states.
+
+**Tests:**
+- Unit tests for all Transformation interval shapes and transformed details.
+- Component coverage for live fact presentation and wrapping.
+- Browser live/export parity tests for all three tools, including `1/x^2`.
+- Reviewed raster baselines and full coverage, Astro, build, Playwright, and audit gates.
+
+**Risks & Tradeoffs:**
+- Unsupported visible-fact sampling must be memoized on expression/window changes.
+- Details add page height but must not resize the graph or controls.
+- Custom Transformation functions remain explicitly unavailable.
+
+**Status:** Design approved; implementation plan pending.
