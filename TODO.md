@@ -516,3 +516,28 @@ Playwright tests including 3/3 read-only visual baselines, zero Astro diagnostic
 production pages built, 86.43% statements / 81.56% branches / 89.34% functions /
 89.37% lines, and zero production vulnerabilities. Subsequent actual/diff PNGs remain
 ignored; only the three explicitly reviewed baselines are tracked.
+## [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+
+**Objective:**
+Use standard interval notation for Graphing Calculator export domain/range facts and
+append the user's current local date and time through seconds to every supported export
+filename.
+
+**Approach:**
+- Derive interval notation from structured parent and polynomial analysis rather than
+  presentation-time string replacement.
+- Keep numerical interval claims approximate and scoped to the visible window.
+- Format filenames from local `Date` fields as `YYYY-MM-DD-HHmmss` for PNG and PDF.
+- Preserve existing UI notation outside the Graphing Calculator export.
+
+**Tests:**
+- Unit coverage for exact, excluded, bounded, singleton, and approximate intervals.
+- Local-calendar filename tests plus browser filename assertions for PNG and PDF.
+- Mounted-artifact assertions, reviewed raster baselines, and full verification gates.
+
+**Risks & Tradeoffs:**
+- Numerical intervals remain observations within the visible window, not global proofs.
+- Seconds reduce but do not eliminate collisions from repeated downloads.
+- Multi-interval domains must wrap within the fixed artifact width.
+
+**Status:** Design approved; implementation plan pending.

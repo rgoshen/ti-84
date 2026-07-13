@@ -1917,3 +1917,22 @@ can reproduce the same definition of done.
 **References:**
 - TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
 - Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
+## [2026-07-12 18:16] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export interval notation and filename timestamps
+
+**Summary:**
+Defined the approved contract for interval-notation Graphing Calculator export facts
+and local `YYYY-MM-DD-HHmmss` timestamps on every supported PNG and PDF filename.
+Documented exact, approximate, singleton, excluded-point, and visible-window behavior,
+along with TDD and visual-regression requirements.
+
+**Rationale:**
+Structured interval formatting preserves mathematical meaning and confidence, while
+local calendar fields ensure the saved filename matches the user's date and time rather
+than UTC.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
