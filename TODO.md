@@ -575,4 +575,5 @@ analysis for reciprocal powers such as `1/x^2` and `1/(x - 2)`.
 - A reciprocal denominator root is excluded from the domain even when it lies outside
   the current graph window.
 
-**Status:** In progress.
+**Status:** In progress. Exact reciprocal-power analysis and conservative unsupported
+domain/range fallback are implemented under TDD; final verification remains.

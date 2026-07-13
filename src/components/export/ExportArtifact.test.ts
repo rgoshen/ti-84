@@ -22,8 +22,8 @@ const MODEL: ExportArtifactModel = {
       title: 'Function details · y = x²',
       color: '#2563eb',
       facts: [
-        { label: 'Domain', value: 'all real numbers' },
-        { label: 'Range', value: 'y ≥ 0' },
+        { label: 'Domain', value: '(-∞, ∞)' },
+        { label: 'Range', value: '[0, ∞)' },
       ],
     },
     {

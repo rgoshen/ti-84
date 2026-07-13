@@ -184,11 +184,28 @@ test('exports visible-window approximation and unresolved states', async ({ page
   await downloadExport(page, 'PNG', async (artifact) => {
     const text = await artifact.textContent();
 
-    expect(text).toContain('DomainApprox. [-10, 10] in visible window');
-    expect(text).toContain('RangeApprox.');
+    expect(text).toContain('DomainNot determined');
+    expect(text).toContain('RangeNot determined');
     expect(text).toContain('in visible window');
     expect(text).toContain('Vertical asymptotesNot determined');
     expect(text).toContain('Horizontal asymptotesNot determined');
+  });
+});
+
+test('exports exact global details for an even reciprocal power', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('1/x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.textContent();
+
+    expect(text).toContain('Domain(-∞, 0) ∪ (0, ∞)');
+    expect(text).toContain('Range(0, ∞)');
+    expect(text).toContain('Vertical asymptotesx = 0');
+    expect(text).toContain('Horizontal asymptotesy = 0');
+    expect(text).not.toContain('x-intercepts');
+    expect(text).not.toContain('y-intercept');
   });
 });
 

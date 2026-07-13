@@ -5,9 +5,7 @@ import { classifyEndBehavior, findVerticalAsymptotes } from '@/scripts/explorer/
 import { PARENTS } from '@/scripts/explorer/parents';
 import { formatNumber } from './hover';
 import {
-  formatClosedInterval,
   formatIntervalNotation,
-  formatVisibleDomainInterval,
 } from './interval-notation';
 import { bisect, evalAt, type Window2D } from './math';
 
@@ -215,6 +213,88 @@ function exactPolynomialAnalysis(expression: string): FunctionAnalysis | null {
   };
 }
 
+interface ReciprocalLinearPower {
+  numerator: number;
+  linearConstant: number;
+  linearCoefficient: number;
+  exponent: number;
+}
+
+function reciprocalLinearPower(node: MathNodeLike): ReciprocalLinearPower | null {
+  if (node.type !== 'OperatorNode' || node.op !== '/' || node.args?.length !== 2) {
+    return null;
+  }
+
+  const numerator = polynomialCoefficients(node.args[0]);
+  if (!numerator || numerator.length !== 1 || Math.abs(numerator[0]) <= POLYNOMIAL_EPS) {
+    return null;
+  }
+
+  let base = node.args[1];
+  let exponent = 1;
+  if (base.type === 'OperatorNode' && base.op === '^' && base.args?.length === 2) {
+    const exponentValue = polynomialCoefficients(base.args[1]);
+    if (
+      !exponentValue ||
+      exponentValue.length !== 1 ||
+      !Number.isInteger(exponentValue[0]) ||
+      exponentValue[0] <= 0
+    ) {
+      return null;
+    }
+    exponent = exponentValue[0];
+    base = base.args[0];
+  }
+
+  const linear = polynomialCoefficients(base);
+  if (!linear || linear.length !== 2 || Math.abs(linear[1]) <= POLYNOMIAL_EPS) {
+    return null;
+  }
+
+  return {
+    numerator: numerator[0],
+    linearConstant: linear[0],
+    linearCoefficient: linear[1],
+    exponent,
+  };
+}
+
+function exactReciprocalPowerAnalysis(expression: string): FunctionAnalysis | null {
+  let reciprocal: ReciprocalLinearPower | null;
+  try {
+    reciprocal = reciprocalLinearPower(parse(expression) as unknown as MathNodeLike);
+  } catch {
+    return null;
+  }
+  if (!reciprocal) return null;
+
+  const { numerator, linearConstant, linearCoefficient, exponent } = reciprocal;
+  const excludedX = -linearConstant / linearCoefficient;
+  const domainText = formatIntervalNotation({ kind: 'exclude', value: excludedX });
+  const range = exponent % 2 === 1
+    ? EXACT('(-∞, 0) ∪ (0, ∞)')
+    : EXACT(numerator > 0 ? '(0, ∞)' : '(-∞, 0)');
+  const denominatorAtZero = linearConstant ** exponent;
+  const yIntercept = Math.abs(denominatorAtZero) <= POLYNOMIAL_EPS
+    ? NOT_APPLICABLE
+    : formattedPolynomialValue(
+        numerator / denominatorAtZero,
+        `y = ${formatNumber(numerator / denominatorAtZero)}`,
+      );
+
+  return {
+    domain: formattedPolynomialValue(excludedX, domainText),
+    range,
+    xIntercepts: NOT_APPLICABLE,
+    yIntercept,
+    verticalAsymptotes: formattedPolynomialValue(
+      excludedX,
+      `x = ${formatNumber(excludedX)}`,
+    ),
+    horizontalAsymptotes: EXACT('y = 0'),
+  };
+}
+
 function sampleExpression(expression: string, window: Window2D): Array<{ x: number; y: number | null }> {
   const width = window.xMax - window.xMin;
   return Array.from({ length: SAMPLE_COUNT + 1 }, (_, index) => {
@@ -293,12 +373,6 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
   }
 
   const vertical = findVerticalAsymptotes(expression, window);
-  const domainInterval = vertical.length
-    ? formatVisibleDomainInterval(window, vertical.map((wall) => wall.x))
-    : finite.length === samples.length
-      ? formatClosedInterval(window.xMin, window.xMax)
-      : formatClosedInterval(finite[0].x, finite.at(-1)?.x ?? finite[0].x);
-  const ys = finite.map((sample) => sample.y);
   const roots = approximateRoots(
     expression,
     samples,
@@ -308,10 +382,8 @@ function approximateAnalysis(expression: string, window: Window2D): FunctionAnal
   const yAtZero = evalAt(expression, 0);
 
   return {
-    domain: APPROXIMATE(`${domainInterval} in visible window`),
-    range: APPROXIMATE(
-      `${formatClosedInterval(Math.min(...ys), Math.max(...ys))} in visible window`,
-    ),
+    domain: NOT_DETERMINED,
+    range: NOT_DETERMINED,
     xIntercepts: roots.length
       ? APPROXIMATE(
           `${roots.map((root) => `x = ${formatNumber(root)}`).join(', ')} in visible window`,
@@ -334,6 +406,7 @@ export function analyzeFunction(expression: string, window: Window2D): FunctionA
   return (
     exactParentAnalysis(expression) ??
     exactPolynomialAnalysis(expression) ??
+    exactReciprocalPowerAnalysis(expression) ??
     approximateAnalysis(expression, window)
   );
 }

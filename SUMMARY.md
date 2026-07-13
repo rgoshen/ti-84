@@ -2033,3 +2033,26 @@ mathematically incorrect report facts for expressions outside exact analysis sup
 **References:**
 - TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
 - Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+## [2026-07-12 19:03] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph function global analysis
+
+**Summary:**
+Added exact analysis for nonzero constants divided by positive integer powers of a
+linear expression. Reciprocal domains now exclude the denominator root globally,
+range follows odd/even power parity and numerator sign, and intercept/asymptote facts
+are exact when losslessly displayable. Unsupported fallback now returns
+`Not determined` for domain/range instead of sampled viewport bounds.
+
+**Rationale:**
+Domain and range are global set properties. Viewport sampling cannot establish either,
+whereas the supported reciprocal form has a small exact algebraic solution.
+
+**Bug Fix Context:**
+`1/x^2` previously reported `[-4, 0) ∪ (0, 4]` and a sampled y-range for a
+`[-4, 4]` window. It now reports domain `(-∞, 0) ∪ (0, ∞)` and range
+`(0, ∞)` independently of the current graph window.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
