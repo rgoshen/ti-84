@@ -100,7 +100,7 @@ append SUMMARY, then commit:
 git commit -m "fix(details): move live panels into control columns"
 ```
 
-- [ ] **Step 7: Push and verify publication**
+- [x] **Step 7: Push and verify publication**
 
 ```bash
 git push origin feature/graph-result-export

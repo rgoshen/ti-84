@@ -2254,6 +2254,22 @@ accessible reading order; unchanged visual export baselines protect the scope bo
 - TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
 - Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
 - Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+## [2026-07-12 20:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details publication
+
+**Summary:**
+Marked the approved placement specification and implementation plan complete after
+publishing the verified implementation to `feature/graph-result-export`.
+
+**Rationale:**
+The documentation now records the same completion state as the remote feature branch.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
 ## [2026-07-12 20:18] Commit Summary
 
 **Change Type:** Fix
