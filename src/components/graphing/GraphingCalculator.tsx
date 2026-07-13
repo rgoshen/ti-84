@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluate, parse } from 'mathjs';
 import katex from 'katex';
 
@@ -25,6 +25,9 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import GraphResultExport from '@/components/export/GraphResultExport';
+import FunctionDetailsPanels, {
+  type FunctionDetailsPanelEntry,
+} from '@/components/FunctionDetailsPanels';
 import {
   EXPORT_GRAPH_HEIGHT,
   formatExportEquation,
@@ -49,6 +52,18 @@ const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 /** A plotted equation plus a stable id for React keys and list mutations. */
 interface EquationItem extends PlotEquation {
   id: string;
+}
+
+function buildEquationDetails(
+  equations: EquationItem[],
+  window: Window2D,
+): FunctionDetailsPanelEntry[] {
+  return equations.map((equation) => ({
+    id: equation.id,
+    title: `Function details · y = ${formatExportEquation(equation.expr)}`,
+    color: equation.color,
+    facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
+  }));
 }
 
 type WindowFields = Record<keyof Window2D, string>;
@@ -285,11 +300,16 @@ export default function GraphingCalculator(): React.JSX.Element {
 
   const tableXs = integerXs(displayWindow);
   const showTable = equations.length > 0 && tableXs.length > 0;
+  const liveFunctionDetails = useMemo(
+    () => buildEquationDetails(equations, displayWindow),
+    [equations, displayWindow],
+  );
 
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotWindow = { ...displayWindow };
     const snapshotEquations = equations.map((equation) => ({ ...equation }));
     const snapshotXs = selectRepresentativeRows(tableXs);
+    const snapshotDetails = buildEquationDetails(snapshotEquations, snapshotWindow);
 
     return {
       model: {
@@ -304,12 +324,7 @@ export default function GraphingCalculator(): React.JSX.Element {
             ? `Points shown (${equation.pointShape})`
             : 'Points hidden',
         })),
-        sections: snapshotEquations.map((equation) => ({
-          id: equation.id,
-          title: `Function details · y = ${formatExportEquation(equation.expr)}`,
-          color: equation.color,
-          facts: functionAnalysisFacts(analyzeFunction(equation.expr, snapshotWindow)),
-        })),
+        sections: snapshotDetails,
         table: {
           title: 'Selected values',
           headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
@@ -504,6 +519,11 @@ export default function GraphingCalculator(): React.JSX.Element {
           <div ref={plotRef} data-testid="plot" className="w-full" style={{ minHeight: 560 }} />
         </Card>
         {hover ? <CoordTooltip hover={hover} boundsRef={plotRef} /> : null}
+
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="graphing-function-details"
+        />
 
         <Card className="gap-3 p-4">
           <div className="flex items-center justify-between">

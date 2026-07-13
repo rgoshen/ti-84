@@ -84,10 +84,20 @@ async function plotWithPoints(page: Page): Promise<void> {
 test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) => {
   await page.goto('/graphing');
   await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByTestId('graphing-function-details')).toHaveCount(0);
 
   await page.locator('#eq-input').fill('x^2');
   await page.getByRole('button', { name: 'Plot' }).click();
   await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Function details · y = x²',
+  );
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Domain(-∞, ∞)',
+  );
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Range[0, ∞)',
+  );
 
   const windowInputs = page.locator('input[type="number"]');
   for (const [index, value] of [
@@ -158,6 +168,18 @@ test('exports separate color-owned details for duplicate equations', async ({ pa
   await page.locator('#eq-input').fill('x^2');
   await page.getByRole('button', { name: 'Plot' }).click();
 
+  const liveSections = page
+    .getByTestId('graphing-function-details')
+    .locator('[data-function-details-id]');
+  await expect(liveSections).toHaveCount(2);
+  const liveColors = await liveSections.evaluateAll((nodes) =>
+    nodes.map((node) => (node instanceof HTMLElement ? node.style.borderLeft : '')),
+  );
+  expect(liveColors).toEqual([
+    '4px solid rgb(96, 165, 250)',
+    '4px solid rgb(248, 113, 113)',
+  ]);
+
   await downloadExport(page, 'PNG', async (artifact) => {
     const detailSections = artifact.locator('[data-export-section]');
     await expect(detailSections).toHaveCount(2);
@@ -197,9 +219,15 @@ test('exports exact global details for an even reciprocal power', async ({ page 
   await page.locator('#eq-input').fill('1/x^2');
   await page.getByRole('button', { name: 'Plot' }).click();
 
+  const liveDetails = page.getByTestId('graphing-function-details');
+  await expect(liveDetails).toContainText('Domain(-∞, 0) ∪ (0, ∞)');
+  await expect(liveDetails).toContainText('Range(0, ∞)');
+  const liveText = (await liveDetails.textContent()) ?? '';
+
   await downloadExport(page, 'PNG', async (artifact) => {
     const text = await artifact.textContent();
 
+    expect(text).toContain(liveText);
     expect(text).toContain('Domain(-∞, 0) ∪ (0, ∞)');
     expect(text).toContain('Range(0, ∞)');
     expect(text).toContain('Vertical asymptotesx = 0');

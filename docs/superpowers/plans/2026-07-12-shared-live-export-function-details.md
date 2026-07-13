@@ -69,12 +69,12 @@
 - Produces one local `buildEquationDetails(equations, window)` result reused by live rendering and snapshot sections.
 - Consumes: `analyzeFunction`, `functionAnalysisFacts`, and `FunctionDetailsPanels`.
 
-- [ ] Add failing browser tests: no live panel before plotting; `x^2` live/export parity; `1/x^2` exact global parity; multiple-equation color ownership.
-- [ ] Run focused Graphing tests and verify the live-panel failures.
-- [ ] Memoize details on equations/display window and render immediately below the graph.
-- [ ] Reuse the same builder in `createExportSnapshot`.
-- [ ] Run focused unit, Astro, and Graphing browser tests until green.
-- [ ] Append `SUMMARY.md` and commit `feat(graphing): show live function details`.
+- [x] Add failing browser tests: no live panel before plotting; `x^2` live/export parity; `1/x^2` exact global parity; multiple-equation color ownership.
+- [x] Run focused Graphing tests and verify the live-panel failures.
+- [x] Memoize details on equations/display window and render immediately below the graph.
+- [x] Reuse the same builder in `createExportSnapshot`.
+- [x] Run focused unit, Astro, and Graphing browser tests until green.
+- [x] Append `SUMMARY.md` and commit `feat(graphing): show live function details`.
 
 ### Task 4: Function Explorer Live/Export Parity
 

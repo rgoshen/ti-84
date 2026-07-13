@@ -2143,3 +2143,21 @@ analysis or coupling live pages to export capture markup.
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Plan: Task 2
+## [2026-07-12 19:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator live Function Details
+
+**Summary:**
+Added memoized live Function Details directly below the graph, with one stable
+color-owned panel per equation. A single builder now supplies both live entries and
+export sections. Browser coverage proves empty state, `x^2` facts, exact `1/x^2`
+live/export text parity, and duplicate-equation color ownership.
+
+**Rationale:**
+Sharing the constructed fact entries removes the previous export-only behavior and
+makes live/export drift structurally harder to introduce.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 3
