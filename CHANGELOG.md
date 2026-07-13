@@ -4,6 +4,37 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.4.0](https://github.com/rgoshen/ti-84/compare/v0.3.0...v0.4.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **details:** move live panels into control columns ([13d3760](https://github.com/rgoshen/ti-84/commit/13d3760669727b20c82a748d004ca14b9a0d5da2))
+* **export:** match approved graph artifact ([1375539](https://github.com/rgoshen/ti-84/commit/137553964acddcbdbab85dd7e3f13a4255966beb))
+* **export:** preserve existing status landmarks ([9cc2186](https://github.com/rgoshen/ti-84/commit/9cc2186255e660e609ea7caefd8369356b728ded))
+* **export:** preserve function analysis confidence ([d95502f](https://github.com/rgoshen/ti-84/commit/d95502f04eb5a81f25c171e0513db6c43ec57341))
+* **export:** preserve wide artifact composition ([2e60507](https://github.com/rgoshen/ti-84/commit/2e6050752137956ade5b4950736cd42c10a9ed1e))
+* **export:** regenerate visual baselines on Linux to match CI ([21106c0](https://github.com/rgoshen/ti-84/commit/21106c07f79a5826e7af21bd14d22239d2e3856b))
+* **export:** use global domain and range semantics ([8c6d499](https://github.com/rgoshen/ti-84/commit/8c6d499041786d5816e9da33c2f3a690bd414b25))
+
+
+### Features
+
+* **details:** add live function detail panels ([96c98d2](https://github.com/rgoshen/ti-84/commit/96c98d24a9b742be740015ad3eb16e85e162807b))
+* **details:** use interval notation in transformations ([fdad21e](https://github.com/rgoshen/ti-84/commit/fdad21eef2886e548688b8186e81d018e1a36dcd))
+* **explorer:** export function results ([f183c04](https://github.com/rgoshen/ti-84/commit/f183c04d65313209fa62785adfa15ad16c69eadf))
+* **explorer:** export transformation results ([9f35f80](https://github.com/rgoshen/ti-84/commit/9f35f806cfdb3d3264657e41028f84a85cfe4521))
+* **explorer:** share live and exported function details ([60715fb](https://github.com/rgoshen/ti-84/commit/60715fb8f33c1592916320ffef56b84aad693c16))
+* **export:** add png and pdf download adapters ([7ee9677](https://github.com/rgoshen/ti-84/commit/7ee96772b50f05be47940164a0bb69bacf484231))
+* **export:** add read-only artifact controller ([06265ce](https://github.com/rgoshen/ti-84/commit/06265ce09891e52dde4394d339fe39e6398b648c))
+* **export:** analyze graph function details ([85803ba](https://github.com/rgoshen/ti-84/commit/85803ba0b78734d956723ef4dd3fb51d2c59c569))
+* **export:** define graph artifact contract ([a18505b](https://github.com/rgoshen/ti-84/commit/a18505bdc51c225ba8e9feaf6303447c6889cc41))
+* **export:** show mathematical function details ([a995d9c](https://github.com/rgoshen/ti-84/commit/a995d9c5c5540556fc186da207a8c19d2aef78b9))
+* **export:** timestamp downloads with local time ([8a3881f](https://github.com/rgoshen/ti-84/commit/8a3881f4d2aada8228c310a97c653dffcdc14e9e))
+* **export:** use interval notation for graph details ([526e409](https://github.com/rgoshen/ti-84/commit/526e409f2c3ff5e849abb39b966a62c7602b8b09))
+* **graphing:** export graph results ([3e7280f](https://github.com/rgoshen/ti-84/commit/3e7280f82f543611d8d8f4299d620bf801c2e798))
+* **graphing:** show live function details ([6225354](https://github.com/rgoshen/ti-84/commit/62253546a330add900a7379495f23a971aca2093))
+
 # [0.3.0](https://github.com/rgoshen/ti-84/compare/v0.2.2...v0.3.0) (2026-07-12)
 
 
