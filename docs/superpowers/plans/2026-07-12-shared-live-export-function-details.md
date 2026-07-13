@@ -52,11 +52,11 @@
 - Produces: `FunctionDetailsPanels({ entries, testId })` returning `null` for no entries.
 - Consumes: `ExportFact[]` display-ready values without mathematical transformation.
 
-- [ ] Write static-render tests for empty output, semantic heading/list relationships, stable IDs, equation color, and long-value wrapping.
-- [ ] Run the focused test and verify the missing-component failure.
-- [ ] Implement compact repeated sections using existing `Card`, semantic definition lists, `overflowWrap: anywhere`, and a 4px color border.
-- [ ] Rerun the focused test and Astro diagnostics until green.
-- [ ] Append `SUMMARY.md` and commit `feat(details): add live function detail panels`.
+- [x] Write static-render tests for empty output, semantic heading/list relationships, stable IDs, equation color, and long-value wrapping.
+- [x] Run the focused test and verify the missing-component failure.
+- [x] Implement compact repeated sections using existing `Card`, semantic definition lists, `overflowWrap: anywhere`, and a 4px color border.
+- [x] Rerun the focused test and Astro diagnostics until green.
+- [x] Append `SUMMARY.md` and commit `feat(details): add live function detail panels`.
 
 ### Task 3: Graphing Live/Export Parity
 

@@ -2125,3 +2125,21 @@ at that pure source guarantees parity without React or export-specific rewriting
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Plan: Task 1
+## [2026-07-12 19:42] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Live Function Details presentation
+
+**Summary:**
+Added a reusable live Function Details panel that renders stable equation-owned cards,
+semantic definition-list facts, curve-color borders, long-value wrapping, and no output
+for an empty entry set.
+
+**Rationale:**
+The component deliberately accepts display-ready facts and contains no mathematical
+policy, allowing multiple tools to share accessible presentation without duplicating
+analysis or coupling live pages to export capture markup.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 2
