@@ -2089,3 +2089,21 @@ visual markup would leave duplicate analysis and allow live/export facts to drif
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+## [2026-07-12 19:37] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live and export Function Details plan
+
+**Summary:**
+Added the five-task TDD plan for Transformation interval-source formatting, reusable
+live fact presentation, Graphing and Function Explorer live/export parity, reviewed
+raster updates, and full completion verification.
+
+**Rationale:**
+Independent red/green slices make each shared-data boundary reviewable while ensuring
+the final browser tests compare live text with mounted export text directly.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+- Plan: docs/superpowers/plans/2026-07-12-shared-live-export-function-details.md

@@ -608,4 +608,4 @@ interval notation.
 - Details add page height but must not resize the graph or controls.
 - Custom Transformation functions remain explicitly unavailable.
 
-**Status:** Design approved; implementation plan pending.
+**Status:** Design approved; implementation plan written; implementation in progress.
