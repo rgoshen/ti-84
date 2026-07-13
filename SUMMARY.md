@@ -2178,3 +2178,30 @@ exported domain, range, intercept, and asymptote information from diverging.
 **References:**
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Plan: Task 4
+## [2026-07-12 19:51] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live/export Function Details verification
+
+**Summary:**
+Approved the Function Explorer and Transformation Explorer export baselines, documented
+live Function Details and interval parity, and corrected the wide-export browser test
+to permit content-driven artifact height. Marked the shared-data design implemented.
+
+**Rationale:**
+The export contract fixes width at 1,440px but intentionally captures all report
+content, so height must grow when Function Details are added. The reviewed baselines
+now record that behavior without committing generated actual or diff images.
+
+**Verification:**
+- Vitest: 178/178 passed
+- Coverage: 85.95% statements, 81.15% branches, 85.79% functions, 88.14% lines
+- Astro: 0 diagnostics
+- Build: 6 pages
+- Playwright: 57/57 passed, including 3/3 reviewed visual baselines
+- Production audit: 0 vulnerabilities
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+- Plan: Task 5

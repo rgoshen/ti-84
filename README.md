@@ -64,14 +64,16 @@ equations, current window, tool-specific analysis, and up to nine representative
 whole-number values. Controls and navigation are omitted, and exports always use a
 light presentation palette even when the site is dark or opened on mobile.
 
-Graphing Calculator exports include one color-coded Function Details section per
-equation. Common parents, degree-two-or-lower polynomials, and supported reciprocal
-powers such as `1/x^2` show exact global properties where values can be rendered
-without loss; rounded derived values are labeled `Approx.`. Unsupported global domain
-or range renders `Not determined` rather than using viewport samples. Numerical
-visible-window analysis remains available for crossings and vertical asymptotes, with
-explicit scope. Properties proven not applicable are omitted. Domain and range use
-interval notation where appropriate, such as `(-∞, ∞)`, `[0, ∞)`, and
+The Graphing Calculator and Function Explorer show color-coded Function Details below
+their live graphs and reuse those exact facts in exports. The Transformation Explorer
+uses the same domain/range strings in its live comparison and export. Common parents,
+degree-two-or-lower polynomials, and supported reciprocal powers such as `1/x^2` show
+exact global properties where values can be rendered without loss; rounded derived
+values are labeled `Approx.`. Unsupported global domain or range renders
+`Not determined` rather than using viewport samples. Numerical visible-window
+analysis remains available for crossings and vertical asymptotes, with explicit
+scope. Properties proven not applicable are omitted. Domain and range use interval
+notation where appropriate, such as `(-∞, ∞)`, `[0, ∞)`, and
 `(-∞, 0) ∪ (0, ∞)`; a constant range uses singleton-set notation such as `{3}`.
 
 PNG downloads preserve the wide 1,440px artifact. PDF downloads fit the same content

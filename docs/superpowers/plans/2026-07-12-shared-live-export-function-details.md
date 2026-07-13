@@ -105,10 +105,10 @@
 - Modify: `docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md`
 - Modify: `docs/superpowers/plans/2026-07-12-shared-live-export-function-details.md`
 
-- [ ] Run read-only visual tests and identify only intentional Function/Transformation export changes.
-- [ ] Run explicit snapshot update, inspect every changed PNG, then rerun read-only visual tests 3/3.
-- [ ] Document live details and interval parity in README.
-- [ ] Run `npm run test:coverage`, remove `coverage/`, `npx astro check`, `npm run build`, `npm run test:e2e`, and `npm audit --omit=dev`.
-- [ ] Mark spec/TODO/plan complete with exact results and append `SUMMARY.md`.
-- [ ] Commit `docs(details): record live and export parity verification`.
+- [x] Run read-only visual tests and identify only intentional Function/Transformation export changes.
+- [x] Run explicit snapshot update, inspect every changed PNG, then rerun read-only visual tests 3/3.
+- [x] Document live details and interval parity in README.
+- [x] Run `npm run test:coverage`, remove `coverage/`, `npx astro check`, `npm run build`, `npm run test:e2e`, and `npm audit --omit=dev`.
+- [x] Mark spec/TODO/plan complete with exact results and append `SUMMARY.md`.
+- [x] Commit `docs(details): record live and export parity verification`.
 - [ ] Push `feature/graph-result-export`; verify clean status and matching local/upstream SHA.

@@ -1,7 +1,7 @@
 # Shared Live and Export Function Details Design
 
 **Date:** 2026-07-12
-**Status:** Approved design; awaiting written-spec review
+**Status:** Implemented and verified
 
 ## Objective
 

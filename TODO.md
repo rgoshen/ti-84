@@ -608,4 +608,7 @@ interval notation.
 - Details add page height but must not resize the graph or controls.
 - Custom Transformation functions remain explicitly unavailable.
 
-**Status:** Design approved; implementation plan written; implementation in progress.
+**Status:** Complete. Verified 178/178 Vitest tests, 57/57 Playwright tests including
+3/3 reviewed export baselines, zero Astro diagnostics, six production pages built,
+85.95% statements / 81.15% branches / 85.79% functions / 88.14% lines, and zero
+production vulnerabilities.
