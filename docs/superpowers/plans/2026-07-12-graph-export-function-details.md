@@ -31,12 +31,12 @@
 - Produces: `functionAnalysisFacts(analysis: FunctionAnalysis): Array<{ label: string; value: string }>`.
 - Consumes: `evalAt`, `bisect`, `findVerticalAsymptotes`, `classifyEndBehavior`, and curated `PARENTS` metadata.
 
-- [ ] Write failing tests for `x^2`, `1/x`, `(x - 2)^2 - 4`, `1/(x - 2)`, and `sin(x^2)`.
-- [ ] Run `npx vitest run src/scripts/graphing/analysis.test.ts` and verify failure because the module is absent.
-- [ ] Implement typed result states, curated-parent matching, and AST polynomial coefficient extraction.
-- [ ] Implement deterministic visible-window sampling, root bisection, asymptote reuse, and result-to-fact mapping.
-- [ ] Rerun the focused test and the complete Vitest suite until green.
-- [ ] Append `SUMMARY.md` and commit with `feat(export): analyze graph function details`.
+- [x] Write failing tests for `x^2`, `1/x`, `(x - 2)^2 - 4`, `1/(x - 2)`, and `sin(x^2)`.
+- [x] Run `npx vitest run src/scripts/graphing/analysis.test.ts` and verify failure because the module is absent.
+- [x] Implement typed result states, curated-parent matching, and AST polynomial coefficient extraction.
+- [x] Implement deterministic visible-window sampling, root bisection, asymptote reuse, and result-to-fact mapping.
+- [x] Rerun the focused test and the complete Vitest suite until green.
+- [x] Append `SUMMARY.md` and commit with `feat(export): analyze graph function details`.
 
 ### Task 2: Per-Equation Export Integration
 
@@ -52,11 +52,11 @@
 - `InformationSection` renders the section color without changing uncolored explorer panels.
 - Graphing snapshots call `analyzeFunction` once per immutable equation snapshot.
 
-- [ ] Add failing static and browser assertions for color-coded per-equation Function Details and removal of `Graph information`.
-- [ ] Run focused tests and confirm the expected missing-section/color failures.
-- [ ] Add optional section color rendering and map analysis facts beside each equation.
-- [ ] Run focused unit and Playwright tests until green.
-- [ ] Append `SUMMARY.md` and commit with `feat(graphing): export mathematical function details`.
+- [x] Add failing static and browser assertions for color-coded per-equation Function Details and removal of `Graph information`.
+- [x] Run focused tests and confirm the expected missing-section/color failures.
+- [x] Add optional section color rendering and map analysis facts beside each equation.
+- [x] Run focused unit and Playwright tests until green.
+- [x] Append `SUMMARY.md` and commit the mathematical Function Details integration.
 
 ### Task 3: Prototype, Baselines, and Verification
 
@@ -68,8 +68,9 @@
 - Modify: `TODO.md`
 - Modify: `SUMMARY.md`
 
-- [ ] Push an updated content-only browser prototype showing color-coded mathematical details.
-- [ ] Run the read-only visual test and verify the Graphing baseline fails while the two explorer baselines remain green.
-- [ ] Run `npm run test:e2e:update-snapshots`, visually inspect all generated baselines, then rerun the read-only visual suite.
-- [ ] Run coverage, Astro check, production build, all Playwright tests, and `npm audit --omit=dev`.
-- [ ] Mark TODO Done with exact evidence, append `SUMMARY.md`, commit documentation, and push the branch.
+- [x] Push an updated content-only browser prototype showing color-coded mathematical details.
+- [x] Run the read-only visual test and inspect the expected Graphing change plus deterministic text-raster diffs in the unchanged explorer artifacts.
+- [x] Run `npm run test:e2e:update-snapshots`, visually inspect all generated baselines, then rerun the read-only visual suite.
+- [x] Run coverage, Astro check, production build, all Playwright tests, and `npm audit --omit=dev`.
+- [x] Complete a spec-gap audit, resolve its confidence and ownership findings, and rerun all verification gates.
+- [x] Mark TODO Done with exact evidence, append `SUMMARY.md`, commit documentation, and push the branch.

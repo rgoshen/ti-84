@@ -505,4 +505,14 @@ y-intercept, vertical asymptotes, and horizontal asymptotes.
 - Per-equation panels can increase artifact height when many functions are plotted;
   the graph remains fixed at 960x560 and the artifact remains one file.
 
-**Status:** In progress.
+**Status:** Done on `feature/graph-result-export`. The old Graph Information panel is
+removed and every plotted equation owns a stable color-coded Function Details section.
+Exact curated-parent and polynomial results remain unqualified only when display is
+lossless; rounded or numerical results use `Approx.` with visible-window scope where
+required. The spec-gap audit led to direct root verification around discontinuities,
+per-property polynomial confidence, stable duplicate-equation IDs, and browser coverage
+for approximate/unresolved states. Final verification: 172/172 Vitest tests, 56/56
+Playwright tests including 3/3 read-only visual baselines, zero Astro diagnostics, six
+production pages built, 86.43% statements / 81.56% branches / 89.34% functions /
+89.37% lines, and zero production vulnerabilities. Subsequent actual/diff PNGs remain
+ignored; only the three explicitly reviewed baselines are tracked.

@@ -1899,3 +1899,21 @@ that `x^2 - 2` rendered `±1.414` without an approximation label.
 **References:**
 - TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
 - Plan: Tasks 1 through 3
+
+## [2026-07-12 18:04] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph export Function Details completion
+
+**Summary:**
+Marked the implementation plan and feature TODO complete with the final audited unit,
+browser, visual, static-analysis, build, coverage, and production-audit evidence.
+
+**Rationale:**
+The completion record now distinguishes exact and approximate property confidence and
+captures the additional safeguards required by the spec-gap review, so future changes
+can reproduce the same definition of done.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
