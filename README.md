@@ -65,13 +65,14 @@ whole-number values. Controls and navigation are omitted, and exports always use
 light presentation palette even when the site is dark or opened on mobile.
 
 Graphing Calculator exports include one color-coded Function Details section per
-equation. Common parent functions and constant, linear, or quadratic polynomials show
-exact properties where the value can be rendered without loss; rounded derived values
-are labeled `Approx.`. Other expressions use visible-window numerical analysis labeled
-`Approx.`, while unreliable properties are marked `Not determined` and properties
-proven not applicable are omitted. Domain and range use interval notation where
-appropriate, such as `(-∞, ∞)`, `[0, ∞)`, and `(-∞, 0) ∪ (0, ∞)`; a
-constant range uses singleton-set notation such as `{3}`.
+equation. Common parents, degree-two-or-lower polynomials, and supported reciprocal
+powers such as `1/x^2` show exact global properties where values can be rendered
+without loss; rounded derived values are labeled `Approx.`. Unsupported global domain
+or range renders `Not determined` rather than using viewport samples. Numerical
+visible-window analysis remains available for crossings and vertical asymptotes, with
+explicit scope. Properties proven not applicable are omitted. Domain and range use
+interval notation where appropriate, such as `(-∞, ∞)`, `[0, ∞)`, and
+`(-∞, 0) ∪ (0, ∞)`; a constant range uses singleton-set notation such as `{3}`.
 
 PNG downloads preserve the wide 1,440px artifact. PDF downloads fit the same content
 within margins on one standard Letter landscape page. The embedded TI-84 does not

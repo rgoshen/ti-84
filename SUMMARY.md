@@ -2056,3 +2056,19 @@ whereas the supported reciprocal form has a small exact algebraic solution.
 
 **References:**
 - TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+## [2026-07-12 19:05] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Global domain and range verification
+
+**Summary:**
+Documented exact reciprocal-power support, conservative unsupported global properties,
+and the final unit, browser, visual, static-analysis, build, coverage, and audit results.
+
+**Rationale:**
+User documentation must distinguish global mathematical properties from explicitly
+scoped viewport evidence so zooming cannot appear to redefine domain or range.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md

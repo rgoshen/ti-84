@@ -89,11 +89,10 @@ Strict Red -> Green -> Refactor applies.
 
 ## Risks and Tradeoffs
 
-- Numerical interval output describes sampled visible-window behavior, not a global
-  mathematical proof; the confidence label and scope text are mandatory.
-- A union of visible-domain intervals can become long when many asymptotes are
-  detected. Existing wrapping protects the fixed-width artifact, and unreliable
-  cases may remain `Not determined`.
+- Numerical visible-window evidence is not a global mathematical proof; confidence and
+  scope text are mandatory, and it is never used for domain or range.
+- Exact analysis is deliberately bounded. Unsupported global properties remain
+  `Not determined` until a sound symbolic analyzer is added.
 - Seconds substantially reduce filename collisions, but two exports of the same tool
   and format within one second can still share a name. Milliseconds are intentionally
   excluded to keep filenames readable.

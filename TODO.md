@@ -575,5 +575,10 @@ analysis for reciprocal powers such as `1/x^2` and `1/(x - 2)`.
 - A reciprocal denominator root is excluded from the domain even when it lies outside
   the current graph window.
 
-**Status:** In progress. Exact reciprocal-power analysis and conservative unsupported
-domain/range fallback are implemented under TDD; final verification remains.
+**Status:** Done on `feature/graph-result-export`. Supported reciprocal powers receive
+exact global domain/range, intercept, and asymptote analysis; unsupported fallback
+renders `Not determined` for domain/range. Final verification: 176/176 Vitest tests,
+57/57 Playwright tests including the exact `1/x^2` export and 3/3 read-only visual
+baselines, zero Astro diagnostics, six production pages built, 86.52% statements /
+81.44% branches / 88.43% functions / 88.87% lines, and zero production
+vulnerabilities. No approved raster baseline changed for this correction.
