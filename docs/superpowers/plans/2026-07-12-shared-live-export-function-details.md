@@ -32,13 +32,13 @@
 - Consumes: `formatIntervalNotation(interval: Interval): string`.
 - Produces: interval-formatted `FunctionDetails.domain` and `FunctionDetails.range` for both live and export consumers.
 
-- [ ] Change unit expectations for every interval shape and transformed parent case.
-- [ ] Run `npx vitest run src/scripts/explorer/details.test.ts` and verify inequality/prose failures.
-- [ ] Delegate `formatInterval` to `formatIntervalNotation` while preserving its public signature.
-- [ ] Rerun focused tests until green.
-- [ ] Add browser assertions comparing live and mounted-export parent/transformed interval text.
-- [ ] Run focused Transformation Playwright tests.
-- [ ] Append `SUMMARY.md` and commit `feat(details): use interval notation in transformations`.
+- [x] Change unit expectations for every interval shape and transformed parent case.
+- [x] Run `npx vitest run src/scripts/explorer/details.test.ts` and verify inequality/prose failures.
+- [x] Delegate `formatInterval` to `formatIntervalNotation` while preserving its public signature.
+- [x] Rerun focused tests until green.
+- [x] Add browser assertions comparing live and mounted-export parent/transformed interval text.
+- [x] Run focused Transformation Playwright tests.
+- [x] Append `SUMMARY.md` and commit `feat(details): use interval notation in transformations`.
 
 ### Task 2: Reusable Live Fact Presentation
 

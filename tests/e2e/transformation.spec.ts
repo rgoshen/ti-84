@@ -32,6 +32,8 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
     });
     expect(snapshot.text).toContain('g(x) = (x − 1)²');
     expect(snapshot.text).toContain('Function details');
+    expect(snapshot.text).toContain('DomainParent: (-∞, ∞) | Transformed: (-∞, ∞)');
+    expect(snapshot.text).toContain('RangeParent: [0, ∞) | Transformed: [0, ∞)');
     expect(snapshot.rows).toBe(9);
     expect(snapshot.controls).toBe(0);
     expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
@@ -228,17 +230,17 @@ test('function details describe the parent and the transformed curve', async ({ 
   await goto(page);
   const details = page.locator('[data-testid="function-details"]');
 
-  // Parent x²: domain all reals, range y ≥ 0.
-  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('all real numbers');
-  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
-  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 0');
+  // Parent x²: domain all reals, range [0, infinity).
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('(-∞, ∞)');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('[0, ∞)');
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('[0, ∞)');
 
   // k = +2 lifts only g's range, leaving f's alone — the whole point of the panel.
   const k = page.getByRole('slider', { name: /k — vertical shift/i });
   await k.focus();
   for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
-  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('y ≥ 2');
-  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('y ≥ 0');
+  await expect(details.locator('tr[data-row="range"] td[data-col="gx"]')).toHaveText('[2, ∞)');
+  await expect(details.locator('tr[data-row="range"] td[data-col="fx"]')).toHaveText('[0, ∞)');
 });
 
 test('ln shows its domain and its asymptote moves with h', async ({ page }) => {
@@ -247,7 +249,7 @@ test('ln shows its domain and its asymptote moves with h', async ({ page }) => {
   await page.getByRole('option', { name: /natural log/i }).click();
 
   const details = page.locator('[data-testid="function-details"]');
-  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('x > 0');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('(0, ∞)');
   await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 0');
 
   // Shift right 2 → the vertical asymptote follows.
@@ -255,7 +257,7 @@ test('ln shows its domain and its asymptote moves with h', async ({ page }) => {
   await h.focus();
   for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight'); // step 0.1 × 20
   await expect(details.locator('tr[data-row="verticalAsymptote"] td[data-col="gx"]')).toHaveText('x = 2');
-  await expect(details.locator('tr[data-row="domain"] td[data-col="gx"]')).toHaveText('x > 2');
+  await expect(details.locator('tr[data-row="domain"] td[data-col="gx"]')).toHaveText('(2, ∞)');
 });
 
 test('a custom function reports that details are unavailable', async ({ page }) => {

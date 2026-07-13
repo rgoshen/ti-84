@@ -10,6 +10,7 @@
  */
 import { evalAt } from '@/scripts/graphing/math';
 import { formatNumber } from '@/scripts/graphing/hover';
+import { formatIntervalNotation } from '@/scripts/graphing/interval-notation';
 import { EPS, type Coeffs } from './transform';
 import type { Interval, Parent } from './parents';
 
@@ -57,19 +58,8 @@ export function mapInterval(iv: Interval, m: number, c: number): Interval {
   }
 }
 
-export function formatInterval(iv: Interval, v: 'x' | 'y'): string {
-  switch (iv.kind) {
-    case 'all':
-      return 'all real numbers';
-    case 'bound': {
-      const op = iv.dir === 'ge' ? (iv.strict ? '>' : '≥') : iv.strict ? '<' : '≤';
-      return `${v} ${op} ${fmt(iv.value)}`;
-    }
-    case 'exclude':
-      return `${v} ≠ ${fmt(iv.value)}`;
-    case 'between':
-      return `${fmt(iv.lo)} ≤ ${v} ≤ ${fmt(iv.hi)}`;
-  }
+export function formatInterval(iv: Interval, _variable: 'x' | 'y'): string {
+  return formatIntervalNotation(iv);
 }
 
 /** g(x) = 0  ⟺  a·f(u) + k = 0  ⟺  f(u) = −k/a, with u = b(x − h) ⟹ x = u/b + h. */

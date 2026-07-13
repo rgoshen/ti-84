@@ -2107,3 +2107,21 @@ the final browser tests compare live text with mounted export text directly.
 - TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
 - Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
 - Plan: docs/superpowers/plans/2026-07-12-shared-live-export-function-details.md
+## [2026-07-12 19:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Transformation Function Details notation
+
+**Summary:**
+Changed the shared Transformation `FunctionDetails` interval formatter to standard
+interval notation. Updated every structured interval and transformed-parent unit case,
+plus browser assertions proving identical interval text in the live comparison table
+and mounted export.
+
+**Rationale:**
+Transformation live and export surfaces already share one details model, so formatting
+at that pure source guarantees parity without React or export-specific rewriting.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 1
