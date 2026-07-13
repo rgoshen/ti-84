@@ -1831,3 +1831,24 @@ prevents React presentation code from making unsupported mathematical claims.
 **References:**
 - TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
 - Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
+
+## [2026-07-12 17:39] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graph function analysis
+
+**Summary:**
+Added a pure graph-analysis module that returns typed exact, approximate,
+not-applicable, or not-determined results for domain, range, intercepts, and vertical
+and horizontal asymptotes. Curated parent functions and constant, linear, and
+quadratic polynomials receive exact results; other valid expressions use deterministic
+visible-window sampling with every inferred value labeled as approximate.
+
+**Rationale:**
+The export needs mathematically useful facts without presenting numerical guesses as
+global truths. Keeping confidence in the result type makes omission and labeling rules
+testable before the values reach the report UI.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Task 1
