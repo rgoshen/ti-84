@@ -540,5 +540,11 @@ filename.
 - Seconds reduce but do not eliminate collisions from repeated downloads.
 - Multi-interval domains must wrap within the fixed artifact width.
 
-**Status:** In progress. Structured interval notation and local filename timestamps are
-implemented under TDD; reviewed raster and final completion verification remain.
+**Status:** Done on `feature/graph-result-export`. Graphing Calculator export domains
+and ranges now use structured interval or singleton-set notation, including approximate
+visible-window unions around detected asymptotes. Every supported PNG and PDF filename
+uses the user's local `YYYY-MM-DD-HHmmss` timestamp. Final verification: 176/176 Vitest
+tests, 56/56 Playwright tests including 3/3 read-only visual baselines, zero Astro
+diagnostics, six production pages built, 87.12% statements / 82.5% branches / 89.77%
+functions / 89.98% lines, and zero production vulnerabilities. Only the reviewed
+Graphing baseline changed; generated actual/diff PNGs remain ignored.

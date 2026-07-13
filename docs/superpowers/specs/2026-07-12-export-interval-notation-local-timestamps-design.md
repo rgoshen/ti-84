@@ -1,7 +1,7 @@
 # Export Interval Notation and Local Timestamp Design
 
 **Date:** 2026-07-12
-**Status:** Approved design; awaiting written-spec review
+**Status:** Implemented and verified on `feature/graph-result-export`
 
 ## Objective
 

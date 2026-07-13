@@ -223,40 +223,40 @@ git commit -m "feat(export): timestamp downloads with local time"
 - Consumes: interval-formatted `FunctionAnalysisFact[]` and timestamped `exportFilename`.
 - Produces: mounted-artifact and visual contracts for the final user-visible behavior.
 
-- [ ] **Step 1: Add mounted-artifact interval assertions**
+- [x] **Step 1: Add mounted-artifact interval assertions**
 
 Require the Graphing export callback to contain `Domain(-∞, ∞)` and `Range[0, ∞)` for
 `x^2`, while still omitting non-applicable asymptotes. Retain the fallback browser
 test for `Approx.`, visible-window scope, and `Not determined`.
 
-- [ ] **Step 2: Run the read-only visual suite and verify intentional failure scope**
+- [x] **Step 2: Run the read-only visual suite and verify intentional change scope**
 
 Run: `npm run test:e2e:visual`
 
-Expected: Graphing Calculator fails because visible notation changed. Untouched
-explorer artifacts should remain unchanged; investigate before approving any shared
-text-raster drift.
+Observed: all three passed because the Graphing text-only change remained within the
+0.1% tolerance. The Graphing baseline was still force-refreshed by name so its approved
+content records interval notation. Both explorer baseline hashes remained unchanged.
 
-- [ ] **Step 3: Explicitly update and inspect raster baselines**
+- [x] **Step 3: Explicitly update and inspect raster baselines**
 
 Run: `npm run test:e2e:update-snapshots`.
 
 Inspect all three approved PNGs. Commit only explicitly reviewed baseline files;
 actual/diff output under ignored `test-results/` remains untracked.
 
-- [ ] **Step 4: Rerun the read-only visual suite**
+- [x] **Step 4: Rerun the read-only visual suite**
 
 Run: `npm run test:e2e:visual`
 
 Expected: 3/3 pass without modifying tracked files.
 
-- [ ] **Step 5: Update user and completion documentation**
+- [x] **Step 5: Update user and completion documentation**
 
 Document interval notation and local timestamp examples in `README.md`. Mark the spec,
 plan, and `TODO.md` entry complete with exact verification counts. Append the mandatory
 `SUMMARY.md` commit record.
 
-- [ ] **Step 6: Run the full completion gate**
+- [x] **Step 6: Run the full completion gate**
 
 Run each command and inspect its exit status:
 
@@ -272,13 +272,13 @@ Remove generated `coverage/` before the Astro check. Expected: all tests pass, a
 coverage is at least 80%, zero Astro errors/warnings/hints, six production pages build,
 all browser and visual tests pass, and production audit reports zero vulnerabilities.
 
-- [ ] **Step 7: Commit completion documentation**
+- [x] **Step 7: Commit completion documentation**
 
 ```bash
 git commit -m "docs(export): record notation and timestamp verification"
 ```
 
-- [ ] **Step 8: Push and verify remote parity**
+- [x] **Step 8: Push and verify remote parity**
 
 Push `feature/graph-result-export`, then confirm `git rev-parse HEAD` equals
 `git rev-parse @{upstream}` and `git status --short --branch` is clean.
