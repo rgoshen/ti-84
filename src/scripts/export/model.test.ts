@@ -33,8 +33,8 @@ describe('graph export model', () => {
 
   it('builds deterministic filenames without user input', () => {
     expect(
-      exportFilename('function-explorer', 'png', new Date('2026-07-12T19:00:00Z')),
-    ).toBe('function-explorer-2026-07-12.png');
+      exportFilename('function-explorer', 'png', new Date(2026, 6, 12, 18, 15, 30)),
+    ).toBe('function-explorer-2026-07-12-181530.png');
   });
 
   it('formats missing and finite table values consistently', () => {

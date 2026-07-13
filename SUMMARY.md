@@ -1974,3 +1974,22 @@ polynomial ranges use set notation because a single value is not an interval.
 **References:**
 - TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
 - Plan: Task 1
+## [2026-07-12 18:32] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export download filenames
+
+**Summary:**
+Changed the shared filename formatter to append local date and 24-hour time through
+seconds as `YYYY-MM-DD-HHmmss`. Updated pure PNG/PDF tests and browser contracts for
+Graphing Calculator, Function Explorer, and Transformation Explorer, including PDF
+filename assertions that were previously absent for the two explorers.
+
+**Rationale:**
+Local calendar getters make the filename match the user's actual date and time; UTC
+ISO serialization changed a Phoenix evening export from July 12 to July 13. Seconds
+keep repeated downloads distinct without making filenames unreadable.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Plan: Task 2

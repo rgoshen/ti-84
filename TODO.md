@@ -540,5 +540,5 @@ filename.
 - Seconds reduce but do not eliminate collisions from repeated downloads.
 - Multi-interval domains must wrap within the fixed artifact width.
 
-**Status:** In progress. Structured exact and visible-window interval notation is
-implemented under TDD; local filename timestamps and final artifact verification remain.
+**Status:** In progress. Structured interval notation and local filename timestamps are
+implemented under TDD; reviewed raster and final completion verification remain.

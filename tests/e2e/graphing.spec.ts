@@ -120,8 +120,8 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
     expect(snapshot.text).toContain('x [-10.46, 11.572] | y [-5.74, 5.249]');
     expect(snapshot.text).toContain('y = x²');
     expect(snapshot.text).toContain('Function details · y = x²');
-    expect(snapshot.text).toContain('Domainall real numbers');
-    expect(snapshot.text).toContain('Rangey ≥ 0');
+    expect(snapshot.text).toContain('Domain(-∞, ∞)');
+    expect(snapshot.text).toContain('Range[0, ∞)');
     expect(snapshot.text).toContain('x-interceptsx = 0');
     expect(snapshot.text).toContain('y-intercepty = 0');
     expect(snapshot.text).not.toContain('Graph information');
@@ -132,14 +132,18 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
     expect(snapshot.width).toBe(1440);
     expect(snapshot.graph).toEqual({ width: 960, height: 560 });
   });
-  expect(png.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.png$/);
+  expect(png.suggestedFilename()).toMatch(
+    /^graphing-calculator-\d{4}-\d{2}-\d{2}-\d{6}\.png$/,
+  );
   const pngBytes = await readDownload(png);
   expect(pngBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect(pngBytes.readUInt32BE(16)).toBe(1440);
   expect(pngBytes.readUInt32BE(20)).toBeLessThan(1440);
 
   const pdf = await downloadExport(page, 'PDF');
-  expect(pdf.suggestedFilename()).toMatch(/^graphing-calculator-\d{4}-\d{2}-\d{2}\.pdf$/);
+  expect(pdf.suggestedFilename()).toMatch(
+    /^graphing-calculator-\d{4}-\d{2}-\d{2}-\d{6}\.pdf$/,
+  );
   const pdfBytes = await readDownload(pdf);
   expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdfBytes.toString('latin1')).toMatch(
@@ -180,7 +184,7 @@ test('exports visible-window approximation and unresolved states', async ({ page
   await downloadExport(page, 'PNG', async (artifact) => {
     const text = await artifact.textContent();
 
-    expect(text).toContain('DomainApprox. defined across visible window');
+    expect(text).toContain('DomainApprox. [-10, 10] in visible window');
     expect(text).toContain('RangeApprox.');
     expect(text).toContain('in visible window');
     expect(text).toContain('Vertical asymptotesNot determined');

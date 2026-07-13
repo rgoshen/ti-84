@@ -20,7 +20,7 @@ describe('downloadExportArtifact', () => {
       node,
       'png',
       'graphing-calculator',
-      new Date('2026-07-12T00:00:00Z'),
+      new Date(2026, 6, 12, 18, 15, 30),
       dependencies,
     );
 
@@ -30,7 +30,7 @@ describe('downloadExportArtifact', () => {
     );
     expect(dependencies.savePng).toHaveBeenCalledWith(
       'data:image/png;base64,abc',
-      'graphing-calculator-2026-07-12.png',
+      'graphing-calculator-2026-07-12-181530.png',
     );
     expect(dependencies.savePdf).not.toHaveBeenCalled();
   });
@@ -46,7 +46,7 @@ describe('downloadExportArtifact', () => {
       node,
       'pdf',
       'function-explorer',
-      new Date('2026-07-12T00:00:00Z'),
+      new Date(2026, 6, 12, 18, 15, 30),
       dependencies,
     );
 
@@ -54,7 +54,7 @@ describe('downloadExportArtifact', () => {
       'data:image/png;base64,abc',
       1440,
       900,
-      'function-explorer-2026-07-12.pdf',
+      'function-explorer-2026-07-12-181530.pdf',
     );
     expect(dependencies.savePng).not.toHaveBeenCalled();
   });

@@ -37,7 +37,7 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
     expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
   });
   expect(download.suggestedFilename()).toMatch(
-    /^transformation-explorer-\d{4}-\d{2}-\d{2}\.png$/,
+    /^transformation-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.png$/,
   );
   const bytes = await readDownload(download);
   expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
@@ -45,6 +45,9 @@ test('exports one fixed transformation artifact across wide graph windows', asyn
   expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
 
   const pdf = await downloadExport(page, 'PDF');
+  expect(pdf.suggestedFilename()).toMatch(
+    /^transformation-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.pdf$/,
+  );
   const pdfBytes = await readDownload(pdf);
   expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdfBytes.toString('latin1')).toMatch(

@@ -69,7 +69,18 @@ export function exportFilename(
   format: ExportFormat,
   now: Date,
 ): string {
-  return `${slug}-${now.toISOString().slice(0, 10)}.${format}`;
+  const pad2 = (value: number): string => String(value).padStart(2, '0');
+  const date = [
+    now.getFullYear(),
+    pad2(now.getMonth() + 1),
+    pad2(now.getDate()),
+  ].join('-');
+  const time = [
+    pad2(now.getHours()),
+    pad2(now.getMinutes()),
+    pad2(now.getSeconds()),
+  ].join('');
+  return `${slug}-${date}-${time}.${format}`;
 }
 
 export function formatExportValue(value: number | null | undefined): string {

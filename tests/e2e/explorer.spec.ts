@@ -59,7 +59,9 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
     expect(snapshot.controls).toBe(0);
     expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
   });
-  expect(download.suggestedFilename()).toMatch(/^function-explorer-\d{4}-\d{2}-\d{2}\.png$/);
+  expect(download.suggestedFilename()).toMatch(
+    /^function-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.png$/,
+  );
   const bytes = await readDownload(download);
   expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   expect(bytes.readUInt32BE(16)).toBe(1440);
@@ -79,6 +81,9 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
   expect(topLeft.slice(0, 3)).toEqual([248, 250, 252]);
 
   const pdf = await downloadExport(page, 'PDF');
+  expect(pdf.suggestedFilename()).toMatch(
+    /^function-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.pdf$/,
+  );
   const pdfBytes = await readDownload(pdf);
   expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
   expect(pdfBytes.toString('latin1')).toMatch(

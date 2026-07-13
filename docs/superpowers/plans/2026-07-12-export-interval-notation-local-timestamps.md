@@ -144,7 +144,7 @@ git commit -m "feat(export): use interval notation for graph details"
 - Consumes: the existing `exportFilename(slug, format, now)` signature.
 - Produces: local `YYYY-MM-DD-HHmmss` filename suffixes without changing download-controller APIs.
 
-- [ ] **Step 1: Write failing local-time filename tests**
+- [x] **Step 1: Write failing local-time filename tests**
 
 Construct the date with local numeric components so the expected value is independent
 of machine timezone:
@@ -157,13 +157,13 @@ expect(exportFilename('function-explorer', 'png', localNow))
 
 Update PNG/PDF dependency tests to use the same local date and exact filenames.
 
-- [ ] **Step 2: Run model and download tests and verify RED**
+- [x] **Step 2: Run model and download tests and verify RED**
 
 Run: `npx vitest run src/scripts/export/model.test.ts src/scripts/export/download.test.ts`
 
 Expected: filename assertions fail because the current formatter emits only the UTC date.
 
-- [ ] **Step 3: Implement local zero-padded timestamp formatting**
+- [x] **Step 3: Implement local zero-padded timestamp formatting**
 
 Keep `exportFilename` pure and use local getters:
 
@@ -174,20 +174,20 @@ const time = `${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeco
 return `${slug}-${date}-${time}.${format}`;
 ```
 
-- [ ] **Step 4: Run model and download tests and verify GREEN**
+- [x] **Step 4: Run model and download tests and verify GREEN**
 
 Run: `npx vitest run src/scripts/export/model.test.ts src/scripts/export/download.test.ts`
 
 Expected: all focused filename tests pass.
 
-- [ ] **Step 5: Update browser filename contracts**
+- [x] **Step 5: Update browser filename contracts**
 
 Require `-YYYY-MM-DD-HHmmss` before `.png`/`.pdf` for every supported tool. In the
 fixed-clock Graphing test, require the exact approved local timestamp when stable;
 otherwise require the complete six-digit time component and rely on unit tests for
 timezone semantics.
 
-- [ ] **Step 6: Run all export browser tests**
+- [x] **Step 6: Run all export browser tests**
 
 Run:
 
@@ -197,7 +197,7 @@ npx playwright test tests/e2e/graphing.spec.ts tests/e2e/explorer.spec.ts tests/
 
 Expected: all export workflow and filename assertions pass.
 
-- [ ] **Step 7: Document and commit Task 2**
+- [x] **Step 7: Document and commit Task 2**
 
 Append `SUMMARY.md`, stage only timestamp-related files, and commit:
 
