@@ -1852,3 +1852,24 @@ testable before the values reach the report UI.
 **References:**
 - TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
 - Plan: Task 1
+
+## [2026-07-12 17:44] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator export
+
+**Summary:**
+Replaced the Graph Information viewport/count panel with one color-coded Function
+Details section per plotted equation. The export now presents domain, range,
+intercepts, and applicable asymptotes from the typed analysis engine, and the browser
+test rejects the former panel. Updated the reviewed PNG baselines after inspecting all
+three actual downloadable artifacts.
+
+**Rationale:**
+The report should preserve useful mathematics rather than repeat window bounds already
+shown in its header. Equation-colored sections retain ownership when multiple functions
+are exported, while omitted and not-determined states avoid misleading `N/A` rows.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Tasks 2 and 3

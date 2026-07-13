@@ -4,6 +4,7 @@ import { evaluate, parse } from 'mathjs';
 import katex from 'katex';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
 import { formatNumber, type HoverInfo } from '@/scripts/graphing/hover';
 import {
   renderGraph,
@@ -26,7 +27,6 @@ import { Card } from '@/components/ui/card';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import {
   EXPORT_GRAPH_HEIGHT,
-  formatExportBound,
   formatExportEquation,
   formatExportValue,
   selectRepresentativeRows,
@@ -304,16 +304,11 @@ export default function GraphingCalculator(): React.JSX.Element {
             ? `Points shown (${equation.pointShape})`
             : 'Points hidden',
         })),
-        sections: [
-          {
-            title: 'Graph information',
-            facts: [
-              { label: 'x range', value: `${formatExportBound(snapshotWindow.xMin)} to ${formatExportBound(snapshotWindow.xMax)}` },
-              { label: 'y range', value: `${formatExportBound(snapshotWindow.yMin)} to ${formatExportBound(snapshotWindow.yMax)}` },
-              { label: 'Functions', value: String(snapshotEquations.length) },
-            ],
-          },
-        ],
+        sections: snapshotEquations.map((equation) => ({
+          title: `Function details · y = ${formatExportEquation(equation.expr)}`,
+          color: equation.color,
+          facts: functionAnalysisFacts(analyzeFunction(equation.expr, snapshotWindow)),
+        })),
         table: {
           title: 'Selected values',
           headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],

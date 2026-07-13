@@ -24,6 +24,7 @@ export interface ExportFact {
 
 export interface ExportSection {
   title: string;
+  color?: string;
   facts: ExportFact[];
 }
 

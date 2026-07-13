@@ -23,7 +23,14 @@ const MUTED = '#64748b';
 
 function InformationSection({ section }: { section: ExportSection }): React.JSX.Element {
   return (
-    <section style={{ padding: 16, border: `1px solid ${BORDER}`, background: '#ffffff' }}>
+    <section
+      style={{
+        padding: 16,
+        border: `1px solid ${BORDER}`,
+        borderLeft: section.color ? `4px solid ${section.color}` : undefined,
+        background: '#ffffff',
+      }}
+    >
       <h2
         style={{
           margin: '0 0 8px',

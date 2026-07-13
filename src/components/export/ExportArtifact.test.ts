@@ -18,10 +18,11 @@ const MODEL: ExportArtifactModel = {
   }],
   sections: [
     {
-      title: 'Graph information',
+      title: 'Function details · y = x²',
+      color: '#2563eb',
       facts: [
-        { label: 'x range', value: '-10 to 10' },
-        { label: 'Functions', value: '1' },
+        { label: 'Domain', value: 'all real numbers' },
+        { label: 'Range', value: 'y ≥ 0' },
       ],
     },
     {
@@ -54,7 +55,9 @@ describe('ExportArtifact', () => {
     expect(html).toContain('Graphing Calculator');
     expect(html).toContain('y = thisIsAnIntentionallyLongFunctionName(x) + x²');
     expect(html).toContain('x [-10.46, 11.572]');
-    expect(html).toContain('Graph information');
+    expect(html).toContain('Function details · y = x²');
+    expect(html).toContain('border-left:4px solid #2563eb');
+    expect(html).not.toContain('Graph information');
     expect(html).toContain('data-testid="export-details"');
     expect(html).toContain('grid-template-columns:repeat(2, minmax(0, 1fr))');
     expect(html).toContain('Analysis');

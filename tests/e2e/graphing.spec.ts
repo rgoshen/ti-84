@@ -106,6 +106,9 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
       const graphStyle = graph instanceof HTMLElement ? graph.style : null;
       return {
         text: node.textContent,
+        functionDetails: Array.from(node.querySelectorAll('section')).find((section) =>
+          section.textContent?.includes('Function details · y = x²'),
+        )?.style.borderLeft,
         rows: node.querySelectorAll('tbody tr').length,
         controls: node.querySelectorAll('button, input, select, nav').length,
         width: parseFloat(node.style.width),
@@ -116,6 +119,13 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
     });
     expect(snapshot.text).toContain('x [-10.46, 11.572] | y [-5.74, 5.249]');
     expect(snapshot.text).toContain('y = x²');
+    expect(snapshot.text).toContain('Function details · y = x²');
+    expect(snapshot.text).toContain('Domainall real numbers');
+    expect(snapshot.text).toContain('Rangey ≥ 0');
+    expect(snapshot.text).toContain('x-interceptsx = 0');
+    expect(snapshot.text).toContain('y-intercepty = 0');
+    expect(snapshot.text).not.toContain('Graph information');
+    expect(snapshot.functionDetails).toBe('4px solid rgb(96, 165, 250)');
     expect(snapshot.rows).toBe(9);
     expect(snapshot.controls).toBe(0);
     expect(snapshot.width).toBe(1440);
