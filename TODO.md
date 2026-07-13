@@ -540,4 +540,4 @@ filename.
 - Seconds reduce but do not eliminate collisions from repeated downloads.
 - Multi-interval domains must wrap within the fixed artifact width.
 
-**Status:** Design approved; implementation plan pending.
+**Status:** Design approved; implementation plan written; implementation pending.
