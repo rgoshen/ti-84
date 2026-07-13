@@ -472,3 +472,37 @@ diagnostics, six production pages built, 86.13% statements / 82.14% branches / 8
 functions / 88.33% lines, and zero production vulnerabilities. Only the three
 approved baselines are tracked; subsequent actual/expected/diff PNGs remain under the
 ignored `test-results/` path.
+
+## [2026-07-12] Feature: Mathematical Function Details in Graph Export
+
+**Objective:**
+Replace the Graphing Calculator export's viewport-summary panel with useful
+mathematical analysis for every plotted equation: domain, range, x-intercepts,
+y-intercept, vertical asymptotes, and horizontal asymptotes.
+
+**Approach:**
+- Produce one color-coded Function Details section per equation.
+- Reuse curated parent metadata for exact common-function results and add exact
+  constant/linear/quadratic polynomial analysis from the `mathjs` syntax tree.
+- Fall back to deterministic numerical analysis for unsupported expressions, clearly
+  labeling every inferred result `Approx.` and scoping viewport-bound claims.
+- Omit properties proven not applicable and show `Not determined` only when exact and
+  approximate analysis are both unreliable.
+- Keep graph-window bounds in the artifact header and remove the old range/count panel.
+
+**Tests:**
+- Unit tests first for result states, parent functions, polynomials, numerical roots,
+  visible domain/range, vertical asymptotes, and unknown results.
+- Static artifact coverage for color-coded Function Details sections.
+- Playwright capture assertions plus regenerated, visually reviewed golden PNGs.
+- Full Vitest, coverage, Astro, build, Playwright, and production-audit verification.
+
+**Risks & Tradeoffs:**
+- Numerical domain and range are never global claims; they are explicitly limited to
+  the visible window.
+- Oscillatory or pathological functions may remain `Not determined` rather than
+  receive a plausible but misleading answer.
+- Per-equation panels can increase artifact height when many functions are plotted;
+  the graph remains fixed at 960x560 and the artifact remains one file.
+
+**Status:** In progress.

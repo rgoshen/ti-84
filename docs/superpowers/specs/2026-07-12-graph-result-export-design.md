@@ -45,7 +45,28 @@ relevant read-only information.
 - Every plotted equation with its curve color
 - For each equation, whether point markers are shown and their shape
 - Current graph window
+- One color-coded Function Details section per equation containing domain, range,
+  x-intercepts, y-intercept, vertical asymptotes, and horizontal asymptotes
 - Up to nine representative whole-number-x values selected across the current window
+
+Function Details use a structured result state for every property:
+
+- `exact`: render the mathematical value without a qualifier;
+- `approximate`: prefix the value with `Approx.` and include `in visible window` for
+  viewport-bounded domain, range, intercept, and vertical-asymptote results;
+- `not-applicable`: omit the row because analysis proved the property does not apply;
+- `not-determined`: render `Not determined` when neither exact nor numerical analysis
+  can support a reliable statement.
+
+Exact analysis supports the curated parent catalog (`x`, `x^2`, `sqrt(x)`, `x^3`,
+`cbrt(x)`, `1/x`, `abs(x)`, `exp(x)`, `log(x)`, `sin(x)`, and `cos(x)`) plus constant,
+linear, and quadratic polynomial expressions recognized from the `mathjs` syntax tree.
+Other valid expressions use deterministic sampling across the visible x-window,
+existing bisection for intercepts, existing divergence checks for vertical asymptotes,
+and existing end-behavior classification for possible horizontal asymptotes.
+
+The prior `Graph information` panel containing x-range, y-range, and function count is
+removed. Window bounds remain concise export metadata in the artifact header.
 
 ### Function Explorer
 

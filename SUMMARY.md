@@ -1811,3 +1811,23 @@ modify or add tracked PNG expectations.
 **References:**
 - TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
 - Plan: Task 2
+
+## [2026-07-12 16:45] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph export Function Details
+
+**Summary:**
+Defined and planned per-equation mathematical analysis for Graphing Calculator
+exports. The contract covers exact curated parents and degree-two polynomials,
+visible-window numerical fallback, explicit confidence states, color ownership,
+omission rules, and removal of the old viewport-summary panel.
+
+**Rationale:**
+Window bounds and function counts describe the renderer, not the mathematics the user
+wants to preserve. A typed pure-analysis boundary keeps uncertainty explicit and
+prevents React presentation code from making unsupported mathematical claims.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
