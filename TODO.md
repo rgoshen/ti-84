@@ -592,7 +592,7 @@ interval notation.
 **Approach:**
 - Reuse `analyzeFunction` facts for Graphing Calculator and Function Explorer live and
   export surfaces.
-- Add compact equation-colored live detail sections after each graph.
+- Place compact live detail sections in each tool's left control column.
 - Change Transformation Explorer's shared structured interval formatter so its live
   comparison table and export update together.
 - Preserve explorer-specific readouts and custom/degenerate unavailable states.
@@ -633,4 +633,6 @@ for each graph tool without changing exports or any other behavior.
 - The 340px control column requires existing long-value wrapping to remain intact.
 - DOM movement must not accidentally move details into export capture markup.
 
-**Status:** Approved; implementation pending.
+**Status:** Complete. Verified 178/178 Vitest tests, 57/57 Playwright tests, 3/3
+unchanged export visual baselines, zero Astro diagnostics, and six production pages
+built. No export snapshot or approved PNG changed.

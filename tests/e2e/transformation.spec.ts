@@ -229,6 +229,18 @@ test('the point shape picker changes the markers on both curves', async ({ page 
 test('function details describe the parent and the transformed curve', async ({ page }) => {
   await goto(page);
   const details = page.locator('[data-testid="function-details"]');
+  const placement = await details.evaluate((node) => {
+    const heading = [...document.querySelectorAll('h3')].find(
+      (candidate) => candidate.textContent === 'Transform',
+    );
+    const controlCard = heading?.closest('[data-slot="card"]');
+    const detailsCard = node.closest('[data-slot="card"]');
+    return {
+      sameColumn: controlCard?.parentElement === detailsCard?.parentElement,
+      immediatelyAfter: controlCard?.nextElementSibling === detailsCard,
+    };
+  });
+  expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
 
   // Parent x²: domain all reals, range [0, infinity).
   await expect(details.locator('tr[data-row="domain"] td[data-col="fx"]')).toHaveText('(-∞, ∞)');

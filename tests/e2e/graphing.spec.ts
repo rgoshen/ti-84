@@ -98,6 +98,17 @@ test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) 
   await expect(page.getByTestId('graphing-function-details')).toContainText(
     'Range[0, ∞)',
   );
+  const placement = await page.getByTestId('graphing-function-details').evaluate((node) => {
+    const heading = [...document.querySelectorAll('h3')].find(
+      (candidate) => candidate.textContent === 'Plotted equations',
+    );
+    const controlCard = heading?.closest('[data-slot="card"]');
+    return {
+      sameColumn: controlCard?.parentElement === node.parentElement,
+      immediatelyAfter: controlCard?.nextElementSibling === node,
+    };
+  });
+  expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
 
   const windowInputs = page.locator('input[type="number"]');
   for (const [index, value] of [

@@ -44,6 +44,17 @@ test('exports a fixed light PNG from mobile dark mode while a limit animation ru
   await expect(liveDetails).toContainText('Function details · f(x) = 1/x²');
   await expect(liveDetails).toContainText('Domain(-∞, 0) ∪ (0, ∞)');
   await expect(liveDetails).toContainText('Range(0, ∞)');
+  const placement = await liveDetails.evaluate((node) => {
+    const heading = [...document.querySelectorAll('h3')].find(
+      (candidate) => candidate.textContent === 'Animate a limit',
+    );
+    const controlCard = heading?.closest('[data-slot="card"]');
+    return {
+      sameColumn: controlCard?.parentElement === node.parentElement,
+      immediatelyAfter: controlCard?.nextElementSibling === node,
+    };
+  });
+  expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
   const liveText = (await liveDetails.textContent()) ?? '';
 
   await page.getByRole('button', { name: 'x → 0⁺' }).click();

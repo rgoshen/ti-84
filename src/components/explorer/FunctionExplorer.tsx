@@ -650,6 +650,11 @@ export default function FunctionExplorer(): React.JSX.Element {
           )}
         </Card>
 
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="explorer-function-details"
+        />
+
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window &amp; guides</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
@@ -743,11 +748,6 @@ export default function FunctionExplorer(): React.JSX.Element {
             style={{ minHeight: 480 }}
           />
         </Card>
-
-        <FunctionDetailsPanels
-          entries={liveFunctionDetails}
-          testId="explorer-function-details"
-        />
 
         <ValueTable
           xs={tableXs}

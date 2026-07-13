@@ -34,7 +34,7 @@
 - Consumes: existing `graphing-function-details`, `explorer-function-details`, and `function-details` test IDs.
 - Produces: interactive DOM order matching the approved left-column placements.
 
-- [ ] **Step 1: Write failing placement assertions**
+- [x] **Step 1: Write failing placement assertions**
 
 For each tool, locate the named control card with `getByRole('heading', { name })`,
 locate the details region, and evaluate:
@@ -56,29 +56,29 @@ expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
 Use `Animate a limit` for Function Explorer. For Transformation Explorer, use the
 details table's closest card as `detailsRegion` and `Transform` as the heading.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run:
 
 ```bash
-npx playwright test tests/e2e/graphing.spec.ts tests/e2e/explorer.spec.ts tests/e2e/transformation.spec.ts --grep "function details|exports a fixed light"
+npx playwright test tests/e2e/graphing.spec.ts tests/e2e/explorer.spec.ts tests/e2e/transformation.spec.ts --grep "exports one fixed-width|exports a fixed light|function details describe"
 ```
 
 Expected: placement assertions fail because details currently live in the graph column.
 
-- [ ] **Step 3: Move the existing JSX blocks**
+- [x] **Step 3: Move the existing JSX blocks**
 
 In each component, remove the existing details block from below the graph and insert it
 as a sibling immediately after the approved left-column card. Do not alter props,
 content, analysis, or export code.
 
-- [ ] **Step 4: Run focused tests and verify GREEN**
+- [x] **Step 4: Run focused tests and verify GREEN**
 
 Run the focused command from Step 2.
 
 Expected: all selected tests pass, including existing live/export content assertions.
 
-- [ ] **Step 5: Verify exports and application diagnostics**
+- [x] **Step 5: Verify exports and application diagnostics**
 
 Run:
 
@@ -91,7 +91,7 @@ npm run test:e2e:visual
 Expected: zero Astro diagnostics, all Playwright tests pass, and all three existing
 export baselines pass without updates.
 
-- [ ] **Step 6: Document and commit**
+- [x] **Step 6: Document and commit**
 
 Update README placement copy, mark TODO and this plan complete with exact results,
 append SUMMARY, then commit:

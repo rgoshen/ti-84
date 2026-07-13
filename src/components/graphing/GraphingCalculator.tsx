@@ -475,6 +475,11 @@ export default function GraphingCalculator(): React.JSX.Element {
           )}
         </Card>
 
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="graphing-function-details"
+        />
+
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
@@ -519,11 +524,6 @@ export default function GraphingCalculator(): React.JSX.Element {
           <div ref={plotRef} data-testid="plot" className="w-full" style={{ minHeight: 560 }} />
         </Card>
         {hover ? <CoordTooltip hover={hover} boundsRef={plotRef} /> : null}
-
-        <FunctionDetailsPanels
-          entries={liveFunctionDetails}
-          testId="graphing-function-details"
-        />
 
         <Card className="gap-3 p-4">
           <div className="flex items-center justify-between">

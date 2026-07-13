@@ -446,6 +446,43 @@ export default function TransformationExplorer(): React.JSX.Element {
         </Card>
 
         <Card className="gap-3 p-4">
+          <h3 className="text-sm font-medium">Function details</h3>
+          {fDetails && gDetails ? (
+            <table data-testid="function-details" className="w-full text-xs">
+              <caption className="sr-only">
+                Domain, range, intercepts and asymptotes of the parent and the transformed function
+              </caption>
+              <thead>
+                <tr className="border-b">
+                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
+                    Property
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">
+                    f(x) = {parentLabel}
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DETAIL_ROWS.map(({ key, label }) => (
+                  <tr key={key} data-row={key} className="border-b last:border-0">
+                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
+                      {label}
+                    </th>
+                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
+                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Not available for a custom function — pick a parent function to see its details.
+            </p>
+          )}
+        </Card>
+
+        <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window &amp; guides</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             {(['xMin', 'xMax', 'yMin', 'yMax'] as const).map((key) => (
@@ -507,43 +544,6 @@ export default function TransformationExplorer(): React.JSX.Element {
             className="w-full"
             style={{ minHeight: 480 }}
           />
-        </Card>
-
-        <Card className="gap-3 p-4">
-          <h3 className="text-sm font-medium">Function details</h3>
-          {fDetails && gDetails ? (
-            <table data-testid="function-details" className="w-full text-xs">
-              <caption className="sr-only">
-                Domain, range, intercepts and asymptotes of the parent and the transformed function
-              </caption>
-              <thead>
-                <tr className="border-b">
-                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
-                    Property
-                  </th>
-                  <th scope="col" className="py-1 text-left font-medium">
-                    f(x) = {parentLabel}
-                  </th>
-                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DETAIL_ROWS.map(({ key, label }) => (
-                  <tr key={key} data-row={key} className="border-b last:border-0">
-                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
-                      {label}
-                    </th>
-                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
-                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Not available for a custom function — pick a parent function to see its details.
-            </p>
-          )}
         </Card>
 
         <ValueTable

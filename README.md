@@ -64,9 +64,10 @@ equations, current window, tool-specific analysis, and up to nine representative
 whole-number values. Controls and navigation are omitted, and exports always use a
 light presentation palette even when the site is dark or opened on mobile.
 
-The Graphing Calculator and Function Explorer show color-coded Function Details below
-their live graphs and reuse those exact facts in exports. The Transformation Explorer
-uses the same domain/range strings in its live comparison and export. Common parents,
+The Graphing Calculator, Function Explorer, and Transformation Explorer show Function
+Details in their left control columns beneath Plotted equations, Animate a limit, and
+Transform respectively. Live and exported details reuse the same mathematical facts;
+the Transformation Explorer uses the same domain/range strings in both. Common parents,
 degree-two-or-lower polynomials, and supported reciprocal powers such as `1/x^2` show
 exact global properties where values can be rendered without loss; rounded derived
 values are labeled `Approx.`. Unsupported global domain or range renders

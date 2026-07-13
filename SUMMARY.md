@@ -2254,3 +2254,30 @@ accessible reading order; unchanged visual export baselines protect the scope bo
 - TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
 - Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
 - Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+## [2026-07-12 20:18] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Interactive Function Details placement
+
+**Summary:**
+Moved Graphing Function Details beneath Plotted equations, Function Explorer details
+beneath Animate a limit, and Transformation details beneath Transform in the left
+control columns. Added DOM-order regression assertions for all three tools.
+
+**Rationale:**
+Moving the existing JSX blocks preserves their shared mathematical data and semantics
+while making visible and assistive-technology reading order match the approved layout.
+Export builders were untouched.
+
+**Verification:**
+- Vitest: 178/178 passed
+- Focused placement tests: 3/3 passed after all three failed in RED
+- Astro: 0 diagnostics
+- Build: 6 pages
+- Playwright: 57/57 passed
+- Export visuals: 3/3 unchanged baselines
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
