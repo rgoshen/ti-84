@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { evaluate, parse } from 'mathjs';
 import katex from 'katex';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
 import { formatNumber, type HoverInfo } from '@/scripts/graphing/hover';
 import {
   renderGraph,
@@ -23,6 +24,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import GraphResultExport from '@/components/export/GraphResultExport';
+import FunctionDetailsPanels, {
+  type FunctionDetailsPanelEntry,
+} from '@/components/FunctionDetailsPanels';
+import {
+  EXPORT_GRAPH_HEIGHT,
+  formatExportEquation,
+  formatExportValue,
+  selectRepresentativeRows,
+  type ExportSnapshot,
+} from '@/scripts/export/model';
 
 const DEFAULT_WINDOW: Window2D = { xMin: -10, xMax: 10, yMin: -5, yMax: 5 };
 const PALETTE = [
@@ -40,6 +52,18 @@ const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 /** A plotted equation plus a stable id for React keys and list mutations. */
 interface EquationItem extends PlotEquation {
   id: string;
+}
+
+function buildEquationDetails(
+  equations: EquationItem[],
+  window: Window2D,
+): FunctionDetailsPanelEntry[] {
+  return equations.map((equation) => ({
+    id: equation.id,
+    title: `Function details · y = ${formatExportEquation(equation.expr)}`,
+    color: equation.color,
+    facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
+  }));
 }
 
 type WindowFields = Record<keyof Window2D, string>;
@@ -276,6 +300,52 @@ export default function GraphingCalculator(): React.JSX.Element {
 
   const tableXs = integerXs(displayWindow);
   const showTable = equations.length > 0 && tableXs.length > 0;
+  const liveFunctionDetails = useMemo(
+    () => buildEquationDetails(equations, displayWindow),
+    [equations, displayWindow],
+  );
+
+  const createExportSnapshot = (): ExportSnapshot => {
+    const snapshotWindow = { ...displayWindow };
+    const snapshotEquations = equations.map((equation) => ({ ...equation }));
+    const snapshotXs = selectRepresentativeRows(tableXs);
+    const snapshotDetails = buildEquationDetails(snapshotEquations, snapshotWindow);
+
+    return {
+      model: {
+        slug: 'graphing-calculator',
+        title: 'Graphing Calculator',
+        exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
+        window: snapshotWindow,
+        legend: snapshotEquations.map((equation) => ({
+          label: `y = ${formatExportEquation(equation.expr)}`,
+          color: equation.color,
+          detail: equation.showPoints
+            ? `Points shown (${equation.pointShape})`
+            : 'Points hidden',
+        })),
+        sections: snapshotDetails,
+        table: {
+          title: 'Selected values',
+          headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
+          rows: snapshotXs.map((x) => [
+            String(x),
+            ...snapshotEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
+          ]),
+        },
+      },
+      renderGraph: (target) => {
+        renderGraph({
+          target,
+          window: snapshotWindow,
+          equations: snapshotEquations,
+          dark: false,
+          height: EXPORT_GRAPH_HEIGHT,
+          onViewChange: () => {},
+        });
+      },
+    };
+  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
@@ -405,6 +475,11 @@ export default function GraphingCalculator(): React.JSX.Element {
           )}
         </Card>
 
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="graphing-function-details"
+        />
+
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
@@ -439,6 +514,12 @@ export default function GraphingCalculator(): React.JSX.Element {
 
       {/* Plot + table column */}
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <GraphResultExport
+            hasGraph={equations.length > 0}
+            createSnapshot={createExportSnapshot}
+          />
+        </div>
         <Card className="overflow-hidden p-2">
           <div ref={plotRef} data-testid="plot" className="w-full" style={{ minHeight: 560 }} />
         </Card>

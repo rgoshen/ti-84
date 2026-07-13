@@ -350,3 +350,289 @@ Re-enable the two currently-red assertions in `tests/e2e/transformation.spec.ts`
 `slider.tsx` is a shared primitive used by both explorers — verify the visual/`data-slot` styling hooks (`slider-thumb` class, focus ring) are unaffected by moving the prop. Low risk, single-file change, but touches every existing slider consumer.
 
 **Status:** ✅ RESOLVED (2026-07-11, commit 8fcddea). Forwarded `aria-label`/`aria-labelledby` to `SliderPrimitive.Thumb`; both explorers' sliders now resolve by accessible name (Function Explorer's "x value" slider fixed as a bonus). The two transformation e2e assertions pass (9/9 transformation, 24/24 full e2e, no regression); styling/`data-slot` hooks unaffected. Optional follow-up remaining: add a named-role query for the Function Explorer slider in `explorer.spec.ts` (currently `[role="slider"]`).
+
+## [2026-07-12] Feature: Graph Result Export
+
+**Objective:**
+Allow users to preserve a completed graph from the Graphing Calculator, Function
+Explorer, or Transformation Explorer as one self-contained artifact. The exported
+file must retain the graph and its relevant mathematical information while omitting
+navigation, buttons, inputs, sliders, and other editing controls. The TI-84 remains
+out of scope.
+
+**Approach:**
+- Add an accessible Export menu to each supported React island with PNG and PDF
+  choices.
+- Render a shared, read-only export surface at a fixed 1,440px desktop width from an
+  immutable state snapshot. Render the graph off-screen at 960x560 in a light palette
+  through each tool's existing renderer so mobile and desktop exports match.
+- Keep one artifact per action: PNG downloads the complete surface; PDF fits that
+  same surface within margins on one standard Letter landscape page.
+- Use pinned, MIT-licensed `html-to-image` and `jsPDF` dependencies behind a small
+  export adapter so browser conversion can be stubbed in unit tests.
+
+**Tests:**
+- Unit tests first for filenames, dimensions, export state, and the PNG/PDF adapter.
+- Playwright tests for each supported tool: menu availability, successful PNG/PDF
+  download, correct extension/signature, and absence from the TI-84 page.
+- Visual verification at desktop and mobile browser widths to confirm the artifact
+  always uses desktop proportions and contains no interactive controls.
+- Representative-row selection tests and an active-animation export test for
+  immutable Function Explorer captures.
+- Run Vitest, Astro typecheck, production build, and the complete Playwright suite.
+
+**Risks & Tradeoffs:**
+- DOM capture relies on SVG `foreignObject`; current Chrome, Firefox, and Safari are
+  supported. The artifact selects at most nine representative rows to keep capture
+  dimensions bounded.
+- The PDF is a raster rendering of the same PNG surface. This guarantees visual
+  parity and a single page, but its text is not selectable.
+- Export uses a light presentation palette for predictable sharing and printing,
+  independent of the active application theme.
+
+**Status:** Reopened by the export-preview correction below. The first implementation
+passed automated checks but did not match the approved visual target when the user
+inspected the actual downloaded PNG and PDF.
+
+## [2026-07-12] Fix: Match the Approved Export Preview
+
+**Objective:**
+Correct the export artifact so it matches the approved wide desktop preview instead
+of producing a tall generic report with raw machine values and an oversized portrait
+PDF.
+
+**Approach:**
+- Format graph-window bounds to at most three decimal places and render integer
+  exponents with readable superscripts in equation labels.
+- Keep the graph dominant and replace the complete value-table dump with at most nine
+  representative values selected across the visible x window.
+- Keep PNG as the shared visual source, but place it with margins on a standard Letter
+  landscape PDF page instead of creating a custom page from the captured pixel size.
+- Preserve the content-only layout, fixed desktop graph, light palette, tool-specific
+  information, and TI-84 exclusion.
+
+**Tests:**
+- Unit tests first for coordinate formatting, equation display formatting,
+  representative row selection, and landscape PDF image fitting.
+- Update Playwright assertions to verify rounded output-model values and a standard
+  landscape PDF MediaBox.
+- Inspect actual PNG and PDF exports from all three tools against the approved preview.
+- Re-run Vitest, Astro check, build, coverage, and the full Playwright suite.
+
+**Risks & Tradeoffs:**
+- The artifact intentionally shows representative table values rather than every row;
+  the interactive page remains the complete data source.
+- Raster PDF text remains non-selectable because PNG/PDF visual parity is retained.
+
+**Status:** Done on `feature/graph-result-export` after the user review correction.
+The actual Graphing PNG is 1,440x1,139 with rounded bounds, superscript notation, and
+nine selected values; its PDF is one 792x612pt Letter landscape page. Actual Function
+and Transformation PNGs are 1,440x1,354 and 1,440x1,420. The repeated
+`spec-gap-auditor` review led to mounted-artifact content checks for all three tools,
+all-tool PDF coverage, wide-window export coverage, exponent normalization, and
+long-expression wrapping. Final verification: 164/164 Vitest tests, 51/51 Playwright
+tests, zero Astro diagnostics, six production pages built, 86.13% statements / 82.14%
+branches / 87.69% functions / 88.33% lines, and zero production vulnerabilities.
+
+## [2026-07-12] Test: Approved Export Raster Baselines
+
+**Objective:**
+Protect the user-approved graph export composition with automated visual regression
+tests that compare the actual downloaded PNG for every supported tool. This closes
+the planning gap that allowed the original implementation to diverge from the shown
+artifact while still passing structural tests.
+
+**Approach:**
+- Add one focused Playwright visual suite for Graphing Calculator, Function Explorer,
+  and Transformation Explorer; keep TI-84 excluded.
+- Freeze date-dependent content and bundle the Inter font already named by the export
+  so local and Linux CI compare the same raster inputs.
+- Store platform-independent approved PNGs in the test tree and allow updates only
+  through an explicit npm command.
+- Retain semantic artifact assertions for precise failure diagnosis.
+
+**Tests:**
+- First run the new suite without baselines and confirm the expected missing-snapshot
+  failure.
+- Generate reviewed baselines, rerun the visual suite without update mode, and prove
+  a deliberate pixel mutation fails comparison.
+- Run Vitest, Astro check, build, the full Playwright suite, and production audit.
+
+**Risks & Tradeoffs:**
+- Raster checks are sensitive to font and browser changes; both inputs are pinned and
+  baseline replacements require explicit review.
+- The 0.1% pixel tolerance absorbs minor antialiasing but intentionally rejects
+  meaningful composition or content drift.
+
+**Status:** Done on `feature/graph-result-export`. The TDD red run failed three times
+only because baselines were absent; the explicit update command generated the reviewed
+1,440px PNGs, and two subsequent read-only runs passed 3/3 without changing Git state.
+Final verification: 164/164 Vitest tests, 54/54 Playwright tests, zero Astro
+diagnostics, six production pages built, 86.13% statements / 82.14% branches / 87.69%
+functions / 88.33% lines, and zero production vulnerabilities. Only the three
+approved baselines are tracked; subsequent actual/expected/diff PNGs remain under the
+ignored `test-results/` path.
+
+## [2026-07-12] Feature: Mathematical Function Details in Graph Export
+
+**Objective:**
+Replace the Graphing Calculator export's viewport-summary panel with useful
+mathematical analysis for every plotted equation: domain, range, x-intercepts,
+y-intercept, vertical asymptotes, and horizontal asymptotes.
+
+**Approach:**
+- Produce one color-coded Function Details section per equation.
+- Reuse curated parent metadata for exact common-function results and add exact
+  constant/linear/quadratic polynomial analysis from the `mathjs` syntax tree.
+- Fall back to deterministic numerical analysis for unsupported expressions, clearly
+  labeling every inferred result `Approx.` and scoping viewport-bound claims.
+- Omit properties proven not applicable and show `Not determined` only when exact and
+  approximate analysis are both unreliable.
+- Keep graph-window bounds in the artifact header and remove the old range/count panel.
+
+**Tests:**
+- Unit tests first for result states, parent functions, polynomials, numerical roots,
+  visible domain/range, vertical asymptotes, and unknown results.
+- Static artifact coverage for color-coded Function Details sections.
+- Playwright capture assertions plus regenerated, visually reviewed golden PNGs.
+- Full Vitest, coverage, Astro, build, Playwright, and production-audit verification.
+
+**Risks & Tradeoffs:**
+- Numerical domain and range are never global claims; they are explicitly limited to
+  the visible window.
+- Oscillatory or pathological functions may remain `Not determined` rather than
+  receive a plausible but misleading answer.
+- Per-equation panels can increase artifact height when many functions are plotted;
+  the graph remains fixed at 960x560 and the artifact remains one file.
+
+**Status:** Done on `feature/graph-result-export`. The old Graph Information panel is
+removed and every plotted equation owns a stable color-coded Function Details section.
+Exact curated-parent and polynomial results remain unqualified only when display is
+lossless; rounded or numerical results use `Approx.` with visible-window scope where
+required. The spec-gap audit led to direct root verification around discontinuities,
+per-property polynomial confidence, stable duplicate-equation IDs, and browser coverage
+for approximate/unresolved states. Final verification: 172/172 Vitest tests, 56/56
+Playwright tests including 3/3 read-only visual baselines, zero Astro diagnostics, six
+production pages built, 86.43% statements / 81.56% branches / 89.34% functions /
+89.37% lines, and zero production vulnerabilities. Subsequent actual/diff PNGs remain
+ignored; only the three explicitly reviewed baselines are tracked.
+## [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+
+**Objective:**
+Use standard interval notation for Graphing Calculator export domain/range facts and
+append the user's current local date and time through seconds to every supported export
+filename.
+
+**Approach:**
+- Derive interval notation from structured parent and polynomial analysis rather than
+  presentation-time string replacement.
+- Keep numerical interval claims approximate and scoped to the visible window.
+- Format filenames from local `Date` fields as `YYYY-MM-DD-HHmmss` for PNG and PDF.
+- Preserve existing UI notation outside the Graphing Calculator export.
+
+**Tests:**
+- Unit coverage for exact, excluded, bounded, singleton, and approximate intervals.
+- Local-calendar filename tests plus browser filename assertions for PNG and PDF.
+- Mounted-artifact assertions, reviewed raster baselines, and full verification gates.
+
+**Risks & Tradeoffs:**
+- Numerical intervals remain observations within the visible window, not global proofs.
+- Seconds reduce but do not eliminate collisions from repeated downloads.
+- Multi-interval domains must wrap within the fixed artifact width.
+
+**Status:** Done on `feature/graph-result-export`. Graphing Calculator export domains
+and ranges now use structured interval or singleton-set notation, including approximate
+visible-window unions around detected asymptotes. Every supported PNG and PDF filename
+uses the user's local `YYYY-MM-DD-HHmmss` timestamp. Final verification: 176/176 Vitest
+tests, 56/56 Playwright tests including 3/3 read-only visual baselines, zero Astro
+diagnostics, six production pages built, 87.12% statements / 82.5% branches / 89.77%
+functions / 89.98% lines, and zero production vulnerabilities. Only the reviewed
+Graphing baseline changed; generated actual/diff PNGs remain ignored.
+## [2026-07-12] Fix: Global Domain and Range Semantics
+
+**Objective:**
+Stop presenting viewport coverage as mathematical domain/range and add exact global
+analysis for reciprocal powers such as `1/x^2` and `1/(x - 2)`.
+
+**Approach:**
+- Recognize nonzero constants divided by a positive integer power of a linear
+  expression before numerical fallback.
+- Return exact global domain, range, intercept, and asymptote results for supported
+  reciprocal forms.
+- Return `Not determined` for unsupported global domain/range while retaining clearly
+  scoped visible-window evidence for intercepts and vertical asymptotes.
+- Correct the specifications and artifact assertions that encoded viewport semantics.
+
+**Tests:**
+- TDD cases for `1/x^2`, `1/(x - 2)`, odd/even reciprocal powers, and unsupported
+  `sin(x^2)` fallback.
+- Mounted artifact and reviewed Graphing raster coverage.
+- Full unit, coverage, Astro, build, Playwright, visual, and production-audit gates.
+
+**Risks & Tradeoffs:**
+- Exact support remains deliberately bounded; unsupported expressions prefer
+  `Not determined` over plausible but false global claims.
+- A reciprocal denominator root is excluded from the domain even when it lies outside
+  the current graph window.
+
+**Status:** Done on `feature/graph-result-export`. Supported reciprocal powers receive
+exact global domain/range, intercept, and asymptote analysis; unsupported fallback
+renders `Not determined` for domain/range. Final verification: 176/176 Vitest tests,
+57/57 Playwright tests including the exact `1/x^2` export and 3/3 read-only visual
+baselines, zero Astro diagnostics, six production pages built, 86.52% statements /
+81.44% branches / 88.43% functions / 88.87% lines, and zero production
+vulnerabilities. No approved raster baseline changed for this correction.
+## [2026-07-12] Feature: Shared Live and Export Function Details
+
+**Objective:**
+Show Function Details in the interactive Graphing Calculator and Function Explorer,
+and make live/export details across all three graph tools use the same values and proper
+interval notation.
+
+**Approach:**
+- Reuse `analyzeFunction` facts for Graphing Calculator and Function Explorer live and
+  export surfaces.
+- Place compact live detail sections in each tool's left control column.
+- Change Transformation Explorer's shared structured interval formatter so its live
+  comparison table and export update together.
+- Preserve explorer-specific readouts and custom/degenerate unavailable states.
+
+**Tests:**
+- Unit tests for all Transformation interval shapes and transformed details.
+- Component coverage for live fact presentation and wrapping.
+- Browser live/export parity tests for all three tools, including `1/x^2`.
+- Reviewed raster baselines and full coverage, Astro, build, Playwright, and audit gates.
+
+**Risks & Tradeoffs:**
+- Unsupported visible-fact sampling must be memoized on expression/window changes.
+- Details add page height but must not resize the graph or controls.
+- Custom Transformation functions remain explicitly unavailable.
+
+**Status:** Complete. Verified 178/178 Vitest tests, 57/57 Playwright tests including
+3/3 reviewed export baselines, zero Astro diagnostics, six production pages built,
+85.95% statements / 81.15% branches / 85.79% functions / 88.14% lines, and zero
+production vulnerabilities.
+
+## [2026-07-12] Feature: Interactive Function Details Placement
+
+**Objective:**
+Move live Function Details into the left control column at the user-approved position
+for each graph tool without changing exports or any other behavior.
+
+**Approach:**
+- Move existing JSX mount points without changing their data or presentation logic.
+- Place details after Plotted equations, Animate a limit, and Transform respectively.
+- Preserve export snapshot builders and artifact composition exactly.
+
+**Tests:**
+- Browser DOM-order assertions for all three approved placements.
+- Existing live/export parity coverage, full Playwright, Astro, and read-only export
+  visual verification.
+
+**Risks & Tradeoffs:**
+- The 340px control column requires existing long-value wrapping to remain intact.
+- DOM movement must not accidentally move details into export capture markup.
+
+**Status:** Complete. Verified 178/178 Vitest tests, 57/57 Playwright tests, 3/3
+unchanged export visual baselines, zero Astro diagnostics, and six production pages
+built. No export snapshot or approved PNG changed.

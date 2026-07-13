@@ -11,5 +11,8 @@ dist/
 # Playwright
 test-results/
 playwright-report/
+/output/playwright/
 /playwright/.cache/
 .playwright-mcp/
+.superpowers/
+coverage/

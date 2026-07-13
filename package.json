@@ -9,17 +9,23 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:visual": "playwright test tests/e2e/export-visual.spec.ts",
+    "test:e2e:update-snapshots": "playwright test tests/e2e/export-visual.spec.ts --update-snapshots"
   },
   "dependencies": {
     "@astrojs/react": "6.0.0",
+    "@fontsource/inter": "5.2.8",
     "@tailwindcss/vite": "4.3.2",
     "astro": "7.0.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "d3-scale": "4.0.2",
     "function-plot": "1.25.4",
+    "html-to-image": "1.11.13",
+    "jspdf": "4.2.1",
     "katex": "0.17.0",
     "lucide-react": "1.22.0",
     "mathjs": "15.2.0",
@@ -37,6 +43,7 @@
     "@types/node": "26.0.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "@vitest/coverage-v8": "4.1.9",
     "tw-animate-css": "1.4.0",
     "typescript": "6.0.3",
     "vitest": "4.1.9"

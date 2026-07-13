@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { downloadExport, readDownload } from './export-helpers';
+
 const POINT = '[data-testid="explorer-point"]';
 const PLOT = '[data-testid="explorer-plot"]';
 
@@ -28,10 +30,110 @@ async function gotoExplorer(page: Page, fn = '1/x^2'): Promise<void> {
   await plot(page, fn);
 }
 
+test('exports a fixed light PNG from mobile dark mode while a limit animation runs', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await page.goto('/explorers/function');
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByTestId('explorer-function-details')).toHaveCount(0);
+  await plot(page, '1/x^2');
+
+  const liveDetails = page.getByTestId('explorer-function-details');
+  await expect(liveDetails).toContainText('Function details · f(x) = 1/x²');
+  await expect(liveDetails).toContainText('Domain(-∞, 0) ∪ (0, ∞)');
+  await expect(liveDetails).toContainText('Range(0, ∞)');
+  const placement = await liveDetails.evaluate((node) => {
+    const heading = [...document.querySelectorAll('h3')].find(
+      (candidate) => candidate.textContent === 'Animate a limit',
+    );
+    const controlCard = heading?.closest('[data-slot="card"]');
+    return {
+      sameColumn: controlCard?.parentElement === node.parentElement,
+      immediatelyAfter: controlCard?.nextElementSibling === node,
+    };
+  });
+  expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
+  const liveText = (await liveDetails.textContent()) ?? '';
+
+  await page.getByRole('button', { name: 'x → 0⁺' }).click();
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    const snapshot = await artifact.evaluate((node) => {
+      const graph = node.querySelector('[data-testid="export-graph"]');
+      const graphStyle = graph instanceof HTMLElement ? graph.style : null;
+      return {
+        text: node.textContent,
+        rows: node.querySelectorAll('tbody tr').length,
+        controls: node.querySelectorAll('button, input, select, nav').length,
+        graph: graphStyle
+          ? { width: parseFloat(graphStyle.width), height: parseFloat(graphStyle.height) }
+          : null,
+      };
+    });
+    expect(snapshot.text).toContain('f(x) = 1/x²');
+    expect(snapshot.text).toContain(liveText);
+    expect(snapshot.text).toContain('Current readout');
+    expect(snapshot.text).toContain('Asymptotes and end behavior');
+    expect(snapshot.rows).toBe(9);
+    expect(snapshot.controls).toBe(0);
+    expect(snapshot.graph).toMatchObject({ width: 960, height: 560 });
+  });
+  expect(download.suggestedFilename()).toMatch(
+    /^function-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.png$/,
+  );
+  const bytes = await readDownload(download);
+  expect(bytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+
+  const topLeft = await page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('2D canvas unavailable');
+    context.drawImage(image, 0, 0);
+    return Array.from(context.getImageData(0, 0, 1, 1).data);
+  }, bytes.toString('base64'));
+  expect(topLeft.slice(0, 3)).toEqual([248, 250, 252]);
+
+  const pdf = await downloadExport(page, 'PDF');
+  expect(pdf.suggestedFilename()).toMatch(
+    /^function-explorer-\d{4}-\d{2}-\d{2}-\d{6}\.pdf$/,
+  );
+  const pdfBytes = await readDownload(pdf);
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdfBytes.toString('latin1')).toMatch(
+    /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
+  );
+});
+
+test('keeps Function Explorer export available for a wide window', async ({ page }) => {
+  await gotoExplorer(page, 'x');
+  const windowInputs = page.locator('input[type="number"]');
+  await windowInputs.nth(0).fill('0');
+  await windowInputs.nth(1).fill('201');
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
+
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    await expect(artifact.locator('tbody tr')).toHaveCount(9);
+  });
+  const bytes = await readDownload(download);
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+  expect(bytes.readUInt32BE(20)).toBeGreaterThan(0);
+});
+
 test('starts with no function and no point until one is plotted', async ({ page }) => {
   await page.goto('/explorers/function');
   await expect(page.locator(`${PLOT} svg`)).toBeVisible();
   await expect(page.locator(POINT)).toHaveCount(0); // no default function
+  await expect(page.getByTestId('explorer-function-details')).toHaveCount(0);
   await expect(page.getByText('Enter a function to begin')).toBeVisible();
 
   await plot(page, '1/x^2');

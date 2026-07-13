@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
+import { downloadExport, readDownload } from './export-helpers';
+
 /**
  * Geometric, library-agnostic on-curve check: samples the function curve path in
  * screen-space (getPointAtLength + getScreenCTM) and returns the largest distance
@@ -78,6 +80,194 @@ async function plotWithPoints(page: Page): Promise<void> {
   await page.getByRole('checkbox').click();
   await expect(page.locator('[data-testid="plot"] .points-overlay circle').first()).toBeVisible();
 }
+
+test('exports one fixed-width PNG and one PDF after graphing', async ({ page }) => {
+  await page.goto('/graphing');
+  await expect(page.getByRole('button', { name: 'Export' })).toBeDisabled();
+  await expect(page.getByTestId('graphing-function-details')).toHaveCount(0);
+
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Function details · y = x²',
+  );
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Domain(-∞, ∞)',
+  );
+  await expect(page.getByTestId('graphing-function-details')).toContainText(
+    'Range[0, ∞)',
+  );
+  const placement = await page.getByTestId('graphing-function-details').evaluate((node) => {
+    const heading = [...document.querySelectorAll('h3')].find(
+      (candidate) => candidate.textContent === 'Plotted equations',
+    );
+    const controlCard = heading?.closest('[data-slot="card"]');
+    return {
+      sameColumn: controlCard?.parentElement === node.parentElement,
+      immediatelyAfter: controlCard?.nextElementSibling === node,
+    };
+  });
+  expect(placement).toEqual({ sameColumn: true, immediatelyAfter: true });
+
+  const windowInputs = page.locator('input[type="number"]');
+  for (const [index, value] of [
+    '-10.459925966974',
+    '11.57158384563583',
+    '-5.739505589180887',
+    '5.249036586587907',
+  ].entries()) {
+    await windowInputs.nth(index).fill(value);
+  }
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  const png = await downloadExport(page, 'PNG', async (artifact) => {
+    const snapshot = await artifact.evaluate((node) => {
+      const graph = node.querySelector('[data-testid="export-graph"]');
+      const graphStyle = graph instanceof HTMLElement ? graph.style : null;
+      return {
+        text: node.textContent,
+        functionDetails: Array.from(node.querySelectorAll('section')).find((section) =>
+          section.textContent?.includes('Function details · y = x²'),
+        )?.style.borderLeft,
+        rows: node.querySelectorAll('tbody tr').length,
+        controls: node.querySelectorAll('button, input, select, nav').length,
+        width: parseFloat(node.style.width),
+        graph: graphStyle
+          ? { width: parseFloat(graphStyle.width), height: parseFloat(graphStyle.height) }
+          : null,
+      };
+    });
+    expect(snapshot.text).toContain('x [-10.46, 11.572] | y [-5.74, 5.249]');
+    expect(snapshot.text).toContain('y = x²');
+    expect(snapshot.text).toContain('Function details · y = x²');
+    expect(snapshot.text).toContain('Domain(-∞, ∞)');
+    expect(snapshot.text).toContain('Range[0, ∞)');
+    expect(snapshot.text).toContain('x-interceptsx = 0');
+    expect(snapshot.text).toContain('y-intercepty = 0');
+    expect(snapshot.text).not.toContain('Graph information');
+    expect(snapshot.text).not.toContain('asymptote');
+    expect(snapshot.functionDetails).toBe('4px solid rgb(96, 165, 250)');
+    expect(snapshot.rows).toBe(9);
+    expect(snapshot.controls).toBe(0);
+    expect(snapshot.width).toBe(1440);
+    expect(snapshot.graph).toEqual({ width: 960, height: 560 });
+  });
+  expect(png.suggestedFilename()).toMatch(
+    /^graphing-calculator-\d{4}-\d{2}-\d{2}-\d{6}\.png$/,
+  );
+  const pngBytes = await readDownload(png);
+  expect(pngBytes.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(pngBytes.readUInt32BE(16)).toBe(1440);
+  expect(pngBytes.readUInt32BE(20)).toBeLessThan(1440);
+
+  const pdf = await downloadExport(page, 'PDF');
+  expect(pdf.suggestedFilename()).toMatch(
+    /^graphing-calculator-\d{4}-\d{2}-\d{2}-\d{6}\.pdf$/,
+  );
+  const pdfBytes = await readDownload(pdf);
+  expect(pdfBytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(pdfBytes.toString('latin1')).toMatch(
+    /\/MediaBox\s*\[\s*0\s+0\s+792(?:\.\d*)?\s+612(?:\.\d*)?\s*\]/,
+  );
+});
+
+test('exports separate color-owned details for duplicate equations', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await page.locator('#eq-input').fill('x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  const liveSections = page
+    .getByTestId('graphing-function-details')
+    .locator('[data-function-details-id]');
+  await expect(liveSections).toHaveCount(2);
+  const liveColors = await liveSections.evaluateAll((nodes) =>
+    nodes.map((node) => (node instanceof HTMLElement ? node.style.borderLeft : '')),
+  );
+  expect(liveColors).toEqual([
+    '4px solid rgb(96, 165, 250)',
+    '4px solid rgb(248, 113, 113)',
+  ]);
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const detailSections = artifact.locator('[data-export-section]');
+    await expect(detailSections).toHaveCount(2);
+    const sections = await detailSections.evaluateAll((nodes) =>
+      nodes.map((node) => ({
+        id: node.getAttribute('data-export-section'),
+        borderLeft: node instanceof HTMLElement ? node.style.borderLeft : '',
+      })),
+    );
+
+    expect(sections).toEqual([
+      { id: expect.any(String), borderLeft: '4px solid rgb(96, 165, 250)' },
+      { id: expect.any(String), borderLeft: '4px solid rgb(248, 113, 113)' },
+    ]);
+    expect(new Set(sections.map((section) => section.id)).size).toBe(2);
+  });
+});
+
+test('exports visible-window approximation and unresolved states', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('sin(x^2)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.textContent();
+
+    expect(text).toContain('DomainNot determined');
+    expect(text).toContain('RangeNot determined');
+    expect(text).toContain('in visible window');
+    expect(text).toContain('Vertical asymptotesNot determined');
+    expect(text).toContain('Horizontal asymptotesNot determined');
+  });
+});
+
+test('exports exact global details for an even reciprocal power', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('1/x^2');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  const liveDetails = page.getByTestId('graphing-function-details');
+  await expect(liveDetails).toContainText('Domain(-∞, 0) ∪ (0, ∞)');
+  await expect(liveDetails).toContainText('Range(0, ∞)');
+  const liveText = (await liveDetails.textContent()) ?? '';
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.textContent();
+
+    expect(text).toContain(liveText);
+    expect(text).toContain('Domain(-∞, 0) ∪ (0, ∞)');
+    expect(text).toContain('Range(0, ∞)');
+    expect(text).toContain('Vertical asymptotesx = 0');
+    expect(text).toContain('Horizontal asymptotesy = 0');
+    expect(text).not.toContain('x-intercepts');
+    expect(text).not.toContain('y-intercept');
+  });
+});
+
+test('keeps graph export available for a wide window', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  const windowInputs = page.locator('input[type="number"]');
+  await windowInputs.nth(0).fill('0');
+  await windowInputs.nth(1).fill('201');
+  await page.getByRole('button', { name: 'Apply window' }).click();
+
+  await expect(page.getByRole('button', { name: 'Export' })).toBeEnabled();
+  await expect(page.getByText(/Narrow the x window/)).toHaveCount(0);
+
+  const download = await downloadExport(page, 'PNG', async (artifact) => {
+    await expect(artifact.locator('tbody tr')).toHaveCount(9);
+  });
+  const bytes = await readDownload(download);
+  expect(bytes.readUInt32BE(16)).toBe(1440);
+  expect(bytes.readUInt32BE(20)).toBeLessThan(1440);
+});
 
 test('dark mode renders a visible grid and a bold, light-colored origin cross', async ({
   page,

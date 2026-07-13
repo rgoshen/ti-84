@@ -1359,3 +1359,986 @@ when f(0) genuinely does not exist (ln, 1/x), where nothing is the honest answer
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-11-concrete-equation-readout-design.md
+
+## [2026-07-12 12:41] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export design
+
+**Summary:**
+Documented the approved content-only, desktop-width export experience for the
+Graphing Calculator and both Explorers. Defined one-file PNG/PDF artifacts, exact
+tool-specific content, a shared read-only capture architecture, error handling,
+accessibility, dependency boundaries, and a strict TDD verification strategy. Added
+the required TODO entry and ignored temporary visual-companion output.
+
+**Rationale:**
+The existing page layouts mix result readouts with interactive controls, so hiding
+controls in place would lose useful mathematical context. A temporary read-only
+surface fed by current tool state preserves the website's style while excluding UI
+that cannot function in a downloaded file. Capturing that surface once and reusing it
+for PNG and PDF guarantees that both formats remain a single, equivalent artifact.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 12:54] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export specification audit
+
+**Summary:**
+Resolved all eight material gaps from the requested `spec-gap-auditor` review. The
+contract now defines fixed artifact and graph dimensions, a dedicated light export
+render, immutable snapshots, per-tool eligibility, a 201-row table boundary, precise
+Function Explorer asymptote content, and marker-setting ownership.
+
+**Rationale:**
+Capturing the responsive live graph contradicted both fixed desktop output and the
+light export palette: mobile geometry and dark theming would leak into the file. An
+off-screen render through the existing tool renderer keeps the graph behavior DRY
+while making dimensions, theme, and animation consistency deterministic. The
+auditor's suggested 1,001-row cap was tightened to 201 because a 1,440px-wide image
+with 1,001 table rows can exceed practical browser canvas limits.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Spec audit: 8 findings resolved
+
+## [2026-07-12 13:01] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export implementation plan
+
+**Summary:**
+Added a seven-task, TDD-first implementation plan covering the pure export contract,
+dependency-injected PNG/PDF conversion, fixed read-only artifact, accessible menu and
+lifecycle, one integration slice per supported tool, TI-84 exclusion, full automated
+verification, coverage, and cross-viewport visual QA.
+
+**Rationale:**
+The plan isolates browser conversion from domain mapping so pure behavior remains
+fast and deterministic to test. Each tool owns its state-to-artifact adapter while
+reusing the existing plot renderer and the shared export surface, which avoids both
+duplicated graph math and a generic shared module coupled to explorer internals.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md
+
+## [2026-07-12 13:05] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export contract and dependencies
+
+**Summary:**
+Added the pure graph-export contract with fixed artifact/graph dimensions, the
+201-row eligibility boundary, deterministic input-free filenames, numeric display
+formatting, and typed artifact/snapshot models. Added four TDD unit tests and pinned
+`html-to-image` 1.11.13 plus `jsPDF` 4.2.1.
+
+**Rationale:**
+Keeping export policy in a browser-free module makes the user-visible limits and file
+contract independently testable. Tool components can supply domain-specific content
+without redefining dimensions, eligibility messages, or filename behavior.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 1
+
+## [2026-07-12 13:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export download adapters
+
+**Summary:**
+Added a dependency-injected export boundary that captures the artifact once at the
+audited dimensions, downloads that capture directly as PNG, or embeds the identical
+image into a zero-margin custom-size PDF. Added two TDD orchestration tests and lazy
+browser imports for `html-to-image` and `jsPDF`.
+
+**Rationale:**
+Injecting conversion and save operations keeps unit tests deterministic and prevents
+browser/canvas behavior from leaking into export policy. A single capture path also
+guarantees PNG/PDF visual parity and avoids loading the PDF library during normal use.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 2
+
+## [2026-07-12 13:09] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Shared export artifact and controller
+
+**Summary:**
+Added the fixed-width, light read-only artifact shell; an accessible Radix Export menu
+with PNG/PDF commands; and the off-screen snapshot lifecycle with busy, success, and
+recoverable error states. Added static-markup TDD coverage proving audited dimensions,
+result content, disabled guidance, and the absence of interactive controls.
+
+**Rationale:**
+The shared shell owns presentation and conversion timing while each math tool retains
+ownership of its state mapping and plot renderer. Mounting only during export avoids
+duplicate accessible content, and the disabled/busy states prevent invalid or
+duplicate captures.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 3
+
+## [2026-07-12 13:55] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator export
+
+**Summary:**
+Added optional plot heights without changing interactive defaults and integrated the
+Graphing Calculator with immutable, light export snapshots. The artifact includes
+every equation, per-equation marker state, current zoom window, and complete value
+table. Added Playwright coverage for empty/oversized disabling, PNG signature and
+1,440px width, deterministic filename, and PDF signature.
+
+**Rationale:**
+Rendering into a fixed off-screen target through the existing graph renderer preserves
+curve and marker correctness while making mobile and desktop output deterministic.
+Copying equations/window/table inputs before rendering prevents live edits or zoom
+from changing an export in progress.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 4
+
+## [2026-07-12 13:58] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer export
+
+**Summary:**
+Integrated immutable Function Explorer exports containing the function, current
+point/readout, precise vertical asymptote and tail behavior, visible guide/marker
+settings, fixed light graph, and complete value table. Added Playwright coverage for
+mobile dark-mode capture during an active limit animation, light output, fixed PNG
+width/signature, and the 201-row limit; extracted shared download-test helpers.
+
+**Rationale:**
+Copying the moving point, analysis objects, overlay points, and table inputs before
+off-screen rendering prevents the live sweep loop from changing the artifact during
+capture. The export deliberately omits the transient sweep trail while preserving the
+mathematical readout at the snapshot moment.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 5
+
+## [2026-07-12 14:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Transformation Explorer export
+
+**Summary:**
+Integrated Transformation Explorer exports containing the selected parent, concrete
+transformed equation, a/b/h/k values, transformation steps, parent/transformed
+details, visibility and marker state, fixed light graph, and both value-table columns.
+Added Playwright coverage for real PNG output after a coefficient change, the row
+limit, and explicit TI-84 export exclusion.
+
+**Rationale:**
+The tool-specific adapter keeps transformation domain knowledge out of the shared
+export shell while copying every renderer input before capture. Hidden parent curves
+and their suppressed markers are reported explicitly instead of being silently absent
+from the artifact.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 6
+
+## [2026-07-12 14:16] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export progress accessibility
+
+**Summary:**
+Removed the export controller's unconditional `role="status"` while retaining its
+polite live-region announcement. Added a static regression assertion and verified all
+five existing explorer/graph tooltip status tests.
+
+**Rationale:**
+Every supported tool already owns a status landmark, and the graphing tooltip adds one
+conditionally. The export controller's second landmark made role queries ambiguous
+and duplicated the accessibility contract. `aria-live="polite"` provides progress
+announcements without claiming another status role.
+
+**Bug Fix Context:**
+The full Playwright suite found five strict-mode failures because the new empty export
+status and the existing tool/tooltip status resolved simultaneously.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Full-suite regression found during Plan Task 7
+
+## [2026-07-12 15:24] Commit Summary
+
+**Change Type:** Test
+**Scope:** Export coverage verification
+
+**Summary:**
+Pinned `@vitest/coverage-v8` 4.1.9, added the repeatable `npm run test:coverage`
+command, and ignored generated coverage output. Measured 86.08% statements, 82.36%
+branches, 86.88% functions, and 88.07% lines across the exercised unit modules.
+
+**Rationale:**
+The repository required at least 80% coverage on changed work but previously had no
+coverage provider. Pinning the provider to the installed Vitest version makes the
+verification reproducible instead of relying on an unrecorded local tool.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Plan: Task 7
+
+## [2026-07-12 15:24] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph result export completion
+
+**Summary:**
+Documented how to export one PNG/PDF artifact from each supported graph tool, the
+201-row boundary, light fixed-width behavior, and TI-84 exclusion. Updated the project
+structure and test commands, and marked the TODO complete with exact unit, e2e,
+coverage, build, visual-QA, and production-audit evidence.
+
+**Rationale:**
+Export behavior includes deliberate constraints that users and maintainers need to
+understand: the file is content-only, uses desktop proportions regardless of viewport,
+and refuses oversized tables rather than silently truncating mathematical data.
+
+**References:**
+- TODO.md: [2026-07-12] Graph Result Export
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- Plan: docs/superpowers/plans/2026-07-12-graph-result-export.md
+
+## [2026-07-12 15:43] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export preview correction
+
+**Summary:**
+Reopened graph export after the user's downloaded PNG/PDF showed that the first
+implementation did not match the approved preview. Revised the contract to require
+rounded bounds, readable exponent notation, at most nine representative values, and
+a standard Letter landscape PDF with margins.
+
+**Rationale:**
+The original complete-table/custom-page choices turned a graph-first desktop artifact
+into a tall data dump and portrait PDF. The approved visual hierarchy is the source of
+truth; complete table data remains available in the interactive tool.
+
+**Bug Fix Context:**
+The reported PNG was 1,440x1,542 with 14-16 decimal window values. Its 6.6 MB PDF used
+a custom 1,080x1,156.5pt portrait page instead of a standard landscape page.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- User-provided PNG/PDF from 2026-07-12
+
+## [2026-07-12 15:50] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph result export presentation
+
+**Summary:**
+Replaced raw graph bounds and calculator exponent syntax with report formatting,
+selected at most nine representative table rows across each visible window, removed
+the obsolete 201-row export rejection, and fitted PDF captures within an 18pt margin
+on a standard Letter landscape page. Applied the corrected snapshot mapping to the
+Graphing Calculator, Function Explorer, and Transformation Explorer.
+
+**Rationale:**
+The first export passed its technical checks while producing a different artifact
+from the approved preview. Moving the presentation rules into the shared export model
+keeps PNG and PDF content consistent and prevents each tool from reintroducing raw
+values or unbounded tables.
+
+**Bug Fix Context:**
+The rejected PNG was taller than it was wide because it rendered every whole-number
+x row. The PDF then copied that raster height into a custom portrait MediaBox. The
+corrected tests require a wide PNG, representative values, readable notation, and a
+792x612pt Letter landscape PDF.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 15:57] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export artifact composition
+
+**Summary:**
+Kept the primary tool summary beside the graph and moved secondary analysis panels
+into a two-column details band below it. Added a browser assertion that the most
+content-heavy Transformation Explorer export remains wider than it is tall and
+ignored generated visual-QA files under `output/playwright`.
+
+**Rationale:**
+Real artifact inspection found that stacking every information panel in the narrow
+sidebar made the Transformation Explorer 1,470px tall. The horizontal details band
+preserves every required fact while restoring the approved desktop composition.
+
+**Bug Fix Context:**
+This issue was visible only in the downloaded Transformation Explorer PNG; unit and
+signature checks did not reveal that the sidebar was controlling the grid height.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Visual QA: output/playwright/*-corrected.png
+
+## [2026-07-12 16:08] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Export audit closure and documentation
+
+**Summary:**
+Closed the post-implementation `spec-gap-auditor` findings with real capture-path
+content assertions for every tool, PDF coverage for both explorers, wide-window
+export checks, flexible integer-power normalization, and defensive wrapping for long
+equations. Updated the README, specification, implementation-plan warning, and TODO
+to describe the corrected artifact rather than the rejected complete-table design.
+
+**Rationale:**
+File signatures and outer dimensions alone could not prove that the downloaded
+artifact contained rounded values, readable equations, a dominant graph, or no
+controls. Inspecting the exact mounted node passed to `html-to-image` verifies that
+wiring while keeping raster output tests deterministic and independent of OCR.
+
+**Bug Fix Context:**
+The first correction fixed the user's specific graph but the audit found that spaced
+or parenthesized powers could still show caret notation and long equations could
+expand fixed-width regions. Both cases now have regression coverage.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Match the Approved Export Preview
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+- `spec-gap-auditor` post-implementation review
+
+## [2026-07-12 16:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export visual regression design
+
+**Summary:**
+Added the previously omitted raster-baseline contract for all three downloadable
+graph artifacts. Defined canonical fixtures, deterministic date and font inputs, a
+0.1% pixel tolerance, platform-independent baseline paths, and an explicit-only
+approval command. Added the required TDD task to TODO.md.
+
+**Rationale:**
+The original plan treated visual comparison as a manual completion check, which could
+not protect the approved artifact from later drift. Committed golden PNGs turn that
+approved composition into an executable contract while semantic assertions continue
+to explain failures.
+
+**Bug Fix Context:**
+The first implementation passed signature, dimension, and content tests despite not
+matching the preview shown to the user. This design addresses that planning defect
+directly.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+
+## [2026-07-12 16:22] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export raster baseline plan
+
+**Summary:**
+Added a two-task implementation plan for deterministic downloaded-PNG snapshots and
+their review workflow. The plan defines the exact Playwright fixtures, red/green
+commands, bundled Inter weights, platform-independent snapshot path, explicit update
+script, verification gates, and atomic commits.
+
+**Rationale:**
+The approved visual design needs an executable maintenance workflow, not only a
+baseline requirement. Separating read-only comparison from intentional replacement
+makes visual changes reviewable and prevents normal tests from approving regressions.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: docs/superpowers/plans/2026-07-12-export-raster-baselines.md
+
+## [2026-07-12 16:27] Commit Summary
+
+**Change Type:** Test
+**Scope:** Approved export raster baselines
+
+**Summary:**
+Added a dedicated Playwright visual suite that freezes the export date, downloads the
+real PNG from each supported graph tool, and compares it with a platform-independent
+approved baseline at a 0.1% differing-pixel tolerance. Pinned OFL-1.1 Inter 5.2.8 and
+loaded its regular, semibold, and bold weights so local macOS and Linux CI use the
+same export typography. Added separate read-only and explicit-update npm commands.
+
+**Rationale:**
+Structural checks explain artifact content but cannot protect visual hierarchy. The
+golden files encode the approved composition, while fixed time, font, graph geometry,
+theme, and Chromium version remove the major sources of irrelevant raster drift.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: Task 1
+
+## [2026-07-12 16:32] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export visual baseline review
+
+**Summary:**
+Documented the read-only comparison and explicit replacement commands, baseline
+location, required human review, and ignored mismatch evidence. Marked the raster
+baseline task complete with exact unit, browser, coverage, typecheck, build, audit,
+and clean-worktree evidence.
+
+**Rationale:**
+Maintainers need a clear distinction between running visual tests and approving a new
+design. Normal and CI runs now have an explicit documented guarantee that they cannot
+modify or add tracked PNG expectations.
+
+**References:**
+- TODO.md: [2026-07-12] Test: Approved Export Raster Baselines
+- Plan: Task 2
+
+## [2026-07-12 16:45] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph export Function Details
+
+**Summary:**
+Defined and planned per-equation mathematical analysis for Graphing Calculator
+exports. The contract covers exact curated parents and degree-two polynomials,
+visible-window numerical fallback, explicit confidence states, color ownership,
+omission rules, and removal of the old viewport-summary panel.
+
+**Rationale:**
+Window bounds and function counts describe the renderer, not the mathematics the user
+wants to preserve. A typed pure-analysis boundary keeps uncertainty explicit and
+prevents React presentation code from making unsupported mathematical claims.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
+
+## [2026-07-12 17:39] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graph function analysis
+
+**Summary:**
+Added a pure graph-analysis module that returns typed exact, approximate,
+not-applicable, or not-determined results for domain, range, intercepts, and vertical
+and horizontal asymptotes. Curated parent functions and constant, linear, and
+quadratic polynomials receive exact results; other valid expressions use deterministic
+visible-window sampling with every inferred value labeled as approximate.
+
+**Rationale:**
+The export needs mathematically useful facts without presenting numerical guesses as
+global truths. Keeping confidence in the result type makes omission and labeling rules
+testable before the values reach the report UI.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Task 1
+
+## [2026-07-12 17:44] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator export
+
+**Summary:**
+Replaced the Graph Information viewport/count panel with one color-coded Function
+Details section per plotted equation. The export now presents domain, range,
+intercepts, and applicable asymptotes from the typed analysis engine, and the browser
+test rejects the former panel. Updated the reviewed PNG baselines after inspecting all
+three actual downloadable artifacts.
+
+**Rationale:**
+The report should preserve useful mathematics rather than repeat window bounds already
+shown in its header. Equation-colored sections retain ownership when multiple functions
+are exported, while omitted and not-determined states avoid misleading `N/A` rows.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Tasks 2 and 3
+
+## [2026-07-12 18:01] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph export Function Details confidence
+
+**Summary:**
+Prevented discontinuities from being reported as numerical x-intercepts by excluding
+detected asymptote intervals and verifying each bisection result against the function.
+Changed polynomial properties from exact to approximate whenever three-decimal display
+rounding loses information, retained legitimate small coefficients, added required
+visible-window scope, and gave every equation-owned export section a stable ID.
+
+**Rationale:**
+Confidence labels are part of the mathematical result, not presentation decoration.
+Property-level confidence prevents a structurally analyzable polynomial from making an
+incorrect exact-value claim, while root verification distinguishes zero crossings from
+sign changes caused by poles. Stable IDs preserve color ownership for duplicate plots.
+
+**Bug Fix Context:**
+The spec-gap audit reproduced `1/(x - 2.0013)` as a false x-intercept and identified
+that `x^2 - 2` rendered `±1.414` without an approximation label.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: Tasks 1 through 3
+
+## [2026-07-12 18:04] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Graph export Function Details completion
+
+**Summary:**
+Marked the implementation plan and feature TODO complete with the final audited unit,
+browser, visual, static-analysis, build, coverage, and production-audit evidence.
+
+**Rationale:**
+The completion record now distinguishes exact and approximate property confidence and
+captures the additional safeguards required by the spec-gap review, so future changes
+can reproduce the same definition of done.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Mathematical Function Details in Graph Export
+- Plan: docs/superpowers/plans/2026-07-12-graph-export-function-details.md
+## [2026-07-12 18:16] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export interval notation and filename timestamps
+
+**Summary:**
+Defined the approved contract for interval-notation Graphing Calculator export facts
+and local `YYYY-MM-DD-HHmmss` timestamps on every supported PNG and PDF filename.
+Documented exact, approximate, singleton, excluded-point, and visible-window behavior,
+along with TDD and visual-regression requirements.
+
+**Rationale:**
+Structured interval formatting preserves mathematical meaning and confidence, while
+local calendar fields ensure the saved filename matches the user's date and time rather
+than UTC.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
+## [2026-07-12 18:26] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Export interval notation and local timestamps plan
+
+**Summary:**
+Added the three-task TDD implementation plan for structured exact and visible-window
+interval notation, local `YYYY-MM-DD-HHmmss` filenames, mounted-artifact assertions,
+reviewed raster updates, and full completion verification.
+
+**Rationale:**
+Separating mathematical notation, local-time naming, and artifact approval gives each
+behavior an independent red/green cycle and keeps visual baseline replacement behind
+the existing explicit review command.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
+- Plan: docs/superpowers/plans/2026-07-12-export-interval-notation-local-timestamps.md
+## [2026-07-12 18:29] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graph export interval notation
+
+**Summary:**
+Added a pure structured interval formatter for all-real, bounded, excluded-point,
+between, closed sampled, and visible-domain union notation. Integrated it into exact
+parent and polynomial analysis plus approximate visible-window domain/range facts,
+while preserving intercept, asymptote, omission, and confidence behavior.
+
+**Rationale:**
+Formatting structured sets avoids fragile inequality string parsing and prevents a
+finite sampled interval from being confused with a proven global domain. Singleton
+polynomial ranges use set notation because a single value is not an interval.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Plan: Task 1
+## [2026-07-12 18:32] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Export download filenames
+
+**Summary:**
+Changed the shared filename formatter to append local date and 24-hour time through
+seconds as `YYYY-MM-DD-HHmmss`. Updated pure PNG/PDF tests and browser contracts for
+Graphing Calculator, Function Explorer, and Transformation Explorer, including PDF
+filename assertions that were previously absent for the two explorers.
+
+**Rationale:**
+Local calendar getters make the filename match the user's actual date and time; UTC
+ISO serialization changed a Phoenix evening export from July 12 to July 13. Seconds
+keep repeated downloads distinct without making filenames unreadable.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Plan: Task 2
+## [2026-07-12 18:38] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interval notation and local timestamp completion
+
+**Summary:**
+Documented the completed interval-notation and local filename behavior, the reviewed
+Graphing raster replacement, unchanged explorer baselines, and final unit, browser,
+coverage, typecheck, build, and production-audit evidence.
+
+**Rationale:**
+The completion record makes the mathematical notation boundary, local-time semantics,
+and explicit visual approval reproducible for future maintainers.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Export Interval Notation and Local Timestamps
+- Spec: docs/superpowers/specs/2026-07-12-export-interval-notation-local-timestamps-design.md
+- Plan: Task 3
+## [2026-07-12 18:58] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph export domain and range contract
+
+**Summary:**
+Corrected the specifications and task record so domain and range are always global
+properties. Defined exact support for reciprocal powers of linear expressions and
+required `Not determined` instead of viewport-derived domain/range for unsupported
+expressions.
+
+**Rationale:**
+Visible-window sampling can provide evidence about displayed crossings and asymptotes,
+but it cannot prove a function's global domain or range.
+
+**Bug Fix Context:**
+The implementation labeled sampled x/y viewport bounds as domain/range, causing
+mathematically incorrect report facts for expressions outside exact analysis support.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+## [2026-07-12 19:03] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Graph function global analysis
+
+**Summary:**
+Added exact analysis for nonzero constants divided by positive integer powers of a
+linear expression. Reciprocal domains now exclude the denominator root globally,
+range follows odd/even power parity and numerator sign, and intercept/asymptote facts
+are exact when losslessly displayable. Unsupported fallback now returns
+`Not determined` for domain/range instead of sampled viewport bounds.
+
+**Rationale:**
+Domain and range are global set properties. Viewport sampling cannot establish either,
+whereas the supported reciprocal form has a small exact algebraic solution.
+
+**Bug Fix Context:**
+`1/x^2` previously reported `[-4, 0) ∪ (0, 4]` and a sampled y-range for a
+`[-4, 4]` window. It now reports domain `(-∞, 0) ∪ (0, ∞)` and range
+`(0, ∞)` independently of the current graph window.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+## [2026-07-12 19:05] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Global domain and range verification
+
+**Summary:**
+Documented exact reciprocal-power support, conservative unsupported global properties,
+and the final unit, browser, visual, static-analysis, build, coverage, and audit results.
+
+**Rationale:**
+User documentation must distinguish global mathematical properties from explicitly
+scoped viewport evidence so zooming cannot appear to redefine domain or range.
+
+**References:**
+- TODO.md: [2026-07-12] Fix: Global Domain and Range Semantics
+- Spec: docs/superpowers/specs/2026-07-12-graph-result-export-design.md
+## [2026-07-12 19:34] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live and export Function Details
+
+**Summary:**
+Defined the approved shared-data design for live Graphing and Function Explorer detail
+panels plus interval-notation parity across Transformation Explorer live and export
+surfaces. Added exact placement, ownership, accessibility, parity, and test contracts.
+
+**Rationale:**
+All user-visible surfaces must consume the same mathematical result data; sharing only
+visual markup would leave duplicate analysis and allow live/export facts to drift again.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+## [2026-07-12 19:37] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live and export Function Details plan
+
+**Summary:**
+Added the five-task TDD plan for Transformation interval-source formatting, reusable
+live fact presentation, Graphing and Function Explorer live/export parity, reviewed
+raster updates, and full completion verification.
+
+**Rationale:**
+Independent red/green slices make each shared-data boundary reviewable while ensuring
+the final browser tests compare live text with mounted export text directly.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+- Plan: docs/superpowers/plans/2026-07-12-shared-live-export-function-details.md
+## [2026-07-12 19:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Transformation Function Details notation
+
+**Summary:**
+Changed the shared Transformation `FunctionDetails` interval formatter to standard
+interval notation. Updated every structured interval and transformed-parent unit case,
+plus browser assertions proving identical interval text in the live comparison table
+and mounted export.
+
+**Rationale:**
+Transformation live and export surfaces already share one details model, so formatting
+at that pure source guarantees parity without React or export-specific rewriting.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 1
+## [2026-07-12 19:42] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Live Function Details presentation
+
+**Summary:**
+Added a reusable live Function Details panel that renders stable equation-owned cards,
+semantic definition-list facts, curve-color borders, long-value wrapping, and no output
+for an empty entry set.
+
+**Rationale:**
+The component deliberately accepts display-ready facts and contains no mathematical
+policy, allowing multiple tools to share accessible presentation without duplicating
+analysis or coupling live pages to export capture markup.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 2
+## [2026-07-12 19:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Graphing Calculator live Function Details
+
+**Summary:**
+Added memoized live Function Details directly below the graph, with one stable
+color-owned panel per equation. A single builder now supplies both live entries and
+export sections. Browser coverage proves empty state, `x^2` facts, exact `1/x^2`
+live/export text parity, and duplicate-equation color ownership.
+
+**Rationale:**
+Sharing the constructed fact entries removes the previous export-only behavior and
+makes live/export drift structurally harder to introduce.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 3
+## [2026-07-12 19:48] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Function Explorer live and exported Function Details
+
+**Summary:**
+Added memoized Function Details below the Function Explorer graph and inserted the
+same entry into its export before the existing readout, asymptote, and guide sections.
+Browser coverage proves the empty state and exact `1/x^2` live/export text parity.
+
+**Rationale:**
+One local builder now owns the analyzed facts for both surfaces, preventing live and
+exported domain, range, intercept, and asymptote information from diverging.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 4
+## [2026-07-12 19:51] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared live/export Function Details verification
+
+**Summary:**
+Approved the Function Explorer and Transformation Explorer export baselines, documented
+live Function Details and interval parity, and corrected the wide-export browser test
+to permit content-driven artifact height. Marked the shared-data design implemented.
+
+**Rationale:**
+The export contract fixes width at 1,440px but intentionally captures all report
+content, so height must grow when Function Details are added. The reviewed baselines
+now record that behavior without committing generated actual or diff images.
+
+**Verification:**
+- Vitest: 178/178 passed
+- Coverage: 85.95% statements, 81.15% branches, 85.79% functions, 88.14% lines
+- Astro: 0 diagnostics
+- Build: 6 pages
+- Playwright: 57/57 passed, including 3/3 reviewed visual baselines
+- Production audit: 0 vulnerabilities
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Spec: docs/superpowers/specs/2026-07-12-shared-live-export-function-details-design.md
+- Plan: Task 5
+## [2026-07-12 19:57] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Shared Function Details branch publication
+
+**Summary:**
+Recorded completion of the feature-branch push after publishing all shared live/export
+Function Details implementation and verification commits.
+
+**Rationale:**
+Keeping the implementation plan synchronized with the remote branch provides a final,
+traceable completion record without mixing publication bookkeeping into feature code.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Shared Live and Export Function Details
+- Plan: Task 5
+## [2026-07-12 20:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details placement
+
+**Summary:**
+Documented the approved left-column placement for live Function Details across the
+Graphing Calculator, Function Explorer, and Transformation Explorer.
+
+**Rationale:**
+Treating this as a JSX mount-point change keeps interactive reading order aligned with
+the visual layout while explicitly isolating export composition and mathematical data.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+## [2026-07-12 20:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details placement plan
+
+**Summary:**
+Added the TDD implementation plan for moving all three live Function Details regions
+into their approved left-column positions while preserving export artifacts.
+
+**Rationale:**
+DOM ancestry and sibling-order assertions directly protect both visible placement and
+accessible reading order; unchanged visual export baselines protect the scope boundary.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+## [2026-07-12 20:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Interactive Function Details publication
+
+**Summary:**
+Marked the approved placement specification and implementation plan complete after
+publishing the verified implementation to `feature/graph-result-export`.
+
+**Rationale:**
+The documentation now records the same completion state as the remote feature branch.
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+## [2026-07-12 20:18] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Interactive Function Details placement
+
+**Summary:**
+Moved Graphing Function Details beneath Plotted equations, Function Explorer details
+beneath Animate a limit, and Transformation details beneath Transform in the left
+control columns. Added DOM-order regression assertions for all three tools.
+
+**Rationale:**
+Moving the existing JSX blocks preserves their shared mathematical data and semantics
+while making visible and assistive-technology reading order match the approved layout.
+Export builders were untouched.
+
+**Verification:**
+- Vitest: 178/178 passed
+- Focused placement tests: 3/3 passed after all three failed in RED
+- Astro: 0 diagnostics
+- Build: 6 pages
+- Playwright: 57/57 passed
+- Export visuals: 3/3 unchanged baselines
+
+**References:**
+- TODO.md: [2026-07-12] Feature: Interactive Function Details Placement
+- Spec: docs/superpowers/specs/2026-07-12-interactive-function-details-placement-design.md
+- Plan: docs/superpowers/plans/2026-07-12-interactive-function-details-placement.md
+
+## [2026-07-12 20:53] Commit Summary
+
+**Change Type:** Fix
+**Scope:** e2e / export visual regression baselines
+
+**Summary:**
+Regenerated the three approved PNG baselines under
+`tests/e2e/__snapshots__/export-visual.spec.ts/` from a Linux/Chromium environment
+matching CI. No application code changed.
+
+**Rationale:**
+PR #9's `ci / verify` job failed all three `export-visual.spec.ts` tests with a
+deterministic ~1% pixel diff (10x the configured `maxDiffPixelRatio: 0.001`), identical
+across every retry. Reproduced the failure locally in the
+`mcr.microsoft.com/playwright:v1.61.1-noble` container (matching the pinned
+`@playwright/test` version and CI's `ubuntu-latest` family) while the same commit
+passed cleanly on macOS. Diff images showed antialiasing noise around every glyph
+across the exported report (headings, table cells, labels) with the plotted
+curve/grid untouched — the signature of cross-platform font rasterization (macOS
+CoreText vs Linux FreeType), not a layout or logic defect. Ruled out a competing
+hypothesis — staleness from the same-day "move live panels into control columns"
+change (13d3760) — by confirming `ExportArtifact.tsx` composes its own independent
+report layout, unaffected by that live-page reorder. Used the project's existing
+`test:e2e:update-snapshots` script inside the Linux container to regenerate baselines
+against the environment that actually gates PRs.
+
+**Bug Fix Context:**
+Root cause: approved snapshots were originally captured on macOS and committed as the
+sole baseline, but CI runs on Ubuntu Linux; Chromium defers glyph rasterization to the
+OS font stack, so the same self-hosted Inter font renders with slightly different
+antialiasing/hinting per platform, exceeding tolerance. Trade-off: running
+`export-visual.spec.ts` alone on macOS will now show the mirrored failure — future
+baseline updates should run via the same Docker image (or in CI), not natively on
+macOS.
+
+**Verification:**
+- Vitest: 178/178 passed (macOS)
+- Playwright full suite: 54 passed / 3 failed as expected on macOS (mirrored platform
+  diff); all 57 passed inside the Linux container
+- Export visuals: 3/3 pass against new baselines inside the Linux container
+
+**References:**
+- PR: #9
+- Workflow: `.github/workflows/_verify.yml` (`ci / verify`)

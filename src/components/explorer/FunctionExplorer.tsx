@@ -6,6 +6,10 @@ import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/g
 import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
+import FunctionDetailsPanels, {
+  type FunctionDetailsPanelEntry,
+} from '@/components/FunctionDetailsPanels';
+import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
 import {
   renderExplorer,
   pointerToData,
@@ -21,7 +25,12 @@ import {
   type Sweep,
   type SweepPath,
 } from '@/scripts/explorer/visible';
-import { findVerticalAsymptotes, classifyEndBehavior } from '@/scripts/explorer/limits';
+import {
+  findVerticalAsymptotes,
+  classifyEndBehavior,
+  type EndBehavior,
+  type Sign,
+} from '@/scripts/explorer/limits';
 import { describeReadout } from '@/scripts/explorer/notation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +46,14 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import type { PointShape } from '@/scripts/graphing/plot';
+import GraphResultExport from '@/components/export/GraphResultExport';
+import {
+  EXPORT_GRAPH_HEIGHT,
+  formatExportEquation,
+  formatExportValue,
+  selectRepresentativeRows,
+  type ExportSnapshot,
+} from '@/scripts/export/model';
 
 // Tunables, in one place.
 const DEFAULT_WINDOW: Window2D = { xMin: -4, xMax: 4, yMin: -1, yMax: 7 };
@@ -59,6 +76,23 @@ const windowToFields = (w: Window2D): WindowFields => ({
 /** Strip a leading "y =" so "y = 1/x" and "1/x" both work. */
 const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
+const buildFunctionDetails = (
+  expression: string,
+  window: Window2D,
+  color: string,
+): FunctionDetailsPanelEntry[] => {
+  if (!expression.trim()) return [];
+
+  return [
+    {
+      id: 'function-explorer-function',
+      title: `Function details · f(x) = ${formatExportEquation(expression)}`,
+      color,
+      facts: functionAnalysisFacts(analyzeFunction(expression, window)),
+    },
+  ];
+};
+
 const prefersReducedMotion = (): boolean =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -67,6 +101,18 @@ const sweepEq = (a: Sweep | null, b: Sweep): boolean => {
   if (a.kind === 'approach' && b.kind === 'approach') return a.a === b.a && a.side === b.side;
   if (a.kind === 'end' && b.kind === 'end') return a.dir === b.dir;
   return false;
+};
+
+const infinityForSign = (sign: Sign): string => (sign === 1 ? '+infinity' : '-infinity');
+
+const describeEndBehaviorForExport = (end: EndBehavior): string => {
+  if (end.kind === 'finite') {
+    const approach = end.approach ? ` from ${end.approach === '+' ? 'above' : 'below'}` : '';
+    return `Horizontal asymptote y = ${formatNumber(end.value ?? 0)}${approach}`;
+  }
+  if (end.kind === 'posInf') return '+infinity';
+  if (end.kind === 'negInf') return '-infinity';
+  return 'Unknown or oscillating';
 };
 
 export default function FunctionExplorer(): React.JSX.Element {
@@ -123,6 +169,10 @@ export default function FunctionExplorer(): React.JSX.Element {
           ]
         : [],
     [hasFunction, expr, tableXs, dark],
+  );
+  const liveFunctionDetails = useMemo(
+    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve),
+    [expr, displayWindow, dark],
   );
 
   const sweepButtons = useMemo(() => {
@@ -409,6 +459,111 @@ export default function FunctionExplorer(): React.JSX.Element {
           ? '→ −∞'
           : formatNumber(fx);
 
+  const createExportSnapshot = (): ExportSnapshot => {
+    const snapshotExpr = expr;
+    const snapshotWindow = { ...displayWindow };
+    const snapshotX = x;
+    const snapshotAsymptotes = asymptotes.map((asymptote) => ({ ...asymptote }));
+    const snapshotEndNeg = { ...endNeg };
+    const snapshotEndPos = { ...endPos };
+    const snapshotPoints = points.map((point) => ({ ...point }));
+    const snapshotXs = selectRepresentativeRows(tableXs);
+    const snapshotReadout = { ...readout };
+    const snapshotFx = evalAt(snapshotExpr, snapshotX);
+    const lightColors = explorerColors(false);
+    const snapshotDetails = buildFunctionDetails(
+      snapshotExpr,
+      snapshotWindow,
+      lightColors.curve,
+    );
+
+    const asymptoteFacts = snapshotAsymptotes.length
+      ? snapshotAsymptotes.map((asymptote) => ({
+          label: `x = ${formatNumber(asymptote.x)}`,
+          value: `Left -> ${infinityForSign(asymptote.leftSign)}; right -> ${infinityForSign(asymptote.rightSign)}`,
+        }))
+      : [{ label: 'Vertical asymptotes', value: 'None detected' }];
+
+    const scene: OverlayScene = {
+      expr: snapshotExpr,
+      window: snapshotWindow,
+      x: snapshotX,
+      asymptotes: snapshotAsymptotes,
+      endNeg: snapshotEndNeg,
+      endPos: snapshotEndPos,
+      showWall,
+      showFloor,
+      points: snapshotPoints,
+      pointShape,
+      sweepTrail: null,
+    };
+
+    return {
+      model: {
+        slug: 'function-explorer',
+        title: 'Function Explorer',
+        exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
+        window: snapshotWindow,
+        legend: [
+          {
+            label: `f(x) = ${formatExportEquation(snapshotExpr)}`,
+            color: lightColors.curve,
+            detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
+          },
+        ],
+        sections: [
+          ...snapshotDetails,
+          {
+            title: 'Current readout',
+            facts: [
+              { label: 'x', value: formatNumber(snapshotX) },
+              { label: 'f(x)', value: formatExportValue(snapshotFx) },
+              { label: 'Statement', value: snapshotReadout.headline },
+              { label: 'Meaning', value: snapshotReadout.note },
+            ],
+          },
+          {
+            title: 'Asymptotes and end behavior',
+            facts: [
+              ...asymptoteFacts,
+              { label: 'x -> -infinity', value: describeEndBehaviorForExport(snapshotEndNeg) },
+              { label: 'x -> +infinity', value: describeEndBehaviorForExport(snapshotEndPos) },
+            ],
+          },
+          {
+            title: 'Visible guides',
+            facts: [
+              { label: 'Vertical asymptotes', value: showWall ? 'Shown' : 'Hidden' },
+              { label: 'Horizontal asymptotes', value: showFloor ? 'Shown' : 'Hidden' },
+              { label: 'Grid', value: showGrid ? 'Shown' : 'Hidden' },
+              { label: 'Markers', value: showPoints ? `Shown (${pointShape})` : 'Hidden' },
+            ],
+          },
+        ],
+        table: {
+          title: 'Selected values',
+          headers: ['x', `f(x) = ${formatExportEquation(snapshotExpr)}`],
+          rows: snapshotXs.map((tableX) => [
+            String(tableX),
+            formatExportValue(evalAt(snapshotExpr, tableX)),
+          ]),
+        },
+      },
+      renderGraph: (target) => {
+        renderExplorer({
+          target,
+          window: snapshotWindow,
+          expr: snapshotExpr,
+          dark: false,
+          grid: showGrid,
+          height: EXPORT_GRAPH_HEIGHT,
+          getScene: () => scene,
+          onViewChange: () => {},
+        });
+      },
+    };
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       {/* Controls */}
@@ -495,6 +650,11 @@ export default function FunctionExplorer(): React.JSX.Element {
           )}
         </Card>
 
+        <FunctionDetailsPanels
+          entries={liveFunctionDetails}
+          testId="explorer-function-details"
+        />
+
         <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window &amp; guides</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
@@ -572,6 +732,12 @@ export default function FunctionExplorer(): React.JSX.Element {
 
       {/* Plot + value table */}
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <GraphResultExport
+            hasGraph={hasFunction}
+            createSnapshot={createExportSnapshot}
+          />
+        </div>
         <Card className="overflow-hidden p-2">
           <div
             ref={plotRef}

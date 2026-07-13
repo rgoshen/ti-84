@@ -24,6 +24,14 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import type { PointShape } from '@/scripts/graphing/plot';
+import GraphResultExport from '@/components/export/GraphResultExport';
+import {
+  EXPORT_GRAPH_HEIGHT,
+  formatExportEquation,
+  formatExportValue,
+  selectRepresentativeRows,
+  type ExportSnapshot,
+} from '@/scripts/export/model';
 
 // Tunables, in one place.
 const IDENTITY: Coeffs = { a: 1, b: 1, h: 0, k: 0 };
@@ -251,6 +259,114 @@ export default function TransformationExplorer(): React.JSX.Element {
     { key: 'k', label: 'k — vertical shift', range: H_RANGE },
   ];
 
+  const createExportSnapshot = (): ExportSnapshot => {
+    const snapshotBaseExpr = baseExpr;
+    const snapshotParentLabel = parentLabel;
+    const snapshotCoeffs = { ...coeffs };
+    const snapshotWindow = { ...displayWindow };
+    const snapshotEquation = equation;
+    const snapshotSteps = [...readout.steps];
+    const snapshotParentPoints = parentPoints.map((point) => ({ ...point }));
+    const snapshotTransformedPoints = transformedPoints.map((point) => ({ ...point }));
+    const snapshotXs = selectRepresentativeRows(tableXs);
+    const snapshotFDetails = fDetails ? { ...fDetails } : null;
+    const snapshotGDetails = gDetails ? { ...gDetails } : null;
+    const snapshotComposed = composed;
+    const lightColors = explorerColors(false);
+
+    const detailFacts =
+      snapshotFDetails && snapshotGDetails
+        ? DETAIL_ROWS.map(({ key, label }) => ({
+            label,
+            value: `Parent: ${snapshotFDetails[key]} | Transformed: ${snapshotGDetails[key]}`,
+          }))
+        : [{ label: 'Function details', value: 'Not available for a custom function' }];
+
+    return {
+      model: {
+        slug: 'transformation-explorer',
+        title: 'Transformation Explorer',
+        exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
+        window: snapshotWindow,
+        legend: [
+          {
+            label: `Parent: ${formatExportEquation(snapshotParentLabel)}`,
+            color: lightColors.ghost,
+            detail: showParent ? 'Shown (dashed)' : 'Hidden; parent markers suppressed',
+          },
+          {
+            label: snapshotEquation
+              ? formatExportEquation(snapshotEquation)
+              : 'Transformed function unavailable',
+            color: lightColors.curve,
+            detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
+          },
+        ],
+        sections: [
+          {
+            title: 'Transformation',
+            facts: [
+              {
+                label: 'Equation',
+                value: snapshotEquation
+                  ? formatExportEquation(snapshotEquation)
+                  : 'Unavailable',
+              },
+              { label: 'a', value: String(snapshotCoeffs.a) },
+              { label: 'b', value: String(snapshotCoeffs.b) },
+              { label: 'h', value: String(snapshotCoeffs.h) },
+              { label: 'k', value: String(snapshotCoeffs.k) },
+              ...snapshotSteps.map((step, index) => ({ label: `Step ${index + 1}`, value: step })),
+            ],
+          },
+          { title: 'Function details', facts: detailFacts },
+          {
+            title: 'Visible graph settings',
+            facts: [
+              { label: 'Parent curve', value: showParent ? 'Shown (dashed)' : 'Hidden' },
+              { label: 'Grid', value: showGrid ? 'Shown' : 'Hidden' },
+              {
+                label: 'Markers',
+                value: showPoints
+                  ? `Shown (${pointShape}); parent ${showParent ? 'shown' : 'suppressed'}`
+                  : 'Hidden',
+              },
+            ],
+          },
+        ],
+        table: {
+          title: 'Selected values',
+          headers: [
+            'x',
+            `Parent: ${formatExportEquation(snapshotParentLabel)}`,
+            snapshotEquation ? formatExportEquation(snapshotEquation) : 'Transformed',
+          ],
+          rows: snapshotXs.map((tableX) => [
+            String(tableX),
+            formatExportValue(evalAt(snapshotBaseExpr, tableX)),
+            formatExportValue(evalAt(snapshotComposed, tableX)),
+          ]),
+        },
+      },
+      renderGraph: (target) => {
+        renderTransform({
+          target,
+          window: snapshotWindow,
+          baseExpr: snapshotBaseExpr,
+          coeffs: snapshotCoeffs,
+          showParent,
+          parentPoints: snapshotParentPoints,
+          transformedPoints: snapshotTransformedPoints,
+          pointShape,
+          dark: false,
+          grid: showGrid,
+          height: EXPORT_GRAPH_HEIGHT,
+          onViewChange: () => {},
+        });
+      },
+    };
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
@@ -330,6 +446,43 @@ export default function TransformationExplorer(): React.JSX.Element {
         </Card>
 
         <Card className="gap-3 p-4">
+          <h3 className="text-sm font-medium">Function details</h3>
+          {fDetails && gDetails ? (
+            <table data-testid="function-details" className="w-full text-xs">
+              <caption className="sr-only">
+                Domain, range, intercepts and asymptotes of the parent and the transformed function
+              </caption>
+              <thead>
+                <tr className="border-b">
+                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
+                    Property
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">
+                    f(x) = {parentLabel}
+                  </th>
+                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {DETAIL_ROWS.map(({ key, label }) => (
+                  <tr key={key} data-row={key} className="border-b last:border-0">
+                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
+                      {label}
+                    </th>
+                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
+                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Not available for a custom function — pick a parent function to see its details.
+            </p>
+          )}
+        </Card>
+
+        <Card className="gap-3 p-4">
           <h3 className="text-sm font-medium">Window &amp; guides</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             {(['xMin', 'xMax', 'yMin', 'yMax'] as const).map((key) => (
@@ -376,6 +529,12 @@ export default function TransformationExplorer(): React.JSX.Element {
       </div>
 
       <div className="space-y-4">
+        <div className="flex justify-end">
+          <GraphResultExport
+            hasGraph={equation !== null}
+            createSnapshot={createExportSnapshot}
+          />
+        </div>
         <Card className="overflow-hidden p-2">
           <div
             ref={plotRef}
@@ -385,43 +544,6 @@ export default function TransformationExplorer(): React.JSX.Element {
             className="w-full"
             style={{ minHeight: 480 }}
           />
-        </Card>
-
-        <Card className="gap-3 p-4">
-          <h3 className="text-sm font-medium">Function details</h3>
-          {fDetails && gDetails ? (
-            <table data-testid="function-details" className="w-full text-xs">
-              <caption className="sr-only">
-                Domain, range, intercepts and asymptotes of the parent and the transformed function
-              </caption>
-              <thead>
-                <tr className="border-b">
-                  <th scope="col" className="py-1 text-left font-normal text-muted-foreground">
-                    Property
-                  </th>
-                  <th scope="col" className="py-1 text-left font-medium">
-                    f(x) = {parentLabel}
-                  </th>
-                  <th scope="col" className="py-1 text-left font-medium">g(x)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DETAIL_ROWS.map(({ key, label }) => (
-                  <tr key={key} data-row={key} className="border-b last:border-0">
-                    <th scope="row" className="py-1 text-left font-normal text-muted-foreground">
-                      {label}
-                    </th>
-                    <td data-col="fx" className="py-1 font-mono tabular-nums">{fDetails[key]}</td>
-                    <td data-col="gx" className="py-1 font-mono tabular-nums">{gDetails[key]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Not available for a custom function — pick a parent function to see its details.
-            </p>
-          )}
         </Card>
 
         <ValueTable

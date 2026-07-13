@@ -107,3 +107,10 @@ test('the dropdown marks the explorer you are currently on', async ({ page }) =>
     'page',
   );
 });
+
+test('the embedded TI-84 does not expose graph result export commands', async ({ page }) => {
+  await page.goto('/ti-84');
+  await expect(page.getByRole('button', { name: 'Export' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'Download PNG' })).toHaveCount(0);
+  await expect(page.getByRole('menuitem', { name: 'Download PDF' })).toHaveCount(0);
+});

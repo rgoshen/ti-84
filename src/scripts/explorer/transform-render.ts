@@ -41,6 +41,8 @@ export interface TransformRenderOptions {
   pointShape: PointShape;
   dark: boolean;
   grid: boolean;
+  /** Optional fixed render height; interactive callers use the existing default. */
+  height?: number;
   onViewChange: (w: Window2D) => void;
 }
 
@@ -105,6 +107,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
     pointShape,
     dark,
     grid,
+    height = PLOT_HEIGHT,
     onViewChange,
   } = opts;
   const colors = themeColors(dark);
@@ -121,7 +124,7 @@ export function renderTransform(opts: TransformRenderOptions): TransformHandle {
   const instance = functionPlot({
     target,
     width: target.clientWidth,
-    height: PLOT_HEIGHT,
+    height,
     grid,
     disableZoom: false,
     xAxis: { domain: [win.xMin, win.xMax], label: 'x' },
