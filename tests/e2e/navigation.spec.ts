@@ -19,7 +19,7 @@ test('the home Explorers card opens the hub, not a specific explorer', async ({ 
   await expect(page.getByRole('heading', { level: 1, name: 'Explorers' })).toBeVisible();
 });
 
-test('the dropdown is closed by default and the caret opens it with both explorers', async ({
+test('the dropdown is closed by default and the caret opens it with every explorer', async ({
   page,
 }) => {
   await page.goto('/');
@@ -33,6 +33,28 @@ test('the dropdown is closed by default and the caret opens it with both explore
   await expect(caret(page)).toHaveAttribute('aria-expanded', 'true');
   await expect(menu(page).getByRole('link', { name: 'Function Explorer' })).toBeVisible();
   await expect(menu(page).getByRole('link', { name: 'Transformation Explorer' })).toBeVisible();
+  await expect(menu(page).getByRole('link', { name: 'Angle Explorer' })).toBeVisible();
+  // Every explorer route must appear here, not just the catalog page — the two lists
+  // are maintained separately, so this count guards against a new explorer being added
+  // to /explorers but forgotten in the header dropdown.
+  await expect(menu(page).getByRole('link')).toHaveCount(3);
+});
+
+test('picking the Angle Explorer from the dropdown navigates to it', async ({ page }) => {
+  await page.goto('/');
+  await caret(page).click();
+  await menu(page).getByRole('link', { name: 'Angle Explorer' }).click();
+  await expect(page).toHaveURL(/\/explorers\/angles\/?$/);
+});
+
+test('the dropdown marks the Angle Explorer when you are on it', async ({ page }) => {
+  await page.goto('/explorers/angles');
+  await caret(page).click();
+
+  await expect(menu(page).getByRole('link', { name: 'Angle Explorer' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
 });
 
 test('hovering the Explorers nav opens the dropdown', async ({ page }) => {
