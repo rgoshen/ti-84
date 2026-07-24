@@ -389,6 +389,18 @@ export default function AngleExplorer(): React.JSX.Element {
         <p className="sr-only" role="status" aria-live="polite">
           {announced}
         </p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Concept adapted from{' '}
+          <a
+            className="underline"
+            href="https://demonstrations.wolfram.com/AnglesMeasuredInDegreesAndRadians/"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Angles Measured in Degrees and Radians
+          </a>{' '}
+          by Eric Schulz, Wolfram Demonstrations Project (CC BY-NC-SA).
+        </p>
       </div>
     </div>
   );
