@@ -9,7 +9,8 @@ export type ExportFormat = 'png' | 'pdf';
 export type ExportToolSlug =
   | 'graphing-calculator'
   | 'function-explorer'
-  | 'transformation-explorer';
+  | 'transformation-explorer'
+  | 'angle-explorer';
 
 export interface ExportLegendItem {
   label: string;
