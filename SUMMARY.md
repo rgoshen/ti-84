@@ -2436,3 +2436,21 @@ N/A -- new feature.
 **References:**
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
+
+## [2026-07-23 20:21] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Replaced the Task 4 placeholder in `AngleExplorer.tsx` with the full interactive diagram: a hand-authored SVG (reference axes, dashed unit circle, the adjustable solid circle at radius `r`, whole-radian tick marks with labels, a small angle-measure arc with a direction arrowhead, the swept arc itself, and the initial/terminal rays with endpoint dots) plus three Radix `Slider` controls (`angle`, `radius`, `position`) with live numeric readouts, a `Reset` button restoring the `{theta: 30, r: 1, beta: 0}` defaults, and dark-mode tracking via a `MutationObserver` on `document.documentElement`'s class list (mirroring the pattern in `TransformationExplorer.tsx`). The SVG carries `role="img"` and a descriptive `aria-label`; each slider forwards `aria-label`/`aria-valuetext` to its focusable thumb.
+
+**Rationale:**
+The diagram is hand-authored SVG rather than routed through `function-plot`: an angle swept around a circle is a polar construction with ticks, arcs, rays, and a direction arrowhead — not a Cartesian `y = f(x)` curve, so `function-plot`'s API has no natural mapping onto it, and direct SVG gives exact control over arc-flag selection and tick placement via the already-tested `angle-render.ts` geometry. The measure arc and its arrowhead are computed from a single hoisted `arcPath(...)` call (`measureArc`) and both are gated on `measureArc !== ''`: `arcPath` returns an empty string at θ = 0, and rendering the arrowhead independently would let it survive that boundary and assert a rotational direction the angle no longer has — sharing one source of truth makes that impossible instead of merely unlikely. `betaRad` is added into every positioned element's angle argument (ticks, rays, dots, both arcs) because β is defined as a rigid rotation of the whole figure; omitting it from even one element would leave that element stationary while the rest of the diagram rotates, and because the default is `beta: 0`, that bug is invisible until someone actually drags the position slider — so the brief's own manual-check step 6 exists specifically to catch it.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
