@@ -2527,3 +2527,21 @@ N/A — new feature.
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 21:34] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s error `<p id="angle-input-error">` is now rendered unconditionally with a `min-h-4` reserved height instead of being mounted/unmounted via `{inputError && (...)}`; its text content is `inputError ?? ''` and the `text-destructive` class is applied only while an error is present, so the row's height never changes between the error and no-error states. Separately, the SVG's `aria-label` now interpolates `round4(theta)` and `round4(r)` instead of the raw `theta`/`r` floats.
+
+**Rationale:**
+Reserving the error row's height fixes a whole class of layout-shift-eats-click bugs, not just this one instance: any conditionally-mounted element positioned above an interactive control is a latent hazard, because a mousedown/mouseup pair is not atomic with respect to a DOM reflow that happens between them — the browser resolves each event against wherever the target element currently sits, so a control that moves mid-click silently swallows the click with no error, no console warning, and no failed assertion pointing at the real cause. Keeping the element permanently mounted and toggling only its content/visibility removes the reflow trigger entirely, which is more robust than trying to sequence state updates (e.g., clearing `inputError` before vs. after the click) since that would only paper over this one call site.
+
+**Bug Fix Context (if applicable):**
+Reproduction: typing `180` into Degrees (valid, θ → 180), then `abc` (invalid; θ correctly stays 180 and the error `<p>` mounts), then clicking Reset left the fields at `180` / `3.1416` instead of resetting to `30` / `0.5236`. Root cause: Reset's click first fires the Degrees input's `onBlur`, which calls `setInputError(null)`; because the error element was conditionally rendered, this unmounted it, reflowing the control column upward between the click's mousedown and mouseup so the click missed the Reset button entirely. Separately, the SVG `aria-label` interpolated raw `theta`, so typing `pi/3` into Radians (θ = 59.99999999999999) made a screen reader announce "Angle of 59.99999999999999 degrees swept on a circle of radius 1" while the visible Degrees field correctly showed `60`; using the existing `round4` helper for both interpolated values in the label brings the accessible name back in line with what's on screen.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
