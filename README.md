@@ -9,7 +9,7 @@
 [![Tested with Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-A small multi-page site with four browser-based math tools:
+A small multi-page site with five browser-based math tools:
 
 - **TI-84 Calculator** — a familiar scientific/graphing calculator.
 - **Graphing Calculator** — plot equations, stack multiple functions, mark whole-number gridline crossings, and zoom/pan, all in the browser.
