@@ -18,8 +18,8 @@ A small multi-page site with five browser-based math tools:
 - **Angle Explorer** — sweep an angle on a circle whose radius you control: whole-radian tick marks, a five-way readout (degrees, fraction of a turn, ×2π, exact π-multiple, decimal radians) and arc length s = rθ. Because arc length equals radian measure only when r = 1, changing the radius pulls them apart on screen. Linked degree/radian fields convert in either direction and accept exact forms like `pi/3`.
 
 The site is built with **Astro + TypeScript** — a shared layout and header wrap the
-routes (`/` landing, `/ti-84`, `/graphing`, and the `/explorers` hub plus its two tools),
-with the graphing calculator and both explorers rendered as React islands (shadcn/ui
+routes (`/` landing, `/ti-84`, `/graphing`, and the `/explorers` hub plus its three tools),
+with the graphing calculator and all three explorers rendered as React islands (shadcn/ui
 on Tailwind v4).
 
 ## Tech stack
