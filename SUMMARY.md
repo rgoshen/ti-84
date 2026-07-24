@@ -2342,3 +2342,25 @@ macOS.
 **References:**
 - PR: #9
 - Workflow: `.github/workflows/_verify.yml` (`ci / verify`)
+
+## [2026-07-23 19:08] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Recorded the Angle Explorer feature plan in TODO.md: a new /explorers/angles standalone
+explorer for degree/radian measure, with angle, radius, and position controls, whole-radian
+tick marks, a five-way readout plus arc length, and linked degree/radian conversion fields.
+
+**Rationale:**
+Project workflow requires the feature plan to be documented in TODO.md before implementation
+begins. Recorded as a standalone explorer rather than a graphing-calculator mode because the
+diagram is polar, not y = f(x), so function-plot does not apply.
+
+**Bug Fix Context (if applicable):**
+N/A — planning entry for a new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
