@@ -2545,3 +2545,21 @@ Reproduction: typing `180` into Degrees (valid, θ → 180), then `abc` (invalid
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 21:48] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Two accessibility/layout hardening fixes in `AngleExplorer.tsx`. First, the Degrees/Radians `Input`'s `aria-describedby` now appends `angle-input-error` only when that specific field is the one being edited (`inputError !== null && editing === f.unit`), matching the guard already used for `aria-invalid`; the unconditional `hint-${f.unit}` reference is unchanged, so both fields still always describe their own syntax hint. Second, the reserved error row's `min-h-4` (a one-line minimum) was replaced with `h-8`, a fixed two-line height that cannot grow past its reservation, with an inline comment explaining why the height must be fixed rather than minimum.
+
+**Rationale:**
+`aria-invalid` was already scoped per-field with `editing === f.unit`, but `aria-describedby` was not, so a screen reader user tabbing to the untouched, valid field heard an error that `aria-invalid="false"` on that same field contradicted — the two attributes disagreed about whether the field had a problem. Applying the identical guard to both attributes keeps them consistent. `min-h-4` was a floor, not a reservation: today's longest message happens to fit on one line at the measured viewports, but a future longer message or font change would grow the row and then collapse it again on blur, reintroducing the layout-shift-eats-click bug (documented in the entry above) that a *reserved* row exists to prevent. A fixed `h-8` (two lines of `text-xs`) makes the row's height invariant regardless of message length, so the Reset button's position can never move between mousedown and mouseup.
+
+**Bug Fix Context (if applicable):**
+Accessibility defect: with either Degrees or Radians invalid, both inputs' `aria-describedby` referenced `angle-input-error`, so the valid, untouched field was also announced as having an error, even though its `aria-invalid` correctly read `false`. Fixed by gating the error reference on `editing === f.unit`, the same condition already used for `aria-invalid`. Separately hardened (no live bug today, confirmed by measurement at 1024px/1280px/1440px) the reserved error row against a future regression of the Reset-unclickable bug: `min-h-4` only reserves a floor, so a longer message or font change could still grow-then-collapse the row.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
