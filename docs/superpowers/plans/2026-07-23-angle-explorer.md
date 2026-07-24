@@ -1,5 +1,7 @@
 # Angle Explorer Implementation Plan
 
+> **Revised 2026-07-23** — spec-gap audit against issue #14; gaps G1–G10 closed. See the revision changelog at the foot of this document.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a standalone Angle Explorer at `/explorers/angles` that renders a sweeping angle on an adjustable-radius circle, shows the same measurement five ways at once, and converts between degrees and radians in both directions.
@@ -23,6 +25,8 @@
 - **Do NOT add Playwright visual-snapshot baselines.** PNG baselines must be generated on Linux/Docker; baselines committed from macOS fail CI deterministically. Out of scope for this plan.
 - **Accessibility target:** WCAG 2.1 AA. Non-text graphical elements ≥3:1 contrast in both themes.
 - **Never pass raw user input to `mathjs.evaluate()`** — see Task 2.
+- **Static analysis is `npx tsc --noEmit` only [G2].** This repo has no ESLint/Prettier/Biome config, no lint devDependency, and no CI lint step — verified 2026-07-23. Do **not** claim "lint clean" anywhere; that gap is tracked in issue #15 rather than bolted onto this feature branch.
+- **Components import React as a namespace [G1]:** `import * as React from 'react'` alongside the named-hook import, because the house return type is `React.JSX.Element` (`TransformationExplorer.tsx:1,63`).
 
 ---
 
@@ -388,8 +392,18 @@ describe('parseAngleInput — rejection', () => {
   });
 
   it('rejects non-finite results', () => {
+    // `1/0` is the case that actually exercises the isFinite branch: every one of
+    // its characters is whitelisted, so it reaches evaluate() and returns Infinity.
     expect(parseAngleInput('1/0', 'deg').ok).toBe(false);
-    expect(parseAngleInput('1e999', 'deg').ok).toBe(false);
+  });
+
+  it('rejects characters outside the whitelist [G7]', () => {
+    // `1e999` never reaches isFinite — `e` is not an allowed character, so the guard
+    // rejects it first. Filing it under "non-finite" would misreport which branch is
+    // covered and leave the isFinite path looking better tested than it is.
+    const r = parseAngleInput('1e999', 'deg');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/numbers/i);
   });
 
   it('rejects values beyond the slider range', () => {
@@ -778,6 +792,7 @@ export const SITE_TITLE_ANGLE_EXPLORER =
 Create `src/components/explorer/AngleExplorer.tsx`:
 
 ```tsx
+import * as React from 'react'; // [G1] required for the React.JSX.Element return type
 import { useState } from 'react';
 
 /** Slider defaults, also the reset target. */
@@ -873,6 +888,7 @@ git commit -m "feat(explorer): scaffold the Angle Explorer route and catalog car
 Overwrite `src/components/explorer/AngleExplorer.tsx`:
 
 ```tsx
+import * as React from 'react'; // [G1] required for the React.JSX.Element return type
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -919,12 +935,17 @@ export default function AngleExplorer(): React.JSX.Element {
 
   const colors = useMemo(() => explorerColors(dark), [dark]);
   const axis = dark ? '#64748b' : '#94a3b8';
-  const text = dark ? '#e2e8f0' : '#334155';
+  const tickText = dark ? '#e2e8f0' : '#334155'; // [G9] stroke colour for tick labels
 
   const thetaRad = degreesToRadians(theta);
   const betaRad = degreesToRadians(beta);
   const sign = theta < 0 ? -1 : 1;
   const endRad = betaRad + thetaRad;
+
+  // [G4] One source of truth for the measure sweep. `arcPath` returns '' at θ = 0, and
+  // the arrowhead must vanish with it — otherwise a stray head sits on the circle
+  // asserting a counter-clockwise direction for an angle that has no direction.
+  const measureArc = arcPath(C, C, MEASURE_R * UNIT, betaRad, endRad);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
@@ -962,7 +983,8 @@ export default function AngleExplorer(): React.JSX.Element {
   ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+    // testid carried over from the Task 4 skeleton rather than dropped [G10].
+    <div data-testid="angle-explorer" className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <div className="space-y-5">
         {sliders.map((s) => (
           <div key={s.id} className="space-y-2">
@@ -1016,7 +1038,7 @@ export default function AngleExplorer(): React.JSX.Element {
                 <text
                   x={label.x}
                   y={label.y}
-                  fill={text}
+                  fill={tickText}
                   fontSize={9}
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -1027,17 +1049,17 @@ export default function AngleExplorer(): React.JSX.Element {
             );
           })}
 
-          {/* Small angle-measure arc with its direction arrowhead. */}
-          <path
-            d={arcPath(C, C, MEASURE_R * UNIT, betaRad, endRad)}
-            fill="none"
-            stroke={colors.arrow}
-            strokeWidth={1.5}
-          />
-          <polygon
-            points={arrowheadPoints(C, C, MEASURE_R * UNIT, endRad, sign)}
-            fill={colors.arrow}
-          />
+          {/* Small angle-measure arc with its direction arrowhead. Both are gated on
+              the same non-empty path, so they can never disagree at θ = 0 [G4]. */}
+          {measureArc !== '' && (
+            <>
+              <path d={measureArc} fill="none" stroke={colors.arrow} strokeWidth={1.5} />
+              <polygon
+                points={arrowheadPoints(C, C, MEASURE_R * UNIT, endRad, sign)}
+                fill={colors.arrow}
+              />
+            </>
+          )}
 
           {/* The swept arc — its length is the radian measure when r = 1. */}
           <path
@@ -1070,11 +1092,13 @@ Expected: build succeeds.
 - [ ] **Step 3: Verify manually in the browser**
 
 Run: `npm run dev`, open `http://localhost:4321/explorers/angles`.
-Expected, all four checked by eye:
+Expected, all six checked by eye:
 1. At the 30° default, one arc sweeps counter-clockwise from the positive x-axis and a `1 rad` tick is visible.
 2. Dragging **angle** to 360° draws a complete circle (this is the two-arc split — if the arc vanishes at exactly 360°, `arcPath` is wrong).
 3. Dragging **angle** negative flips the arrowhead to clockwise.
-4. Dragging **radius** grows the solid circle away from the dashed unit circle.
+4. Dragging **angle** to exactly 0 removes the measure arc **and** its arrowhead together [G4].
+5. Dragging **radius** grows the solid circle away from the dashed unit circle.
+6. **Rigid-body check for position (β) [G3].** Sweep **position** across its full range and confirm the initial ray, the measure arc, the swept arc, every tick and label, and both endpoint dots rotate **together as one rigid figure**, keeping their relative spacing. β is added into all six of those coordinate calculations; if any single one omits `betaRad`, that element will stay behind while the rest rotate. This is the only check that catches it — the β = 0 default hides the bug completely.
 
 - [ ] **Step 4: Commit**
 
@@ -1092,7 +1116,7 @@ git commit -m "feat(explorer): render the angle diagram with sliders and reset"
 
 **Interfaces:**
 - Consumes: `turnFraction`, `piMultiple`, `isIntegerDegrees`, `formatPiLatex`, `formatFractionLatex`, `arcLength`, `degreesToRadians` from `@/scripts/explorer/angle`.
-- Produces: readout at `data-testid="angle-readout"`; `announcement` string reused by Task 8.
+- Produces: readout at `data-testid="angle-readout"`; the `readout.spoken` string consumed by Task 8 [G6].
 
 - [ ] **Step 1: Add the readout builder above the component**
 
@@ -1504,25 +1528,61 @@ test('a full 360 degree sweep still draws an arc', async ({ page }) => {
   expect(drawn).toBe(true);
 });
 
-test('reset restores every control', async ({ page }) => {
+test('the position slider rotates the figure [G3]', async ({ page }) => {
+  await goto(page);
+  const arcOf = () =>
+    page.locator(`${DIAGRAM} svg path`).first().getAttribute('d');
+  const before = await arcOf();
+
+  const position = page.getByRole('slider', { name: 'position' });
+  await position.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('ArrowRight');
+
+  // Guards against β becoming inert. The rigid-body correctness check — that every
+  // element rotates together — is the manual step in Task 5, since asserting it here
+  // would couple the test to the drawing geometry.
+  expect(await arcOf()).not.toBe(before);
+});
+
+test('reset restores every control [G8]', async ({ page }) => {
   await goto(page);
   await page.getByLabel('Degrees').fill('200');
+  const radius = page.getByRole('slider', { name: 'radius' });
+  const position = page.getByRole('slider', { name: 'position' });
+  await radius.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+  await position.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
+
   await expect(page.getByLabel('Degrees')).toHaveValue('200');
+  await expect(radius).toHaveAttribute('aria-valuenow', '1.3');
+  await expect(position).toHaveAttribute('aria-valuenow', '10');
+
   await page.getByRole('button', { name: 'Reset' }).click();
+
+  // All four controls, not just the two fields.
   await expect(page.getByLabel('Degrees')).toHaveValue('30');
   await expect(page.getByLabel('Radians')).toHaveValue('0.5236');
+  await expect(radius).toHaveAttribute('aria-valuenow', '1');
+  await expect(position).toHaveAttribute('aria-valuenow', '0');
 });
 ```
 
 - [ ] **Step 2: Run the spec**
 
 Run: `npx playwright test tests/e2e/angle.spec.ts`
-Expected: all 9 tests PASS. If the 360° test fails, `arcPath`'s full-turn split is not reaching the DOM — fix `angle-render.ts`, not the test.
+Expected: all 10 tests PASS. If the 360° test fails, `arcPath`'s full-turn split is not reaching the DOM — fix `angle-render.ts`, not the test.
 
-- [ ] **Step 3: Run the whole suite**
+- [ ] **Step 3: Run the whole suite with coverage**
 
 Run: `npm test`
 Expected: all unit tests PASS, including the three new modules.
+
+Run: `npm run test:coverage` [G5]
+Expected: `angle.ts`, `angle-parse.ts`, and `angle-render.ts` each at **≥80%** statements and branches, per issue #14. If a branch is uncovered, add the missing case rather than lowering the bar — the uncovered branches in these modules are exactly the edge cases the feature exists to get right.
+
+Run: `npx tsc --noEmit`
+Expected: no errors. This is the project's only static-analysis gate — there is no linter [G2].
 
 Run: `npx playwright test`
 Expected: all e2e specs PASS with no new visual-snapshot files created. Confirm with `git status` that no `tests/e2e/__snapshots__/**` files are untracked — committing macOS-generated baselines breaks CI.
@@ -1624,6 +1684,29 @@ Map back to issue #14's acceptance criteria before requesting review:
 - [ ] Exact π suppressed for non-integer degrees — Task 6 `buildReadout` guard
 - [ ] Invalid input accessible + non-destructive — Task 7, e2e
 - [ ] Dark mode themed, contrast verified both themes — Task 5, manual
+- [ ] Position (β) rotates the whole figure rigidly — Task 5 Step 3 item 6 (manual), e2e "position slider rotates the figure" [G3]
+- [ ] Measure arc and arrowhead vanish together at θ = 0 — Task 5 Step 3 item 4 [G4]
 - [ ] Screen-reader announcements on every control change — Task 8
 - [ ] CC BY-NC-SA attribution visible in the UI — Task 9, Step 4
-- [ ] Unit + e2e pass, lint and typecheck clean — Task 9
+- [ ] Unit + e2e pass; coverage ≥80% on the three new modules; `tsc --noEmit` clean — Task 9 [G2, G5]
+
+> **Not claimed:** "lint clean". The repo has no lint tooling (verified 2026-07-23); that is tracked as a separate issue, not silently ticked here [G2].
+
+---
+
+## Revision changelog
+
+| Gap | Severity | Summary | Where closed |
+|-----|----------|---------|--------------|
+| G1 | Material | Added `import * as React from 'react'` — `React.JSX.Element` was used with no React in scope, so `tsc` would have failed against the plan's own "Expected: no errors" | Global Constraints, Task 4 Step 2, Task 5 Step 1 |
+| G2 | Should-fix | Replaced the unsatisfiable "lint clean" claim with `tsc --noEmit`; repo has no ESLint/Prettier/Biome, no lint dep, no CI lint step | Global Constraints, Task 9 Step 3, Verification checklist |
+| G3 | Should-fix | Position (β) was verified nowhere; added a rigid-body manual check and an e2e change-assertion | Task 5 Step 3 item 6, Task 9 e2e, Verification checklist |
+| G4 | Should-fix | Hoisted `measureArc` so the arc and its arrowhead share one source of truth and both vanish at θ = 0 | Task 5 Step 1, Task 5 Step 3 item 4 |
+| G5 | Minor | Coverage (≥80%, required by #14) was never measured; added `npm run test:coverage` | Task 9 Step 3 |
+| G6 | Minor | Task 6 Interfaces promised `announcement`; the code produces `readout.spoken` | Task 6 Interfaces |
+| G7 | Minor | `1e999` was filed under "non-finite" but is rejected by the whitelist, masking that `1/0` is the sole isFinite case | Task 2 Step 1 |
+| G8 | Minor | Reset e2e asserted only the two fields; now asserts radius and position too | Task 9 e2e |
+| G9 | Minor | Renamed the vague colour variable `text` → `tickText` | Task 5 Step 1 |
+| G10 | Note | Task 4's `data-testid="angle-explorer"` is now carried into Task 5 instead of being silently dropped | Task 5 Step 1 |
+
+**Open decisions remaining:** none. One deferred item: ESLint + CI lint step, tracked in issue #15 [G2].
