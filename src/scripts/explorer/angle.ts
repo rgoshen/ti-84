@@ -74,12 +74,38 @@ export function formatPiLatex(f: Fraction): string {
   return f.d === 1 ? `${sign}${numerator}` : `${sign}\\frac{${numerator}}{${f.d}}`;
 }
 
+/**
+ * Spoken counterpart of {@link formatPiLatex}, for a screen-reader live
+ * region: `0`, `pi`, `2 pi`, `pi over 6`, `negative 2 pi over 3`. A unit
+ * numerator says "pi" rather than "1 pi"; a unit denominator omits the
+ * "over" clause entirely; the sign becomes the word "negative".
+ */
+export function formatPiSpoken(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? 'negative ' : '';
+  const mag = Math.abs(f.n);
+  const numerator = mag === 1 ? 'pi' : `${mag} pi`;
+  return f.d === 1 ? `${sign}${numerator}` : `${sign}${numerator} over ${f.d}`;
+}
+
 /** KaTeX for a plain fraction: `0`, `1`, `\frac{1}{12}`, `-\frac{1}{4}`. */
 export function formatFractionLatex(f: Fraction): string {
   if (f.n === 0) return '0';
   const sign = f.n < 0 ? '-' : '';
   const mag = Math.abs(f.n);
   return f.d === 1 ? `${sign}${mag}` : `${sign}\\frac{${mag}}{${f.d}}`;
+}
+
+/**
+ * Spoken counterpart of {@link formatFractionLatex}, for a screen-reader live
+ * region: `0`, `1`, `1 over 12`, `negative 1 over 4`. No backslashes or braces
+ * for a screen reader to read aloud or mangle.
+ */
+export function formatFractionSpoken(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? 'negative ' : '';
+  const mag = Math.abs(f.n);
+  return f.d === 1 ? `${sign}${mag}` : `${sign}${mag} over ${f.d}`;
 }
 
 /**

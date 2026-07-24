@@ -8,6 +8,8 @@ import {
   isIntegerDegrees,
   formatPiLatex,
   formatFractionLatex,
+  formatFractionSpoken,
+  formatPiSpoken,
   arcLength,
 } from './angle';
 
@@ -94,6 +96,28 @@ describe('formatFractionLatex', () => {
     expect(formatFractionLatex({ n: 0, d: 1 })).toBe('0');
     expect(formatFractionLatex({ n: -1, d: 4 })).toBe('-\\frac{1}{4}');
     expect(formatFractionLatex({ n: -1, d: 1 })).toBe('-1');
+  });
+});
+
+describe('formatFractionSpoken', () => {
+  it('renders plain-prose fractions for a screen reader', () => {
+    expect(formatFractionSpoken({ n: 0, d: 1 })).toBe('0');
+    expect(formatFractionSpoken({ n: 1, d: 1 })).toBe('1');
+    expect(formatFractionSpoken({ n: 1, d: 12 })).toBe('1 over 12');
+    expect(formatFractionSpoken({ n: -1, d: 4 })).toBe('negative 1 over 4');
+    expect(formatFractionSpoken({ n: -1, d: 1 })).toBe('negative 1');
+  });
+});
+
+describe('formatPiSpoken', () => {
+  it('renders plain-prose π-multiples for a screen reader', () => {
+    expect(formatPiSpoken({ n: 0, d: 1 })).toBe('0');
+    expect(formatPiSpoken({ n: 1, d: 1 })).toBe('pi');
+    expect(formatPiSpoken({ n: 2, d: 1 })).toBe('2 pi');
+    expect(formatPiSpoken({ n: 1, d: 6 })).toBe('pi over 6');
+    expect(formatPiSpoken({ n: 3, d: 2 })).toBe('3 pi over 2');
+    expect(formatPiSpoken({ n: -2, d: 3 })).toBe('negative 2 pi over 3');
+    expect(formatPiSpoken({ n: -1, d: 1 })).toBe('negative pi');
   });
 });
 
