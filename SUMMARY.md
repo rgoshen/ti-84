@@ -2569,7 +2569,7 @@ Accessibility defect: with either Degrees or Radians invalid, both inputs' `aria
 **Scope:** UI / Slider
 
 **Summary:**
-`src/components/ui/slider.tsx`'s `Slider` component now destructures `"aria-valuetext": ariaValuetext` from props alongside the existing `"aria-label"`/`"aria-labelledby"` handling, and forwards `aria-valuetext={ariaValuetext}` onto the `<SliderPrimitive.Thumb>` the same way those two attributes are already forwarded. Purely additive: consumers that don't pass `aria-valuetext` (`FunctionExplorer`, `TransformationExplorer`, `GraphingCalculator`) now forward `undefined`, a no-op.
+`src/components/ui/slider.tsx`'s `Slider` component now destructures `"aria-valuetext": ariaValuetext` from props alongside the existing `"aria-label"`/`"aria-labelledby"` handling, and forwards `aria-valuetext={ariaValuetext}` onto the `<SliderPrimitive.Thumb>` the same way those two attributes are already forwarded. Purely additive: the other `Slider` consumers (`FunctionExplorer`, `TransformationExplorer`) don't pass `aria-valuetext`, so they now forward `undefined`, a no-op. (GraphingCalculator does not use this shared Slider at all.)
 
 **Rationale:**
 Radix's `SliderPrimitive.Root` is a non-interactive positioning wrapper; `SliderPrimitive.Thumb` is the element that actually carries `role="slider"` and is what a screen reader's accessibility tree exposes. Any `aria-*` attribute meant to reach assistive tech through this component has to land on the `Thumb`, not the `Root` — which is exactly what the sibling `aria-label`/`aria-labelledby` forwarding (from commit `8fcddea`) already established as the pattern. This fix mirrors that pattern for `aria-valuetext` rather than inventing a new approach.
