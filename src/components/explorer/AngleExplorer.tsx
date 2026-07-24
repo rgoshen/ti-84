@@ -202,17 +202,27 @@ export default function AngleExplorer(): React.JSX.Element {
       id: 'angle',
       label: 'angle',
       value: theta,
+      // θ can carry float noise (e.g. 59.99999999999999 from typing pi/3 into
+      // Radians) that the slider's own step never produces but the linked text
+      // field can. formatDegrees is the same rounding the Degrees field already
+      // displays, so the chip and aria-valuetext agree with what's on screen
+      // elsewhere instead of leaking the raw float.
+      display: formatDegrees(theta),
       min: -360,
       max: 360,
       step: 1,
       set: setTheta,
       suffix: '°',
-      spoken: `${theta} degrees, ${round4(degreesToRadians(theta))} radians`,
+      spoken: `${formatDegrees(theta)} degrees, ${round4(degreesToRadians(theta))} radians`,
     },
     {
       id: 'radius',
       label: 'radius',
       value: r,
+      // radius and position are only ever set via their own stepped sliders or
+      // reset — never free text — so they can't accumulate float noise and need
+      // no formatting.
+      display: String(r),
       min: 0.5,
       max: 1.5,
       step: 0.1,
@@ -224,6 +234,7 @@ export default function AngleExplorer(): React.JSX.Element {
       id: 'position',
       label: 'position',
       value: beta,
+      display: String(beta),
       min: -360,
       max: 360,
       step: 1,
@@ -242,7 +253,7 @@ export default function AngleExplorer(): React.JSX.Element {
             <Label htmlFor={`slider-${s.id}`} className="justify-between">
               <span>{s.label}</span>
               <span className="font-mono text-muted-foreground">
-                {s.value}
+                {s.display}
                 {s.suffix}
               </span>
             </Label>
