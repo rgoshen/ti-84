@@ -636,3 +636,26 @@ for each graph tool without changing exports or any other behavior.
 **Status:** Complete. Verified 178/178 Vitest tests, 57/57 Playwright tests, 3/3
 unchanged export visual baselines, zero Astro diagnostics, and six production pages
 built. No export snapshot or approved PNG changed.
+
+## [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+
+**Objective:**
+Add `/explorers/angles`: sweep an angle on an adjustable-radius circle, read it five
+ways at once (degrees, turn fraction, ×2π, exact π-multiple, decimal radians) plus
+arc length, and convert in both directions via linked degree/radian fields.
+
+**Approach:**
+Three pure modules — `angle.ts` (exact arithmetic), `angle-parse.ts` (input parsing
+with a whitelist guard before mathjs), `angle-render.ts` (SVG path geometry) — behind
+one React component rendering hand-authored SVG. Not function-plot: the diagram is
+polar, not y = f(x).
+
+**Tests:**
+Unit: fraction reduction incl. 180°→π and 37°→37π/180; parser valid/invalid/injection
+cases; arc paths at >180° and exactly ±360°. E2E: slider drives readout, `pi/3` → 60°,
+`1` rad → 57.2958°, invalid input leaves the diagram intact, reset restores defaults.
+
+**Risks & Tradeoffs:**
+A full ±360° arc cannot be drawn with one SVG `A` command and must be split. Exact
+π forms must be suppressed for non-integer degrees or the readout prints absurd
+fractions. mathjs `evaluate` on raw input is a known injection surface.
