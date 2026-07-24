@@ -20,4 +20,7 @@ export const SITE_TITLE_FUNCTION_EXPLORER =
 export const SITE_TITLE_TRANSFORMATION_EXPLORER =
   import.meta.env.PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER ?? 'Transformation Explorer';
 
+export const SITE_TITLE_ANGLE_EXPLORER =
+  import.meta.env.PUBLIC_SITE_TITLE_ANGLE_EXPLORER ?? 'Angle Explorer';
+
 export const THEME_DEFAULT = import.meta.env.PUBLIC_THEME_DEFAULT ?? 'dark';

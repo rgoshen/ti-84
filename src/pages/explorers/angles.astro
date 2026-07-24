@@ -1,0 +1,22 @@
+---
+import 'katex/dist/katex.min.css';
+import Base from '@/layouts/Base.astro';
+import { SITE_TITLE_ANGLE_EXPLORER } from '@/config';
+import AngleExplorer from '@/components/explorer/AngleExplorer.tsx';
+---
+
+<Base
+  title={SITE_TITLE_ANGLE_EXPLORER}
+  description="Sweep an angle around a circle and watch degrees, radians, and arc length stay in step — then convert between degrees and radians in either direction."
+>
+  <section class="py-6">
+    <h1 class="text-2xl font-semibold tracking-tight">{SITE_TITLE_ANGLE_EXPLORER}</h1>
+    <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
+      Drag <strong>angle</strong> to sweep the arc, and <strong>radius</strong> to grow the
+      circle. On the unit circle the radian measure and the arc length are the same number
+      &mdash; change the radius and watch them come apart. Type into either field to convert
+      between degrees and radians.
+    </p>
+  </section>
+  <AngleExplorer client:only="react" />
+</Base>
