@@ -135,6 +135,15 @@ export default function AngleExplorer(): React.JSX.Element {
     [readout.arc],
   );
 
+  // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
+  // this live region is how the conversion reaches assistive tech at all. Debounced
+  // so a slider drag announces once on settle rather than on every frame.
+  const [announced, setAnnounced] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setAnnounced(readout.spoken), 250);
+    return () => clearTimeout(id);
+  }, [readout.spoken]);
+
   // [G4] One source of truth for the measure sweep. `arcPath` returns '' at θ = 0, and
   // the arrowhead must vanish with it — otherwise a stray head sits on the circle
   // asserting a counter-clockwise direction for an angle that has no direction.
@@ -198,8 +207,19 @@ export default function AngleExplorer(): React.JSX.Element {
       step: 1,
       set: setTheta,
       suffix: '°',
+      spoken: `${theta} degrees, ${round4(degreesToRadians(theta))} radians`,
     },
-    { id: 'radius', label: 'radius', value: r, min: 0.5, max: 1.5, step: 0.1, set: setR, suffix: '' },
+    {
+      id: 'radius',
+      label: 'radius',
+      value: r,
+      min: 0.5,
+      max: 1.5,
+      step: 0.1,
+      set: setR,
+      suffix: '',
+      spoken: undefined,
+    },
     {
       id: 'position',
       label: 'position',
@@ -209,6 +229,7 @@ export default function AngleExplorer(): React.JSX.Element {
       step: 1,
       set: setBeta,
       suffix: '°',
+      spoken: undefined,
     },
   ];
 
@@ -228,7 +249,7 @@ export default function AngleExplorer(): React.JSX.Element {
             <Slider
               id={`slider-${s.id}`}
               aria-label={s.label}
-              aria-valuetext={`${s.value}${s.suffix}`}
+              aria-valuetext={s.spoken ?? `${s.value}${s.suffix}`}
               value={[s.value]}
               min={s.min}
               max={s.max}
@@ -354,6 +375,9 @@ export default function AngleExplorer(): React.JSX.Element {
           <div dangerouslySetInnerHTML={{ __html: chainHtml }} />
           <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: arcHtml }} />
         </div>
+        <p className="sr-only" role="status" aria-live="polite">
+          {announced}
+        </p>
       </div>
     </div>
   );
