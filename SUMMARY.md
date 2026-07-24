@@ -2371,7 +2371,7 @@ N/A — planning entry for a new feature.
 **Scope:** Explorers / Angle Explorer
 
 **Summary:**
-Implemented exact angle arithmetic module for the Angle Explorer: exported ten functions for degree ↔ radian conversion (degreesToRadians, radiansToDegrees), exact fraction reduction (reduceFraction), angle representations as turn-fractions and π-multiples (turnFraction, piMultiple), integer-degree validation (isIntegerDegrees), KaTeX formatting for both π-multiple and plain fractions (formatPiLatex, formatFractionLatex), and arc-length calculation using the formula s = rθ (arcLength). All functions follow exact integer fraction math, never float formatting.
+Implemented exact angle arithmetic module for the Angle Explorer: exported nine functions for degree ↔ radian conversion (degreesToRadians, radiansToDegrees), exact fraction reduction (reduceFraction), angle representations as turn-fractions and π-multiples (turnFraction, piMultiple), integer-degree validation (isIntegerDegrees), KaTeX formatting for both π-multiple and plain fractions (formatPiLatex, formatFractionLatex), and arc-length calculation using the formula s = rθ (arcLength). All functions follow exact integer fraction math, never float formatting.
 
 **Rationale:**
 Exact integer fraction reduction is essential for teaching — showing π/6 instead of 0.524 reveals the mathematical relationship between degrees and radians. The module is pure and DOM-free, enabling unit testing in Node.js environment (like transform.ts) without framework dependencies. Integer arithmetic guarantees reproducible output for every slider position, and the Fraction interface makes LaTeX rendering deterministic and correct across all input domains.
