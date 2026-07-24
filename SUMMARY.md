@@ -2661,3 +2661,21 @@ non-integer degrees so typed radian input cannot produce absurd fractions.
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 22:59] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Strengthened the e2e test titled "the angle slider drives the readout and both fields" (`tests/e2e/angle.spec.ts`) to actually verify what its name claims: after moving the angle slider to 35°, it now also asserts the Radians textbox reads `0.6109` and the `angle-readout` element contains `35`, not just the Degrees textbox. Also corrected `README.md`'s tool count from "four browser-based math tools" to "five" — the bullet list below it already listed five (TI-84, Graphing, Function, Transformation, and Angle Explorer).
+
+**Rationale:**
+The test's title promised it checked the readout and both fields, but its body only asserted the Degrees field — it would still pass even if the slider failed to update Radians or the readout, silently covering less than its name advertised. Adding the two missing assertions closes that gap without touching the other eleven tests. The README count was stale since the Angle Explorer bullet was added without updating the summary sentence above it; a one-word fix keeps the description in sync with the actual list.
+
+**Bug Fix Context (if applicable):**
+Not a functional bug — the underlying slider behavior was already correct (confirmed by running the strengthened test: 12/12 pass, including the new Radians and readout assertions). The defect was in test coverage: a misleadingly named test that asserted less than it claimed.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
