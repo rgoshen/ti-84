@@ -10,7 +10,9 @@ import {
   arcLength,
   degreesToRadians,
   formatFractionLatex,
+  formatFractionSpoken,
   formatPiLatex,
+  formatPiSpoken,
   isIntegerDegrees,
   piMultiple,
   turnFraction,
@@ -41,22 +43,38 @@ function buildReadout(theta: number, r: number): { chain: string; arc: string; s
   const s = arcLength(r, rad);
 
   if (!isIntegerDegrees(theta)) {
+    const absDecimal = round4(Math.abs(rad));
+    // "1 radian(s)" must agree with English grammar for both the signed
+    // conversion and the unsigned value the arc equation substitutes.
+    const radianWord = (value: string): string => (Math.abs(Number(value)) === 1 ? 'radian' : 'radians');
     return {
       chain: `${round4(theta)}^\\circ = ${decimal}\\text{ rad}`,
-      arc: `s = r\\theta = ${round4(r)} \\times ${decimal} \\approx ${round4(s)}`,
-      spoken: `${round4(theta)} degrees is ${decimal} radians. Arc length ${round4(s)}.`,
+      // s = r|θ|: the arc length is a magnitude, so the substituted angle
+      // must be unsigned too, or the equation is untrue for negative sweeps.
+      arc: `s = r|\\theta| = ${round4(r)} \\times ${absDecimal} \\approx ${round4(s)}`,
+      spoken:
+        `${round4(theta)} degrees is ${decimal} ${radianWord(decimal)}. ` +
+        `Arc length uses the absolute angle, ${absDecimal} ${radianWord(absDecimal)}, giving ${round4(s)}.`,
     };
   }
 
   const turn = formatFractionLatex(turnFraction(theta));
   const pi = formatPiLatex(piMultiple(theta));
+  const turnSpoken = formatFractionSpoken(turnFraction(theta));
+  const piSpoken = formatPiSpoken(piMultiple(theta));
+  // The arc substitution uses the unsigned angle (see the non-integer branch above).
+  const piAbsLatex = formatPiLatex(piMultiple(Math.abs(theta)));
+  const piAbsSpoken = formatPiSpoken(piMultiple(Math.abs(theta)));
   return {
     chain:
       `${theta}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
       `= ${pi} \\approx ${decimal}\\text{ rad}`,
-    // Written out with real numbers, not a bare s = rθ.
-    arc: `s = r\\theta = ${round4(r)} \\times ${pi} \\approx ${round4(s)}`,
-    spoken: `${theta} degrees is ${turn} of a full turn, ${pi} radians, about ${decimal}. Arc length ${round4(s)}.`,
+    // Written out with real numbers, not a bare s = rθ. |θ| keeps the equation
+    // true for negative sweeps: a length has no sign even when θ does.
+    arc: `s = r|\\theta| = ${round4(r)} \\times ${piAbsLatex} \\approx ${round4(s)}`,
+    spoken:
+      `${theta} degrees is ${turnSpoken} of a full turn, ${piSpoken} radians, about ${decimal}. ` +
+      `Arc length uses the absolute angle, ${piAbsSpoken} radians, giving ${round4(s)}.`,
   };
 }
 
