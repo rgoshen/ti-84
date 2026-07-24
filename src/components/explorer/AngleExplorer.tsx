@@ -256,16 +256,19 @@ export default function AngleExplorer(): React.JSX.Element {
               </p>
             </div>
           ))}
-          {inputError && (
-            <p
-              id="angle-input-error"
-              data-testid="angle-input-error"
-              role="alert"
-              className="text-xs font-medium text-destructive"
-            >
-              {inputError}
-            </p>
-          )}
+          {/* Rendered unconditionally with a reserved min-height so the column's
+              layout never shifts between "no error" and "error" — an error that
+              unmounts this element on blur reflows the Reset button out from under
+              an in-flight mousedown/mouseup click. Only the content/visibility
+              toggles; the row itself is permanent. */}
+          <p
+            id="angle-input-error"
+            data-testid="angle-input-error"
+            role="alert"
+            className={`min-h-4 text-xs font-medium${inputError ? ' text-destructive' : ''}`}
+          >
+            {inputError ?? ''}
+          </p>
         </div>
         <Button type="button" variant="outline" onClick={reset}>
           Reset
@@ -277,7 +280,7 @@ export default function AngleExplorer(): React.JSX.Element {
           viewBox={`0 0 ${VIEW} ${VIEW}`}
           className="h-auto w-full"
           role="img"
-          aria-label={`Angle of ${theta} degrees swept on a circle of radius ${r}.`}
+          aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}.`}
         >
           {/* Reference axes and the unit circle. */}
           <line x1={C - 1.35 * UNIT} y1={C} x2={C + 1.35 * UNIT} y2={C} stroke={colors.axis} strokeWidth={1} />
