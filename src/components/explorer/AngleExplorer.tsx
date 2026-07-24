@@ -64,22 +64,28 @@ function buildReadout(theta: number, r: number): { chain: string; arc: string; s
     };
   }
 
-  const turn = formatFractionLatex(turnFraction(theta));
-  const pi = formatPiLatex(piMultiple(theta));
-  const turnSpoken = formatFractionSpoken(turnFraction(theta));
-  const piSpoken = formatPiSpoken(piMultiple(theta));
+  // isIntegerDegrees only confirms θ is WITHIN epsilon of an integer — it can still
+  // be 59.99999999999999 (e.g. from typing pi/3 into Radians). Rounding to the
+  // nearest whole degree before handing it to turnFraction/piMultiple is required:
+  // those reduce n/d with an integer gcd, which is meaningless on a raw float and
+  // renders as an astronomically large "reduced" fraction otherwise.
+  const whole = Math.round(theta);
+  const turn = formatFractionLatex(turnFraction(whole));
+  const pi = formatPiLatex(piMultiple(whole));
+  const turnSpoken = formatFractionSpoken(turnFraction(whole));
+  const piSpoken = formatPiSpoken(piMultiple(whole));
   // The arc substitution uses the unsigned angle (see the non-integer branch above).
-  const piAbsLatex = formatPiLatex(piMultiple(Math.abs(theta)));
-  const piAbsSpoken = formatPiSpoken(piMultiple(Math.abs(theta)));
+  const piAbsLatex = formatPiLatex(piMultiple(Math.abs(whole)));
+  const piAbsSpoken = formatPiSpoken(piMultiple(Math.abs(whole)));
   return {
     chain:
-      `${theta}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
+      `${whole}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
       `= ${pi} \\approx ${decimal}\\text{ rad}`,
     // Written out with real numbers, not a bare s = rθ. |θ| keeps the equation
     // true for negative sweeps: a length has no sign even when θ does.
     arc: `s = r|\\theta| = ${round4(r)} \\times ${piAbsLatex} \\approx ${round4(s)}`,
     spoken:
-      `${theta} degrees is ${turnSpoken} of a full turn, ${piSpoken} radians, about ${decimal}. ` +
+      `${whole} degrees is ${turnSpoken} of a full turn, ${piSpoken} radians, about ${decimal}. ` +
       `Arc length uses the absolute angle, ${piAbsSpoken} radians, giving ${round4(s)}.`,
   };
 }
