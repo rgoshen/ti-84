@@ -2491,3 +2491,21 @@ N/A — new feature.
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 21:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added `formatFractionSpoken(f)` and `formatPiSpoken(f)` to `angle.ts` (TDD, with tests in `angle.test.ts` written and run failing first) as plain-prose counterparts of `formatFractionLatex`/`formatPiLatex` — `1 over 12`, `pi over 6`, `negative 2 pi over 3`, no backslashes or braces. `AngleExplorer.tsx`'s `buildReadout` now builds the exact branch's `spoken` string from these instead of interpolating the LaTeX `turn`/`pi` variables, and fixes the unconditional "radians" plural to agree with a singular count (`1 radian`, `-1 radian`) in the non-integer branch. Separately, both branches' `arc` formula and its `spoken` echo were changed from `s = r\theta` to `s = r|\theta|`, substituting the unsigned angle (`formatPiLatex(piMultiple(Math.abs(theta)))` in the exact branch, `round4(Math.abs(rad))` in the non-integer branch) so the displayed/spoken magnitude result matches the equation actually shown.
+
+**Rationale:**
+Spoken text needs its own formatters rather than reusing the LaTeX ones because the two outputs serve different consumers with incompatible syntaxes: KaTeX markup is written for a visual renderer that turns `\frac{\pi}{6}` into a stacked fraction, while a screen reader has no such renderer and reads the raw control sequence character by character. Reusing `formatPiLatex`'s output as `spoken` conflated "how to typeset this" with "how to say this aloud" — one string cannot serve both once the visual form contains markup. Substituting `|θ|` makes the arc equation true for negative sweeps because `arcLength()` already returns a magnitude (`Math.abs(r * radians)`); displaying the signed `θ` on the left of `=` while showing an unsigned result on the right asserted `1.5 × (−π/6) = +0.7854`, which is false. Showing `r|θ|` and substituting the unsigned angle keeps both sides of the equation honest.
+
+**Bug Fix Context (if applicable):**
+Two defects, both in `buildReadout`. First, `spoken` interpolated the LaTeX `turn`/`pi` variables directly (e.g. `\frac{\pi}{6}`), so a screen reader consuming the Task 8 live region would read backslashes and braces aloud instead of words, or mangle the string outright; it also unconditionally pluralized "radians" even for a count of exactly 1 or -1. Second, the arc line's formula read `s = r\theta` but substituted the signed `θ` (e.g. `1.5 × -π/6`) while displaying `arcLength()`'s unsigned result (`0.7854`), making the printed equation arithmetically false for any negative angle — the left side would evaluate to −0.7854, not the +0.7854 shown. Both are fixed by using magnitude-consistent forms end to end: `formatFractionSpoken`/`formatPiSpoken` for speech, and `|θ|` substituted with the unsigned angle for the arc equation and its spoken echo.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
