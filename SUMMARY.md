@@ -2454,3 +2454,22 @@ N/A — new feature.
 **References:**
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
+
+## [2026-07-23 20:41] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added a vetted `axis` field to the `ExplorerColors` interface and `explorerColors(dark)` in `theme.ts` (`#475569` slate-600 for light, `#64748b` slate-500 for dark), added `'axis'` to the `theme.test.ts` `MARK_KEYS` array so it gets the same automated ≥3:1 non-text contrast assertion as `curve`/`wall`/`floor`/`arrow`/`ghost`, and replaced `AngleExplorer.tsx`'s local `const axis = dark ? '#64748b' : '#94a3b8'` literal with `colors.axis` at all four usage sites (the x-axis, y-axis, dashed unit circle, and every tick mark).
+
+**Rationale:**
+The colour moved into the shared vetted palette instead of being patched locally so the reference-geometry stroke goes through the same contrast-tested pipeline as every other explorer mark, with the assertion generated automatically from `MARK_KEYS` rather than hand-verified once and left to drift. A local hex literal in a component has no test coverage and can silently reintroduce a value the palette already rejected; a palette field is enforced by `theme.test.ts` for both themes on every run.
+
+**Bug Fix Context (if applicable):**
+`AngleExplorer.tsx`'s local light-mode value, `#94a3b8` (slate-400), measured 2.564:1 against white — below the WCAG 1.4.11 non-text floor of 3:1. `theme.ts` already carried a comment on this exact hex (originally about `explorerColors`'s light `ghost` field): "#94a3b8 (slate-400) only clears 2.56:1 against white — below the 3:1 floor. Darkened to slate-500 ... for margin." The component bypassed the vetted palette, redeclared the same literal locally, and reintroduced the failure the comment was written to prevent.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
