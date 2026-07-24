@@ -2617,3 +2617,21 @@ N/A — new feature. (This work is what surfaced both bugs fixed in the two prec
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 22:41] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s `sliders` array entries now carry a `display` string used for the visible value chip (`{s.display}{s.suffix}`) instead of the raw `{s.value}`. The angle entry's `display` is `formatDegrees(theta)`; radius and position, which can only ever hold clean values (set via their own stepped sliders or `reset`, never free text), get `String(r)`/`String(beta)`. The angle entry's `spoken` string also switched its degree component from raw `theta` to `formatDegrees(theta)`; the radians component (`round4(degreesToRadians(theta))`) was already correct and is unchanged. `Slider`'s `value={[s.value]}` prop is still the raw number — only the human-readable text changed.
+
+**Rationale:**
+θ is legitimately a float (e.g. `57.2958` from typing `1` into Radians) and must stay that way in state and in the `Slider` widget's own `value` prop, so the fix could not be "round theta" — that would have broken real non-integer angles. `formatDegrees` was already the correct formatting tool, already imported, and already used for the Degrees text field, so reusing it for the slider chip and spoken string makes all three surfaces (Degrees field, angle chip, live region) agree on the same rounding instead of three different presentations of θ.
+
+**Bug Fix Context (if applicable):**
+The previous two commits (the `slider.tsx` `aria-valuetext` forwarding fix and the `buildReadout` rounding fix) made a pre-existing float-noise leak both visible and audible for the first time. Before the `aria-valuetext` forwarding fix, the attribute never reached the accessible slider node at all, so nothing was announced; once it did, the raw `theta` fed straight through the chip render (`{s.value}{s.suffix}`) and the `spoken` template literal. Reproduction: typing `pi/3` into Radians sets θ to `59.99999999999999`; the visible angle-slider chip read "59.99999999999999°" and `aria-valuetext` read "59.99999999999999 degrees, 1.0472 radians" — both should read "60". Root cause: the chip and `spoken` string interpolated `theta` directly rather than through a formatter, unlike the Degrees text field (which already used `formatDegrees`) and the `buildReadout` readout (fixed two commits prior for the same class of float noise). Fixed by routing both through `formatDegrees(theta)`, verified against both the garbled case (`pi/3` → "60°", no raw float) and a real non-integer case (`1` rad → "57.2958°", confirming the fix does not over-round).
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
