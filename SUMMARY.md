@@ -2418,3 +2418,21 @@ N/A — new feature.
 **References:**
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
+
+## [2026-07-23 20:14] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Wired up the Angle Explorer route: appended `SITE_TITLE_ANGLE_EXPLORER` to `src/config.ts`; created `src/pages/explorers/angles.astro` (the page shell, using the existing `Base` layout, hydrating a React island with `client:only="react"`); created a placeholder `src/components/explorer/AngleExplorer.tsx` that renders a static angle readout with `useState` defaults (`theta: 30, r: 1, beta: 0`) as a skeleton for later tasks; and added a third catalog card to `src/pages/explorers/index.astro`, linking `/explorers/angles` alongside the existing Function and Transformation Explorer cards. This task does not consume the angle-parsing or SVG-geometry modules from Tasks 1-3 -- that wiring is Task 5.
+
+**Rationale:**
+A standalone explorer route rather than a mode inside the graphing calculator: the diagram is polar (an angle swept around a circle), not `y = f(x)`, so `function-plot` -- built for Cartesian function graphs -- does not apply. The route, config constant, and catalog card are scaffolded first and verified (typecheck, build, existing test suite) before the interactive logic lands, keeping the vertical slice small and each commit independently buildable.
+
+**Bug Fix Context (if applicable):**
+N/A -- new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
