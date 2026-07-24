@@ -2400,3 +2400,21 @@ N/A — new feature.
 **References:**
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
+
+## [2026-07-23 20:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Implemented the SVG path geometry module for the Angle Explorer diagram — five pure, node-tested functions exported from `angle-render.ts`: `polarToCartesian(cx, cy, r, radians)` converts polar to Cartesian with y-axis flip to match SVG's downward-growing coordinates; `arcPath(cx, cy, r, startRad, endRad)` generates SVG arc commands with automatic large-arc-flag and sweep-flag selection, splitting full ±360° sweeps across two A commands (since coincident start/end draws nothing); `tickAngles(thetaRad)` emits whole-radian tick positions with a minimum of one tick; `arrowheadPoints(cx, cy, r, radians, sign)` returns three coordinate pairs for the sweep arrowhead triangle. All functions are deterministic, DOM-free pure computations testable in the Node.js environment, enabling 14 passing unit tests (RED → GREEN → PASS via TDD).
+
+**Rationale:**
+SVG arc rendering has two subtle traps that require unit testing to validate: (1) arcs wider than 180° need `large-arc-flag = 1` or the renderer draws the minor arc instead; (2) full ±360° arcs cannot be expressed with a single `A` command because start and end coordinates coincide, so a path renders as nothing — the full turn must be split into two half-arcs. Negating sine in `polarToCartesian` ensures positive angles sweep counter-clockwise on screen (upward), matching textbook convention. The module stays pure and independent of any DOM or plotting library, making every arc-flag decision unit-testable against hardcoded expectations without a browser.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
