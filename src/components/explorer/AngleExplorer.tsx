@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import GraphResultExport from '@/components/export/GraphResultExport';
 import { explorerColors } from '@/scripts/graphing/theme';
 import {
   arcLength,
@@ -17,18 +18,19 @@ import {
   isIntegerDegrees,
   piMultiple,
   turnFraction,
+  type Fraction,
 } from '@/scripts/explorer/angle';
 import {
   formatDegrees,
   formatRadiansDecimal,
   parseAngleInput,
 } from '@/scripts/explorer/angle-parse';
+import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
 import {
-  arcPath,
-  arrowheadPoints,
-  polarToCartesian,
-  tickAngles,
-} from '@/scripts/explorer/angle-render';
+  EXPORT_GRAPH_HEIGHT,
+  EXPORT_GRAPH_WIDTH,
+  type ExportSnapshot,
+} from '@/scripts/export/model';
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
@@ -92,13 +94,30 @@ function buildReadout(theta: number, r: number): { chain: string; arc: string; s
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
- *  Mathematica cannot reflow. */
+ *  Mathematica cannot reflow. The pixels-per-unit and measure-arc radius that
+ *  used to live here now default inside `buildAngleDiagramSvg`, which both
+ *  this component and the export snapshot draw through. */
 const VIEW = 320;
-const C = VIEW / 2;
-/** Pixels per unit radius, leaving room for tick labels outside r = 1.5. */
-const UNIT = 88;
-/** Radius of the small angle-measure arc, in units. */
-const MEASURE_R = 0.3;
+
+/** Plain-text (non-KaTeX) exact fraction, e.g. "0", "1", "1/12", "-1/4". Mirrors
+ *  `formatFractionLatex` without LaTeX markup — the export artifact renders as
+ *  plain HTML text, never through KaTeX. */
+function formatFractionText(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? '-' : '';
+  const mag = Math.abs(f.n);
+  return f.d === 1 ? `${sign}${mag}` : `${sign}${mag}/${f.d}`;
+}
+
+/** Plain-text exact π-multiple, e.g. "0", "π", "2π", "π/6", "-2π/3". Mirrors
+ *  `formatPiLatex` without LaTeX markup, for the same reason. */
+function formatPiText(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? '-' : '';
+  const mag = Math.abs(f.n);
+  const numerator = mag === 1 ? 'π' : `${mag}π`;
+  return f.d === 1 ? `${sign}${numerator}` : `${sign}${numerator}/${f.d}`;
+}
 
 export default function AngleExplorer(): React.JSX.Element {
   const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
@@ -119,11 +138,6 @@ export default function AngleExplorer(): React.JSX.Element {
 
   const colors = useMemo(() => explorerColors(dark), [dark]);
   const tickText = dark ? '#e2e8f0' : '#334155'; // [G9] stroke colour for tick labels
-
-  const thetaRad = degreesToRadians(theta);
-  const betaRad = degreesToRadians(beta);
-  const sign = theta < 0 ? -1 : 1;
-  const endRad = betaRad + thetaRad;
 
   const readout = useMemo(() => buildReadout(theta, r), [theta, r]);
   const chainHtml = useMemo(
@@ -158,11 +172,6 @@ export default function AngleExplorer(): React.JSX.Element {
     const id = setTimeout(() => setAnnounced(readout.spoken), 250);
     return () => clearTimeout(id);
   }, [readout.spoken]);
-
-  // [G4] One source of truth for the measure sweep. `arcPath` returns '' at θ = 0, and
-  // the arrowhead must vanish with it — otherwise a stray head sits on the circle
-  // asserting a counter-clockwise direction for an angle that has no direction.
-  const measureArc = arcPath(C, C, MEASURE_R * UNIT, betaRad, endRad);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
@@ -206,11 +215,6 @@ export default function AngleExplorer(): React.JSX.Element {
     setEditing(null);
     setInputError(null);
   };
-
-  const initialTip = polarToCartesian(C, C, (r + 0.2) * UNIT, betaRad);
-  const terminalTip = polarToCartesian(C, C, (r + 0.2) * UNIT, endRad);
-  const initialDot = polarToCartesian(C, C, r * UNIT, betaRad);
-  const terminalDot = polarToCartesian(C, C, r * UNIT, endRad);
 
   const sliders = [
     {
@@ -258,6 +262,72 @@ export default function AngleExplorer(): React.JSX.Element {
       spoken: undefined,
     },
   ];
+
+  // The diagram is drawn in roughly ±1.8 units (r maxes out at 1.5, ticks and
+  // rays reach a little past it) — an honest window for the always-printed
+  // "x […] | y […]" line, even though this is a polar figure, not a y = f(x)
+  // Cartesian plot.
+  const createExportSnapshot = (): ExportSnapshot => {
+    const snapshotTheta = theta;
+    const snapshotR = r;
+    const snapshotBeta = beta;
+    const lightColors = explorerColors(false);
+    const whole = Math.round(snapshotTheta);
+    const integer = isIntegerDegrees(snapshotTheta);
+    const exactRadiansText = integer ? formatPiText(piMultiple(whole)) : '—';
+    const turnText = integer ? formatFractionText(turnFraction(whole)) : '—';
+    const arcValue = round4(arcLength(snapshotR, degreesToRadians(snapshotTheta)));
+
+    return {
+      model: {
+        slug: 'angle-explorer',
+        title: 'Angle Explorer',
+        exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
+        window: { xMin: -1.8, xMax: 1.8, yMin: -1.8, yMax: 1.8 },
+        legend: [
+          { label: 'Initial side', color: lightColors.floor },
+          { label: 'Terminal side', color: lightColors.wall },
+          {
+            label: 'Arc — length is the radian measure when r = 1',
+            color: lightColors.curve,
+          },
+          { label: 'Angle measure', color: lightColors.arrow },
+        ],
+        sections: [
+          {
+            title: 'Angle',
+            facts: [
+              { label: 'Degrees', value: formatDegrees(snapshotTheta) },
+              { label: 'Radians', value: formatRadiansDecimal(snapshotTheta) },
+              { label: 'Exact radians', value: exactRadiansText },
+            ],
+          },
+          {
+            title: 'Circle',
+            facts: [
+              { label: 'Radius', value: String(snapshotR) },
+              { label: 'Position β', value: `${snapshotBeta}°` },
+              { label: 'Arc length s = r|θ|', value: arcValue },
+            ],
+          },
+        ],
+        table: {
+          title: 'Representations',
+          headers: ['Form', 'Value'],
+          rows: [
+            ['Degrees', `${formatDegrees(snapshotTheta)}°`],
+            ['Fraction of a turn', turnText],
+            ['Exact radians', exactRadiansText],
+            ['Decimal radians', formatRadiansDecimal(snapshotTheta)],
+            ['Arc length', arcValue],
+          ],
+        },
+      },
+      renderGraph: (target) => {
+        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg({ theta: snapshotTheta, r: snapshotR, beta: snapshotBeta, colors: lightColors, tickText: '#334155' })}</svg>`;
+      },
+    };
+  };
 
   return (
     // testid carried over from the Task 4 skeleton rather than dropped [G10].
@@ -340,71 +410,20 @@ export default function AngleExplorer(): React.JSX.Element {
         <Button type="button" variant="outline" onClick={reset}>
           Reset
         </Button>
+        <GraphResultExport hasGraph={true} createSnapshot={createExportSnapshot} />
       </div>
 
       <div data-testid="angle-diagram" className="mx-auto w-full max-w-lg">
+        {/* The children are delegated to buildAngleDiagramSvg — the SAME pure
+            builder the export snapshot draws through — so the live figure and
+            the exported PNG/PDF can never drift apart. */}
         <svg
           viewBox={`0 0 ${VIEW} ${VIEW}`}
           className="h-auto w-full"
           role="img"
           aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}.`}
-        >
-          {/* Reference axes and the unit circle. */}
-          <line x1={C - 1.35 * UNIT} y1={C} x2={C + 1.35 * UNIT} y2={C} stroke={colors.axis} strokeWidth={1} />
-          <line x1={C} y1={C - 1.35 * UNIT} x2={C} y2={C + 1.35 * UNIT} stroke={colors.axis} strokeWidth={1} />
-          <circle cx={C} cy={C} r={UNIT} fill="none" stroke={colors.axis} strokeWidth={1} strokeDasharray="3 3" />
-
-          {/* The adjustable circle. */}
-          <circle cx={C} cy={C} r={r * UNIT} fill="none" stroke={colors.ghost} strokeWidth={1.5} />
-
-          {/* Whole-radian ticks, scaling with r. */}
-          {tickAngles(thetaRad).map((a) => {
-            const inner = polarToCartesian(C, C, r * UNIT, betaRad + a);
-            const outer = polarToCartesian(C, C, (r + 0.1) * UNIT, betaRad + a);
-            const label = polarToCartesian(C, C, (r + 0.22) * UNIT, betaRad + a);
-            return (
-              <g key={a}>
-                <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={colors.axis} strokeWidth={1.5} />
-                <text
-                  x={label.x}
-                  y={label.y}
-                  fill={tickText}
-                  fontSize={9}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                >
-                  {a} rad
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Small angle-measure arc with its direction arrowhead. Both are gated on
-              the same non-empty path, so they can never disagree at θ = 0 [G4]. */}
-          {measureArc !== '' && (
-            <>
-              <path d={measureArc} fill="none" stroke={colors.arrow} strokeWidth={1.5} />
-              <polygon
-                points={arrowheadPoints(C, C, MEASURE_R * UNIT, endRad, sign)}
-                fill={colors.arrow}
-              />
-            </>
-          )}
-
-          {/* The swept arc — its length is the radian measure when r = 1. */}
-          <path
-            d={arcPath(C, C, r * UNIT, betaRad, endRad)}
-            fill="none"
-            stroke={colors.curve}
-            strokeWidth={3}
-          />
-
-          {/* Initial and terminal rays. */}
-          <line x1={C} y1={C} x2={initialTip.x} y2={initialTip.y} stroke={colors.floor} strokeWidth={2} />
-          <line x1={C} y1={C} x2={terminalTip.x} y2={terminalTip.y} stroke={colors.wall} strokeWidth={2} />
-          <circle cx={initialDot.x} cy={initialDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
-          <circle cx={terminalDot.x} cy={terminalDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
-        </svg>
+          dangerouslySetInnerHTML={{ __html: buildAngleDiagramSvg({ theta, r, beta, colors, tickText }) }}
+        />
 
         <div
           data-testid="angle-readout"
