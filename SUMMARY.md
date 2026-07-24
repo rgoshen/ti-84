@@ -2382,3 +2382,21 @@ N/A — new feature.
 **References:**
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
+
+## [2026-07-23 19:53] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Implemented angle input parsing module for the Angle Explorer: exported `ParseResult` union type, constants `MAX_DEG` (360), and three functions — `parseAngleInput(raw, unit)` parses user text in degrees or radians with expressions (pi/3, 180/2, etc.) and returns normalized degrees; `formatDegrees(deg)` and `formatRadiansDecimal(deg)` format output to four decimals, trimming float noise for display. The parser includes a whitelist guard on the raw text (checking only digits, operators, parentheses, whitespace, and the literal 'pi') before passing to mathjs evaluate(), rejecting injection-shaped input like 'config', 'import("fs")', etc. on the guard, never reaching the evaluator. Degrees are the single source of truth; radian input is converted during parse.
+
+**Rationale:**
+The whitelist guard runs BEFORE mathjs evaluate because mathjs has a documented history of sandbox-escape advisories — raw user text must never reach the evaluator. The guard is the security boundary, rejecting 100% of injection attempts at the character-class check, not as an afterthought when evaluate() detects a problem. Degrees are the canonical representation because the degree slider steps 1° (exact), whereas 1 radian is 57.2958° — irrational and never a whole degree, but parseable here, closing a gap in the slider's range. All parse errors are user-friendly messages (empty, non-finite, out-of-range, whitelist violation).
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
