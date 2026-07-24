@@ -246,7 +246,7 @@ export default function AngleExplorer(): React.JSX.Element {
                 value={f.value}
                 inputMode="text"
                 aria-invalid={inputError !== null && editing === f.unit}
-                aria-describedby={`hint-${f.unit}${inputError ? ' angle-input-error' : ''}`}
+                aria-describedby={`hint-${f.unit}${inputError !== null && editing === f.unit ? ' angle-input-error' : ''}`}
                 onFocus={() => setEditing(f.unit)}
                 onBlur={onFieldBlur}
                 onChange={(e) => onFieldChange(f.unit, e.target.value)}
@@ -256,16 +256,17 @@ export default function AngleExplorer(): React.JSX.Element {
               </p>
             </div>
           ))}
-          {/* Rendered unconditionally with a reserved min-height so the column's
-              layout never shifts between "no error" and "error" — an error that
-              unmounts this element on blur reflows the Reset button out from under
-              an in-flight mousedown/mouseup click. Only the content/visibility
-              toggles; the row itself is permanent. */}
+          {/* Rendered unconditionally with a FIXED (not minimum) two-line height so
+              the column's layout never shifts between "no error", "one-line error",
+              and "two-line error" — a row that grows and then collapses on blur
+              moves the Reset button between mousedown and mouseup, which previously
+              made Reset silently unclickable. h-8 reserves two lines of text-xs
+              regardless of message length or content; only visibility toggles. */}
           <p
             id="angle-input-error"
             data-testid="angle-input-error"
             role="alert"
-            className={`min-h-4 text-xs font-medium${inputError ? ' text-destructive' : ''}`}
+            className={`h-8 text-xs font-medium${inputError ? ' text-destructive' : ''}`}
           >
             {inputError ?? ''}
           </p>
