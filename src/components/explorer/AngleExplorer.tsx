@@ -44,7 +44,6 @@ export default function AngleExplorer(): React.JSX.Element {
   }, []);
 
   const colors = useMemo(() => explorerColors(dark), [dark]);
-  const axis = dark ? '#64748b' : '#94a3b8';
   const tickText = dark ? '#e2e8f0' : '#334155'; // [G9] stroke colour for tick labels
 
   const thetaRad = degreesToRadians(theta);
@@ -130,9 +129,9 @@ export default function AngleExplorer(): React.JSX.Element {
           aria-label={`Angle of ${theta} degrees swept on a circle of radius ${r}.`}
         >
           {/* Reference axes and the unit circle. */}
-          <line x1={C - 1.35 * UNIT} y1={C} x2={C + 1.35 * UNIT} y2={C} stroke={axis} strokeWidth={1} />
-          <line x1={C} y1={C - 1.35 * UNIT} x2={C} y2={C + 1.35 * UNIT} stroke={axis} strokeWidth={1} />
-          <circle cx={C} cy={C} r={UNIT} fill="none" stroke={axis} strokeWidth={1} strokeDasharray="3 3" />
+          <line x1={C - 1.35 * UNIT} y1={C} x2={C + 1.35 * UNIT} y2={C} stroke={colors.axis} strokeWidth={1} />
+          <line x1={C} y1={C - 1.35 * UNIT} x2={C} y2={C + 1.35 * UNIT} stroke={colors.axis} strokeWidth={1} />
+          <circle cx={C} cy={C} r={UNIT} fill="none" stroke={colors.axis} strokeWidth={1} strokeDasharray="3 3" />
 
           {/* The adjustable circle. */}
           <circle cx={C} cy={C} r={r * UNIT} fill="none" stroke={colors.ghost} strokeWidth={1.5} />
@@ -144,7 +143,7 @@ export default function AngleExplorer(): React.JSX.Element {
             const label = polarToCartesian(C, C, (r + 0.22) * UNIT, betaRad + a);
             return (
               <g key={a}>
-                <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={axis} strokeWidth={1.5} />
+                <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={colors.axis} strokeWidth={1.5} />
                 <text
                   x={label.x}
                   y={label.y}
