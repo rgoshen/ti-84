@@ -134,6 +134,21 @@ export default function AngleExplorer(): React.JSX.Element {
     () => katex.renderToString(readout.arc, { throwOnError: false, displayMode: false, output: 'html' }),
     [readout.arc],
   );
+  // The exact π form for the Radians field. Only meaningful for whole degrees —
+  // a typed 57.2958° (from "1" radian) has no clean π multiple, so this is null
+  // and the field shows only its decimal. The input keeps the decimal as its
+  // value (so it round-trips); this is a read-only companion showing both forms.
+  const radiansExactHtml = useMemo(
+    () =>
+      isIntegerDegrees(theta)
+        ? katex.renderToString(`${formatPiLatex(piMultiple(Math.round(theta)))}\\text{ rad}`, {
+            throwOnError: false,
+            displayMode: false,
+            output: 'html',
+          })
+        : null,
+    [theta],
+  );
 
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
@@ -292,6 +307,19 @@ export default function AngleExplorer(): React.JSX.Element {
               <p id={`hint-${f.unit}`} className="text-xs text-muted-foreground">
                 {f.hint}
               </p>
+              {/* Radians shows BOTH forms: the decimal in the input above, and the
+                  exact π multiple here (e.g. 0.5236 and π/6). aria-hidden because the
+                  live region already speaks the exact form as plain prose. */}
+              {f.unit === 'rad' && radiansExactHtml && (
+                <p
+                  data-testid="radians-exact"
+                  aria-hidden="true"
+                  className="text-xs font-medium"
+                >
+                  <span className="text-muted-foreground">exact: </span>
+                  <span dangerouslySetInnerHTML={{ __html: radiansExactHtml }} />
+                </p>
+              )}
             </div>
           ))}
           {/* Rendered unconditionally with a FIXED (not minimum) two-line height so
