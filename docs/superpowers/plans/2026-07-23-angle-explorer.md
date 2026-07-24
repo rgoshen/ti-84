@@ -1585,7 +1585,12 @@ Run: `npx tsc --noEmit`
 Expected: no errors. This is the project's only static-analysis gate — there is no linter [G2].
 
 Run: `npx playwright test`
-Expected: all e2e specs PASS with no new visual-snapshot files created. Confirm with `git status` that no `tests/e2e/__snapshots__/**` files are untracked — committing macOS-generated baselines breaks CI.
+Expected: all e2e specs PASS **except the 3 `export-visual.spec.ts` snapshot mismatches, which fail deterministically on macOS** [G11]. Those baselines were generated on Linux/Docker for CI; macOS font rasterization differs, so they always fail locally on a Mac and are unrelated to this feature. Do **not** regenerate them to make them green — that is precisely what breaks CI.
+
+Confirm with `git status` that no `tests/e2e/__snapshots__/**` files are modified or untracked.
+
+> [!WARNING]
+> If you are running on Linux/CI, all specs including the visual ones should pass. The 3-failure allowance is macOS-only. Verify which platform you are on before interpreting the result.
 
 - [ ] **Step 4: Add the attribution**
 
