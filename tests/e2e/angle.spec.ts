@@ -61,6 +61,8 @@ test('the angle slider drives the readout and both fields', async ({ page }) => 
   await angle.focus();
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
   await expect(deg(page)).toHaveValue('35');
+  await expect(rad(page)).toHaveValue('0.6109');
+  await expect(page.locator(READOUT)).toContainText('35');
 });
 
 test('a full 360 degree sweep still draws an arc', async ({ page }) => {
