@@ -2473,3 +2473,21 @@ The colour moved into the shared vetted palette instead of being patched locally
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 20:49] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added the live KaTeX readout under the diagram in `AngleExplorer.tsx`: a `buildReadout(theta, r)` helper producing `{ chain, arc, spoken }`, rendered via `katex.renderToString(..., { throwOnError: false, displayMode: false, output: 'html' })` into two `dangerouslySetInnerHTML` lines inside a `data-testid="angle-readout"` container — the five-way identity (`30° = 1/12 of a full turn = 1/12 × 2π = π/6 ≈ 0.5236 rad`) and the arc-length substitution (`s = rθ = 1 × π/6 ≈ 0.7854` once `r` moves off 1). `degreesToRadians` was folded into a wider single import from `@/scripts/explorer/angle` alongside `arcLength`, `formatFractionLatex`, `formatPiLatex`, `isIntegerDegrees`, `piMultiple`, and `turnFraction`.
+
+**Rationale:**
+Exact `π` and turn-fraction forms are shown only when `isIntegerDegrees(theta)` is true; `piMultiple` reduces `deg/180` with an integer gcd, so a non-integer angle — the shape Task 7's radians field will produce (e.g. typing `1` rad yields 57.2958°) — would otherwise reduce to an absurd fraction like `1047π/180000` instead of failing to reduce at all. The non-integer branch falls back to decimal-only forms so the readout never lies about exactness. The container is `aria-hidden="true"` because KaTeX's rendered markup (nested spans, MathML fallbacks) is noise to a screen reader; `spoken` is plain prose held in reserve for Task 8's live region, which will speak the identity instead of exposing the visual markup. The arc line writes out the substitution with real numbers (`s = rθ = 1.5 × π/6 ≈ 0.7854`) rather than the bare symbolic `s = rθ`, per the project convention that an explorer should never show notation without the concrete numbers behind it — the substitution is what makes the radius slider's effect on arc length legible.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
