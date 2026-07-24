@@ -1463,6 +1463,11 @@ import { test, expect, type Page } from '@playwright/test';
 const DIAGRAM = '[data-testid="angle-diagram"]';
 const READOUT = '[data-testid="angle-readout"]';
 
+// getByLabel('Degrees') is AMBIGUOUS — it also matches the SVG, whose aria-label
+// contains the word "degrees" — and throws a Playwright strict-mode violation [G13].
+const deg = (page: Page) => page.getByRole('textbox', { name: 'Degrees' });
+const rad = (page: Page) => page.getByRole('textbox', { name: 'Radians' });
+
 async function goto(page: Page): Promise<void> {
   await page.goto('/explorers/angles');
   await expect(page.locator(`${DIAGRAM} svg`)).toBeVisible();
@@ -1484,27 +1489,27 @@ test('is reachable from the explorers catalog', async ({ page }) => {
 
 test('converts pi/3 typed in radians to exactly 60 degrees', async ({ page }) => {
   await goto(page);
-  await page.getByLabel('Radians').fill('pi/3');
-  await expect(page.getByLabel('Degrees')).toHaveValue('60');
+  await rad(page).fill('pi/3');
+  await expect(deg(page)).toHaveValue('60');
   await expect(page.locator(READOUT)).toContainText('60');
 });
 
 test('converts 1 radian to the value the 1-degree slider cannot reach', async ({ page }) => {
   await goto(page);
-  await page.getByLabel('Radians').fill('1');
-  await expect(page.getByLabel('Degrees')).toHaveValue('57.2958');
+  await rad(page).fill('1');
+  await expect(deg(page)).toHaveValue('57.2958');
 });
 
 test('degrees drive radians in the other direction', async ({ page }) => {
   await goto(page);
-  await page.getByLabel('Degrees').fill('180');
-  await expect(page.getByLabel('Radians')).toHaveValue('3.1416');
+  await deg(page).fill('180');
+  await expect(rad(page)).toHaveValue('3.1416');
 });
 
 test('invalid input reports an error and leaves the diagram intact', async ({ page }) => {
   await goto(page);
-  await page.getByLabel('Degrees').fill('abc');
-  await expect(page.getByTestId('angle-input-error')).toBeVisible();
+  await deg(page).fill('abc');
+  await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
   // The last valid angle survives the typo.
   await expect(page.locator(READOUT)).toContainText('30');
   await expect(page.locator(`${DIAGRAM} svg`)).toBeVisible();
@@ -1515,13 +1520,13 @@ test('the angle slider drives the readout and both fields', async ({ page }) => 
   const angle = page.getByRole('slider', { name: 'angle' });
   await angle.focus();
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await expect(page.getByLabel('Degrees')).toHaveValue('35');
+  await expect(deg(page)).toHaveValue('35');
 });
 
 test('a full 360 degree sweep still draws an arc', async ({ page }) => {
   await goto(page);
   // Regression guard: a 360° arc built from a single SVG "A" command renders nothing.
-  await page.getByLabel('Degrees').fill('360');
+  await deg(page).fill('360');
   const drawn = await page.locator(`${DIAGRAM} svg path`).evaluateAll((nodes) =>
     nodes.some((n) => (n.getAttribute('d') ?? '').split('A').length > 2),
   );
@@ -1546,7 +1551,7 @@ test('the position slider rotates the figure [G3]', async ({ page }) => {
 
 test('reset restores every control [G8]', async ({ page }) => {
   await goto(page);
-  await page.getByLabel('Degrees').fill('200');
+  await deg(page).fill('200');
   const radius = page.getByRole('slider', { name: 'radius' });
   const position = page.getByRole('slider', { name: 'position' });
   await radius.focus();
@@ -1554,17 +1559,45 @@ test('reset restores every control [G8]', async ({ page }) => {
   await position.focus();
   for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
 
-  await expect(page.getByLabel('Degrees')).toHaveValue('200');
+  await expect(deg(page)).toHaveValue('200');
   await expect(radius).toHaveAttribute('aria-valuenow', '1.3');
   await expect(position).toHaveAttribute('aria-valuenow', '10');
 
   await page.getByRole('button', { name: 'Reset' }).click();
 
   // All four controls, not just the two fields.
-  await expect(page.getByLabel('Degrees')).toHaveValue('30');
-  await expect(page.getByLabel('Radians')).toHaveValue('0.5236');
+  await expect(deg(page)).toHaveValue('30');
+  await expect(rad(page)).toHaveValue('0.5236');
   await expect(radius).toHaveAttribute('aria-valuenow', '1');
   await expect(position).toHaveAttribute('aria-valuenow', '0');
+});
+
+test('reset still works while a validation error is showing [G14]', async ({ page }) => {
+  await goto(page);
+  // REGRESSION GUARD. This shipped broken once: the error element was conditionally
+  // rendered, so blurring the field on mousedown unmounted it, the column reflowed,
+  // and the Reset button moved out from under the cursor before mouseup. The click
+  // never landed. A control case that resets from a VALID value passes either way —
+  // only a non-default angle PLUS a visible error exposes it.
+  await deg(page).fill('180');
+  await expect(rad(page)).toHaveValue('3.1416');
+  await deg(page).fill('abc');
+  await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
+
+  await page.getByRole('button', { name: 'Reset' }).click();
+
+  await expect(deg(page)).toHaveValue('30');
+  await expect(rad(page)).toHaveValue('0.5236');
+});
+
+test('the controls column does not reflow when an error appears [G14]', async ({ page }) => {
+  await goto(page);
+  const column = page.locator('[data-testid="angle-explorer"] > div').first();
+  const clean = (await column.boundingBox())!.height;
+  await deg(page).fill('abc');
+  await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
+  // Equal heights are what keep the click from being stolen mid-press.
+  expect((await column.boundingBox())!.height).toBe(clean);
 });
 ```
 
