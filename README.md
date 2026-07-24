@@ -15,6 +15,7 @@ A small multi-page site with four browser-based math tools:
 - **Graphing Calculator** — plot equations, stack multiple functions, mark whole-number gridline crossings, and zoom/pan, all in the browser.
 - **Function Explorer** — an interactive limits & asymptotes explorer: type any function, drag a point along the curve (it pins to the window edge near a vertical asymptote instead of clipping), animate limits toward auto-detected walls and ±∞, and read the behaviour in arrow notation. It's the first entry in a new **Explorers** section for interactive concept tools.
 - **Transformation Explorer** — choose a parent function, adjust a/b/h/k, compare the parent and transformed graphs, and inspect the resulting equation, domain, range, intercepts, asymptotes, and value table.
+- **Angle Explorer** — sweep an angle on a circle whose radius you control: whole-radian tick marks, a five-way readout (degrees, fraction of a turn, ×2π, exact π-multiple, decimal radians) and arc length s = rθ. Because arc length equals radian measure only when r = 1, changing the radius pulls them apart on screen. Linked degree/radian fields convert in either direction and accept exact forms like `pi/3`.
 
 The site is built with **Astro + TypeScript** — a shared layout and header wrap the
 routes (`/` landing, `/ti-84`, `/graphing`, and the `/explorers` hub plus its two tools),
@@ -108,13 +109,13 @@ change. Review all three replacement PNGs visually before committing them. Ordin
 │   ├── components/
 │   │   ├── Header.astro        # Sticky nav + theme toggle
 │   │   ├── graphing/           # GraphingCalculator React island
-│   │   ├── explorer/           # Function + Transformation Explorer islands
+│   │   ├── explorer/           # Function, Transformation + Angle Explorer islands
 │   │   ├── export/             # Shared artifact + export controller
 │   │   └── ui/                 # shadcn/ui primitives
 │   ├── pages/                  # Routes: index, ti-84, graphing, explorers/*
 │   ├── scripts/
 │   │   ├── graphing/           # Pure math + function-plot wrapper (math/plot/theme/hover .ts) + tests
-│   │   ├── explorer/           # Pure explorer domain logic + function-plot renderers
+│   │   ├── explorer/           # Pure explorer domain logic + function-plot renderers (Angle Explorer modules are renderer-free — SVG, not function-plot)
 │   │   └── export/             # Pure export contract + PNG/PDF adapters
 │   └── styles/global.css       # @import "tailwindcss" + theme tokens
 ├── public/favicon.svg          # Site icon
@@ -183,6 +184,7 @@ docker compose up -d --build
 | `PUBLIC_SITE_TITLE_EXPLORERS` | Title/heading for the Explorers hub page. | `Explorers` |
 | `PUBLIC_SITE_TITLE_FUNCTION_EXPLORER` | Title/heading for the Function Explorer page. | `Function Explorer` |
 | `PUBLIC_SITE_TITLE_TRANSFORMATION_EXPLORER` | Title/heading for the Transformation Explorer page. | `Transformation Explorer` |
+| `PUBLIC_SITE_TITLE_ANGLE_EXPLORER` | Title/heading for the Angle Explorer page. | `Angle Explorer` |
 | `PUBLIC_TI84_IFRAME_SRC` | Source URL for the embedded TI-84 iframe. | `https://ti84calc.com/ti84calc` |
 | `PUBLIC_THEME_DEFAULT` | First-visit theme (`dark` or `light`). | `dark` |
 

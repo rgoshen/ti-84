@@ -2635,3 +2635,29 @@ The previous two commits (the `slider.tsx` `aria-valuetext` forwarding fix and t
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 22:49] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added `/explorers/angles`: an SVG unit-circle explorer with angle, radius, and position
+sliders, whole-radian tick marks, a five-way KaTeX readout (degrees, turn fraction, ×2π,
+exact π-multiple, decimal radians) plus arc length, and linked degree/radian fields that
+convert in both directions.
+
+**Rationale:**
+Built as a standalone explorer rather than a mode in the graphing calculator: the diagram
+is polar, not y = f(x), so function-plot does not apply and a second renderer inside
+`GraphingCalculator.tsx` would have mixed two unrelated jobs. Logic lives in three pure
+modules so the exact-fraction and arc-geometry edge cases are unit-testable.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature. Two traps handled up front: a full ±360° SVG arc must be split across
+two `A` commands or it renders as nothing, and exact π forms are suppressed for
+non-integer degrees so typed radian input cannot produce absurd fractions.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
