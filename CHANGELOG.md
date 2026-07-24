@@ -4,6 +4,38 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.5.0](https://github.com/rgoshen/ti-84/compare/v0.4.0...v0.5.0) (2026-07-24)
+
+
+### Bug Fixes
+
+* **build:** drop deprecated baseUrl so tsc passes on TypeScript 6 ([9fffe22](https://github.com/rgoshen/ti-84/commit/9fffe227a1e44b3284658622c7b17191274dbf85))
+* **explorer:** format the angle slider value so it never shows float noise ([fbceee2](https://github.com/rgoshen/ti-84/commit/fbceee26cda188b7a76ed922056dc79fda94fea5))
+* **explorer:** keep reset clickable and round the diagram's accessible name ([7fe3fbe](https://github.com/rgoshen/ti-84/commit/7fe3fbe922744240ca7e8be52528d258af4577ec))
+* **explorer:** round near-integer degrees so exact fractions render correctly ([3041e9e](https://github.com/rgoshen/ti-84/commit/3041e9e65371fb1ab02d0e18754d3535d7124aaa))
+* **explorer:** scope the input error to its own field and fix the reserved row height ([b2dc4e5](https://github.com/rgoshen/ti-84/commit/b2dc4e5fdea778e9040940f340e90cfa0de8170d))
+* **explorer:** speak plain prose and show a sign-correct arc equation ([8f46456](https://github.com/rgoshen/ti-84/commit/8f46456a00ec1a65985c9ba93436223fc49ca036))
+* **explorer:** use a contrast-checked axis colour for diagram reference marks ([2a611c1](https://github.com/rgoshen/ti-84/commit/2a611c15c73f29cdab3f6bd3485c7505435da248))
+* **nav:** add the Angle Explorer to the header explorers dropdown ([a753da1](https://github.com/rgoshen/ti-84/commit/a753da12b0846092edc2d3add49e1ebc8c13aedf))
+* **ui:** forward slider aria-valuetext to the thumb ([34659fb](https://github.com/rgoshen/ti-84/commit/34659fbfcb202cb8a263914364666e0a2320763d))
+
+
+### Features
+
+* **explorer:** add bidirectional degree and radian input fields ([fd1832c](https://github.com/rgoshen/ti-84/commit/fd1832c49927cad6cda822273bf6870bc71d69a7))
+* **explorer:** add exact angle arithmetic for degrees and radians ([4daf28c](https://github.com/rgoshen/ti-84/commit/4daf28c392d071f9b7b31d5dc58fda438dfa1bc6))
+* **explorer:** add PNG and PDF export to the Angle Explorer ([1c2a6c4](https://github.com/rgoshen/ti-84/commit/1c2a6c43407f620801e7fce58feaccf4adb7e3e7))
+* **explorer:** add spoken-word angle formatters for screen readers ([df28d88](https://github.com/rgoshen/ti-84/commit/df28d88ff59fb88195c5ba0804309585e283b87a))
+* **explorer:** add SVG arc geometry with full-turn split handling ([ed9a1d1](https://github.com/rgoshen/ti-84/commit/ed9a1d14ed63c4f7b56063bc053e23ac2ae92635))
+* **explorer:** add the five-way KaTeX readout with arc length ([9652800](https://github.com/rgoshen/ti-84/commit/96528008dff3c785aa0d287aeac64539c1795004))
+* **explorer:** announce angle conversions to screen readers ([84920d5](https://github.com/rgoshen/ti-84/commit/84920d5861f1d9ecbb26b733dacf42dae6ebb4f1))
+* **explorer:** credit the source demonstration in the UI ([0036a3c](https://github.com/rgoshen/ti-84/commit/0036a3c5c1ddb25b376d314970ea99e6ca6091d2))
+* **explorer:** parse degree and radian input with a whitelist guard ([a149f43](https://github.com/rgoshen/ti-84/commit/a149f435e37b8158d205caf39dba25b40c36f9be))
+* **explorer:** render the angle diagram with sliders and reset ([b24cf6c](https://github.com/rgoshen/ti-84/commit/b24cf6c20a97fcaf3edbeb15f5a0856d891a6f63))
+* **explorer:** scaffold the Angle Explorer route and catalog card ([a5b7376](https://github.com/rgoshen/ti-84/commit/a5b737679a5e39217aaaf1b5657b908e5feea893))
+* **explorer:** show the exact pi form alongside the decimal radians ([9370157](https://github.com/rgoshen/ti-84/commit/9370157e0bcd94f9cf2be5f742b3eb2c23aab4c5))
+* **export:** register the angle-explorer tool slug ([b6a5bb5](https://github.com/rgoshen/ti-84/commit/b6a5bb58c47488477f4e1247fa5ed8d92912cd63))
+
 # [0.4.0](https://github.com/rgoshen/ti-84/compare/v0.3.0...v0.4.0) (2026-07-13)
 
 
