@@ -2509,3 +2509,21 @@ Two defects, both in `buildReadout`. First, `spoken` interpolated the LaTeX `tur
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 21:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added the two linked `Degrees`/`Radians` `Input` fields to `AngleExplorer.tsx`, closing the gap the diagram's `1 rad` tick exposes (the θ slider steps 1° and can never land on it). New state: `degText`/`radText` (draft field text, seeded from `formatDegrees`/`formatRadiansDecimal`), `editing` (`'deg' | 'rad' | null`, tracks which field has focus), and `inputError`. A `useEffect` reflects `theta` into whichever field is NOT being edited, so slider drags and `reset` update both fields while typing only updates the field the user isn't in. `onFieldChange` runs every keystroke through `parseAngleInput`: on success it clears `inputError` and calls `setTheta`; on failure it sets `inputError` and returns without touching `theta`, so the diagram stays on the last valid angle. `onFieldBlur` clears `editing` (letting the effect re-normalize the just-edited field) and clears `inputError`. `reset` now also clears `editing`/`inputError` alongside `theta`/`r`/`beta`. Each field has a `<Label htmlFor>`, syntax hint text (`e.g. 30 or 180/2` / `e.g. 1, pi/3, 2*pi/3`) linked via `aria-describedby`, and `aria-invalid` scoped to the field currently being edited; the error paragraph carries `data-testid="angle-input-error"`, `role="alert"`, and `aria-describedby` appends its id when present, so the message is announced and read as text, not conveyed by colour alone.
+
+**Rationale:**
+θ must stay a float degree value because the whole point of the fields is to reach angles the 1°-stepped slider cannot represent (typing `1` into Radians must produce 57.2958°, not a value coerced to the nearest integer degree) — so `onFieldChange` passes `parseAngleInput`'s `result.degrees` straight to `setTheta` with no rounding or step-snapping. The edited field is not reformatted until blur because `formatDegrees`/`formatRadiansDecimal` round to 4 decimals; re-running that formatter into the field on every keystroke (from the `theta`-reflecting effect) would fight the typist — a half-typed `-3` or `pi/` would be overwritten mid-entry. Tracking `editing` and excluding that field from the effect's writes is what makes the coexistence possible: the *other* field, and the diagram, still update live. Invalid input is non-destructive (error shown, θ and the diagram left on the last valid angle, never blanked or thrown) because a transient typo — an incomplete expression, a stray letter — is expected mid-entry, not a failure state that should discard the user's current, valid angle; `parseAngleInput`'s already-committed security whitelist and ±360° range check run unchanged on every keystroke, this task only wires its result into component state.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
