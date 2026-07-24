@@ -2563,3 +2563,57 @@ Accessibility defect: with either Degrees or Radians invalid, both inputs' `aria
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-23 22:34] Commit Summary
+
+**Change Type:** Fix
+**Scope:** UI / Slider
+
+**Summary:**
+`src/components/ui/slider.tsx`'s `Slider` component now destructures `"aria-valuetext": ariaValuetext` from props alongside the existing `"aria-label"`/`"aria-labelledby"` handling, and forwards `aria-valuetext={ariaValuetext}` onto the `<SliderPrimitive.Thumb>` the same way those two attributes are already forwarded. Purely additive: consumers that don't pass `aria-valuetext` (`FunctionExplorer`, `TransformationExplorer`, `GraphingCalculator`) now forward `undefined`, a no-op.
+
+**Rationale:**
+Radix's `SliderPrimitive.Root` is a non-interactive positioning wrapper; `SliderPrimitive.Thumb` is the element that actually carries `role="slider"` and is what a screen reader's accessibility tree exposes. Any `aria-*` attribute meant to reach assistive tech through this component has to land on the `Thumb`, not the `Root` — which is exactly what the sibling `aria-label`/`aria-labelledby` forwarding (from commit `8fcddea`) already established as the pattern. This fix mirrors that pattern for `aria-valuetext` rather than inventing a new approach.
+
+**Bug Fix Context (if applicable):**
+Verified in a real browser: `slider.tsx` forwarded `aria-label`/`aria-labelledby` to the `Thumb` but not `aria-valuetext`, which fell through `...props` onto the `Root`. Because the `Root` is not the `role="slider"` node, `page.getByRole('slider').getAttribute('aria-valuetext')` returned `null` regardless of what a consumer passed in — the attribute was present in the DOM but on the wrong element for any screen reader or accessibility-tree query to see. This was discovered as a blocker while building Task 8's richer slider announcements for the Angle Explorer (`AngleExplorer.tsx`'s `aria-valuetext={s.spoken ?? ...}`), which depends on the attribute actually reaching the `Thumb`.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:35] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s `buildReadout`, in the exact-integer branch only, now computes `const whole = Math.round(theta);` immediately after the `isIntegerDegrees(theta)` check passes, and uses `whole` — not the raw `theta` — everywhere that branch calls `turnFraction`/`piMultiple` (directly and via `Math.abs`), and everywhere it prints the degree number in both `chain` and `spoken`. The non-integer branch and the decimal radian value (`round4(degreesToRadians(theta))`) are unchanged; `angle.ts` (`isIntegerDegrees`, `turnFraction`, `piMultiple`, `reduceFraction`) is untouched.
+
+**Rationale:**
+The fix belongs at the `buildReadout` call site rather than in `angle.ts` because `turnFraction`/`piMultiple` are contractually integer-only — their doc comments already say so, and `reduceFraction`'s `gcd` is only meaningful on integers. `isIntegerDegrees` deliberately checks "within `DEG_EPS` of an integer," not "is an integer," so it accepts values like `59.99999999999999` by design; widening that epsilon or changing the gcd math would blur a boundary the type-level contract already draws correctly. Rounding once, right after the epsilon check confirms the value is close enough to treat as exact, keeps that contract intact while making the exact branch actually receive an exact integer.
+
+**Bug Fix Context (if applicable):**
+Verified in a real browser on the committed build: typing `pi/3` into the Radians field sets θ to `59.99999999999999`. `isIntegerDegrees(θ)` returns `true` (within its `1e-9` epsilon), so `buildReadout` takes the exact-π branch — but that branch then passed the raw, non-integer `theta` into `turnFraction`/`piMultiple`, whose `reduceFraction` runs Euclid's gcd on it. gcd on a float with no exact integer representation of the intended value produces a spurious near-1 divisor, so the "reduced" fraction came out unreduced and enormous: the readout rendered `59.99999999999999° = 8444249301319679/50665495807918080 of a full turn = … 8444249301319679π/25332747903959040 ≈ 1.0472` instead of `60° = 1/6 of a full turn = 1/6 × 2π = π/3 ≈ 1.0472`. Rounding to `whole` before calling `turnFraction`/`piMultiple`, and using `whole` in place of `theta` for every exact-form display (chain and spoken), fixes the garbled fraction while leaving the correct decimal value (`1.0472`) untouched.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:36] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx` now announces the angle conversion to assistive technology. A debounced `announced` state (`useState('')`, updated via a 250ms `setTimeout` in a `useEffect` keyed on `readout.spoken`, cleared on every re-run so a slider drag settles to one announcement instead of firing on every frame) feeds a visually-hidden `<p className="sr-only" role="status" aria-live="polite">` rendered immediately after the `aria-hidden` KaTeX readout box. Separately, the angle slider's `aria-valuetext` now reads `"${theta} degrees, ${round4(degreesToRadians(theta))} radians"` instead of a bare `"${theta}°"`, via a new `spoken` field added to each entry in the `sliders` array (`spoken: undefined` for `radius` and `position`, which keep their plain `"${value}${suffix}"` fallback through `s.spoken ?? \`${s.value}${s.suffix}\``).
+
+**Rationale:**
+The readout box carries `aria-hidden="true"` because its KaTeX markup is visual noise to a screen reader (backslashes, braces, nested spans) — without a separate spoken channel, the conversion the whole feature exists to show would never reach assistive tech at all. `role="status"`/`aria-live="polite"` announces without interrupting whatever the user is doing, and debouncing on settle rather than on every `onValueChange` frame keeps a slider drag from turning into a wall of announcements. A bare `"30°"` on the angle slider is not meaningful on its own — the pairing of degrees and radians is the point of the explorer — so its `aria-valuetext` was upgraded to speak both, while `radius` and `position` (whose sliders have no dual-unit story) keep the existing minimal form.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature. (This work is what surfaced both bugs fixed in the two preceding commits: the slider `aria-valuetext` forwarding bug, discovered while wiring the richer `spoken` value through to the DOM; the near-integer-degrees fraction bug, discovered while manually verifying the live region's spoken text against `pi/3` input.)
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
