@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import katex from 'katex';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { explorerColors } from '@/scripts/graphing/theme';
@@ -17,6 +18,11 @@ import {
   piMultiple,
   turnFraction,
 } from '@/scripts/explorer/angle';
+import {
+  formatDegrees,
+  formatRadiansDecimal,
+  parseAngleInput,
+} from '@/scripts/explorer/angle-parse';
 import {
   arcPath,
   arrowheadPoints,
@@ -132,6 +138,43 @@ export default function AngleExplorer(): React.JSX.Element {
     setTheta(DEFAULTS.theta);
     setR(DEFAULTS.r);
     setBeta(DEFAULTS.beta);
+    setEditing(null);
+    setInputError(null);
+  };
+
+  // Draft text for the two fields. Kept separate from θ so a half-typed value
+  // ("-", "pi/") never destroys the diagram, and so the field being edited is
+  // not reformatted mid-keystroke.
+  const [degText, setDegText] = useState(() => formatDegrees(DEFAULTS.theta));
+  const [radText, setRadText] = useState(() => formatRadiansDecimal(DEFAULTS.theta));
+  const [editing, setEditing] = useState<'deg' | 'rad' | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+
+  // Reflect θ into whichever field is NOT being edited. Slider drags and reset
+  // update both; typing updates only the other one.
+  useEffect(() => {
+    if (editing !== 'deg') setDegText(formatDegrees(theta));
+    if (editing !== 'rad') setRadText(formatRadiansDecimal(theta));
+  }, [theta, editing]);
+
+  const onFieldChange = (unit: 'deg' | 'rad', raw: string): void => {
+    if (unit === 'deg') setDegText(raw);
+    else setRadText(raw);
+
+    const result = parseAngleInput(raw, unit);
+    if (!result.ok) {
+      // Non-destructive: report the problem, leave the diagram on the last valid angle.
+      setInputError(result.error);
+      return;
+    }
+    setInputError(null);
+    setTheta(result.degrees);
+  };
+
+  // Normalise the edited field only on blur, so it cannot fight the typist.
+  const onFieldBlur = (): void => {
+    setEditing(null);
+    setInputError(null);
   };
 
   const initialTip = polarToCartesian(C, C, (r + 0.2) * UNIT, betaRad);
@@ -188,6 +231,42 @@ export default function AngleExplorer(): React.JSX.Element {
             />
           </div>
         ))}
+        <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-medium">Convert</p>
+          {(
+            [
+              { unit: 'deg' as const, label: 'Degrees', value: degText, hint: 'e.g. 30 or 180/2' },
+              { unit: 'rad' as const, label: 'Radians', value: radText, hint: 'e.g. 1, pi/3, 2*pi/3' },
+            ]
+          ).map((f) => (
+            <div key={f.unit} className="space-y-1">
+              <Label htmlFor={`field-${f.unit}`}>{f.label}</Label>
+              <Input
+                id={`field-${f.unit}`}
+                value={f.value}
+                inputMode="text"
+                aria-invalid={inputError !== null && editing === f.unit}
+                aria-describedby={`hint-${f.unit}${inputError ? ' angle-input-error' : ''}`}
+                onFocus={() => setEditing(f.unit)}
+                onBlur={onFieldBlur}
+                onChange={(e) => onFieldChange(f.unit, e.target.value)}
+              />
+              <p id={`hint-${f.unit}`} className="text-xs text-muted-foreground">
+                {f.hint}
+              </p>
+            </div>
+          ))}
+          {inputError && (
+            <p
+              id="angle-input-error"
+              data-testid="angle-input-error"
+              role="alert"
+              className="text-xs font-medium text-destructive"
+            >
+              {inputError}
+            </p>
+          )}
+        </div>
         <Button type="button" variant="outline" onClick={reset}>
           Reset
         </Button>
