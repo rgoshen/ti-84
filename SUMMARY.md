@@ -2342,3 +2342,361 @@ macOS.
 **References:**
 - PR: #9
 - Workflow: `.github/workflows/_verify.yml` (`ci / verify`)
+
+## [2026-07-23 19:08] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Recorded the Angle Explorer feature plan in TODO.md: a new /explorers/angles standalone
+explorer for degree/radian measure, with angle, radius, and position controls, whole-radian
+tick marks, a five-way readout plus arc length, and linked degree/radian conversion fields.
+
+**Rationale:**
+Project workflow requires the feature plan to be documented in TODO.md before implementation
+begins. Recorded as a standalone explorer rather than a graphing-calculator mode because the
+diagram is polar, not y = f(x), so function-plot does not apply.
+
+**Bug Fix Context (if applicable):**
+N/A — planning entry for a new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 19:14] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Implemented exact angle arithmetic module for the Angle Explorer: exported nine functions for degree ↔ radian conversion (degreesToRadians, radiansToDegrees), exact fraction reduction (reduceFraction), angle representations as turn-fractions and π-multiples (turnFraction, piMultiple), integer-degree validation (isIntegerDegrees), KaTeX formatting for both π-multiple and plain fractions (formatPiLatex, formatFractionLatex), and arc-length calculation using the formula s = rθ (arcLength). All functions follow exact integer fraction math, never float formatting.
+
+**Rationale:**
+Exact integer fraction reduction is essential for teaching — showing π/6 instead of 0.524 reveals the mathematical relationship between degrees and radians. The module is pure and DOM-free, enabling unit testing in Node.js environment (like transform.ts) without framework dependencies. Integer arithmetic guarantees reproducible output for every slider position, and the Fraction interface makes LaTeX rendering deterministic and correct across all input domains.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 19:53] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Implemented angle input parsing module for the Angle Explorer: exported `ParseResult` union type, constants `MAX_DEG` (360), and three functions — `parseAngleInput(raw, unit)` parses user text in degrees or radians with expressions (pi/3, 180/2, etc.) and returns normalized degrees; `formatDegrees(deg)` and `formatRadiansDecimal(deg)` format output to four decimals, trimming float noise for display. The parser includes a whitelist guard on the raw text (checking only digits, operators, parentheses, whitespace, and the literal 'pi') before passing to mathjs evaluate(), rejecting injection-shaped input like 'config', 'import("fs")', etc. on the guard, never reaching the evaluator. Degrees are the single source of truth; radian input is converted during parse.
+
+**Rationale:**
+The whitelist guard runs BEFORE mathjs evaluate because mathjs has a documented history of sandbox-escape advisories — raw user text must never reach the evaluator. The guard is the security boundary, rejecting 100% of injection attempts at the character-class check, not as an afterthought when evaluate() detects a problem. Degrees are the canonical representation because the degree slider steps 1° (exact), whereas 1 radian is 57.2958° — irrational and never a whole degree, but parseable here, closing a gap in the slider's range. All parse errors are user-friendly messages (empty, non-finite, out-of-range, whitelist violation).
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 20:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Implemented the SVG path geometry module for the Angle Explorer diagram — five pure, node-tested functions exported from `angle-render.ts`: `polarToCartesian(cx, cy, r, radians)` converts polar to Cartesian with y-axis flip to match SVG's downward-growing coordinates; `arcPath(cx, cy, r, startRad, endRad)` generates SVG arc commands with automatic large-arc-flag and sweep-flag selection, splitting full ±360° sweeps across two A commands (since coincident start/end draws nothing); `tickAngles(thetaRad)` emits whole-radian tick positions with a minimum of one tick; `arrowheadPoints(cx, cy, r, radians, sign)` returns three coordinate pairs for the sweep arrowhead triangle. All functions are deterministic, DOM-free pure computations testable in the Node.js environment, enabling 14 passing unit tests (RED → GREEN → PASS via TDD).
+
+**Rationale:**
+SVG arc rendering has two subtle traps that require unit testing to validate: (1) arcs wider than 180° need `large-arc-flag = 1` or the renderer draws the minor arc instead; (2) full ±360° arcs cannot be expressed with a single `A` command because start and end coordinates coincide, so a path renders as nothing — the full turn must be split into two half-arcs. Negating sine in `polarToCartesian` ensures positive angles sweep counter-clockwise on screen (upward), matching textbook convention. The module stays pure and independent of any DOM or plotting library, making every arc-flag decision unit-testable against hardcoded expectations without a browser.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 20:14] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Wired up the Angle Explorer route: appended `SITE_TITLE_ANGLE_EXPLORER` to `src/config.ts`; created `src/pages/explorers/angles.astro` (the page shell, using the existing `Base` layout, hydrating a React island with `client:only="react"`); created a placeholder `src/components/explorer/AngleExplorer.tsx` that renders a static angle readout with `useState` defaults (`theta: 30, r: 1, beta: 0`) as a skeleton for later tasks; and added a third catalog card to `src/pages/explorers/index.astro`, linking `/explorers/angles` alongside the existing Function and Transformation Explorer cards. This task does not consume the angle-parsing or SVG-geometry modules from Tasks 1-3 -- that wiring is Task 5.
+
+**Rationale:**
+A standalone explorer route rather than a mode inside the graphing calculator: the diagram is polar (an angle swept around a circle), not `y = f(x)`, so `function-plot` -- built for Cartesian function graphs -- does not apply. The route, config constant, and catalog card are scaffolded first and verified (typecheck, build, existing test suite) before the interactive logic lands, keeping the vertical slice small and each commit independently buildable.
+
+**Bug Fix Context (if applicable):**
+N/A -- new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 20:21] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Replaced the Task 4 placeholder in `AngleExplorer.tsx` with the full interactive diagram: a hand-authored SVG (reference axes, dashed unit circle, the adjustable solid circle at radius `r`, whole-radian tick marks with labels, a small angle-measure arc with a direction arrowhead, the swept arc itself, and the initial/terminal rays with endpoint dots) plus three Radix `Slider` controls (`angle`, `radius`, `position`) with live numeric readouts, a `Reset` button restoring the `{theta: 30, r: 1, beta: 0}` defaults, and dark-mode tracking via a `MutationObserver` on `document.documentElement`'s class list (mirroring the pattern in `TransformationExplorer.tsx`). The SVG carries `role="img"` and a descriptive `aria-label`; each slider forwards `aria-label`/`aria-valuetext` to its focusable thumb.
+
+**Rationale:**
+The diagram is hand-authored SVG rather than routed through `function-plot`: an angle swept around a circle is a polar construction with ticks, arcs, rays, and a direction arrowhead — not a Cartesian `y = f(x)` curve, so `function-plot`'s API has no natural mapping onto it, and direct SVG gives exact control over arc-flag selection and tick placement via the already-tested `angle-render.ts` geometry. The measure arc and its arrowhead are computed from a single hoisted `arcPath(...)` call (`measureArc`) and both are gated on `measureArc !== ''`: `arcPath` returns an empty string at θ = 0, and rendering the arrowhead independently would let it survive that boundary and assert a rotational direction the angle no longer has — sharing one source of truth makes that impossible instead of merely unlikely. `betaRad` is added into every positioned element's angle argument (ticks, rays, dots, both arcs) because β is defined as a rigid rotation of the whole figure; omitting it from even one element would leave that element stationary while the rest of the diagram rotates, and because the default is `beta: 0`, that bug is invisible until someone actually drags the position slider — so the brief's own manual-check step 6 exists specifically to catch it.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 20:41] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added a vetted `axis` field to the `ExplorerColors` interface and `explorerColors(dark)` in `theme.ts` (`#475569` slate-600 for light, `#64748b` slate-500 for dark), added `'axis'` to the `theme.test.ts` `MARK_KEYS` array so it gets the same automated ≥3:1 non-text contrast assertion as `curve`/`wall`/`floor`/`arrow`/`ghost`, and replaced `AngleExplorer.tsx`'s local `const axis = dark ? '#64748b' : '#94a3b8'` literal with `colors.axis` at all four usage sites (the x-axis, y-axis, dashed unit circle, and every tick mark).
+
+**Rationale:**
+The colour moved into the shared vetted palette instead of being patched locally so the reference-geometry stroke goes through the same contrast-tested pipeline as every other explorer mark, with the assertion generated automatically from `MARK_KEYS` rather than hand-verified once and left to drift. A local hex literal in a component has no test coverage and can silently reintroduce a value the palette already rejected; a palette field is enforced by `theme.test.ts` for both themes on every run.
+
+**Bug Fix Context (if applicable):**
+`AngleExplorer.tsx`'s local light-mode value, `#94a3b8` (slate-400), measured 2.564:1 against white — below the WCAG 1.4.11 non-text floor of 3:1. `theme.ts` already carried a comment on this exact hex (originally about `explorerColors`'s light `ghost` field): "#94a3b8 (slate-400) only clears 2.56:1 against white — below the 3:1 floor. Darkened to slate-500 ... for margin." The component bypassed the vetted palette, redeclared the same literal locally, and reintroduced the failure the comment was written to prevent.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 20:49] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added the live KaTeX readout under the diagram in `AngleExplorer.tsx`: a `buildReadout(theta, r)` helper producing `{ chain, arc, spoken }`, rendered via `katex.renderToString(..., { throwOnError: false, displayMode: false, output: 'html' })` into two `dangerouslySetInnerHTML` lines inside a `data-testid="angle-readout"` container — the five-way identity (`30° = 1/12 of a full turn = 1/12 × 2π = π/6 ≈ 0.5236 rad`) and the arc-length substitution (`s = rθ = 1 × π/6 ≈ 0.7854` once `r` moves off 1). `degreesToRadians` was folded into a wider single import from `@/scripts/explorer/angle` alongside `arcLength`, `formatFractionLatex`, `formatPiLatex`, `isIntegerDegrees`, `piMultiple`, and `turnFraction`.
+
+**Rationale:**
+Exact `π` and turn-fraction forms are shown only when `isIntegerDegrees(theta)` is true; `piMultiple` reduces `deg/180` with an integer gcd, so a non-integer angle — the shape Task 7's radians field will produce (e.g. typing `1` rad yields 57.2958°) — would otherwise reduce to an absurd fraction like `1047π/180000` instead of failing to reduce at all. The non-integer branch falls back to decimal-only forms so the readout never lies about exactness. The container is `aria-hidden="true"` because KaTeX's rendered markup (nested spans, MathML fallbacks) is noise to a screen reader; `spoken` is plain prose held in reserve for Task 8's live region, which will speak the identity instead of exposing the visual markup. The arc line writes out the substitution with real numbers (`s = rθ = 1.5 × π/6 ≈ 0.7854`) rather than the bare symbolic `s = rθ`, per the project convention that an explorer should never show notation without the concrete numbers behind it — the substitution is what makes the radius slider's effect on arc length legible.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 21:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added `formatFractionSpoken(f)` and `formatPiSpoken(f)` to `angle.ts` (TDD, with tests in `angle.test.ts` written and run failing first) as plain-prose counterparts of `formatFractionLatex`/`formatPiLatex` — `1 over 12`, `pi over 6`, `negative 2 pi over 3`, no backslashes or braces. `AngleExplorer.tsx`'s `buildReadout` now builds the exact branch's `spoken` string from these instead of interpolating the LaTeX `turn`/`pi` variables, and fixes the unconditional "radians" plural to agree with a singular count (`1 radian`, `-1 radian`) in the non-integer branch. Separately, both branches' `arc` formula and its `spoken` echo were changed from `s = r\theta` to `s = r|\theta|`, substituting the unsigned angle (`formatPiLatex(piMultiple(Math.abs(theta)))` in the exact branch, `round4(Math.abs(rad))` in the non-integer branch) so the displayed/spoken magnitude result matches the equation actually shown.
+
+**Rationale:**
+Spoken text needs its own formatters rather than reusing the LaTeX ones because the two outputs serve different consumers with incompatible syntaxes: KaTeX markup is written for a visual renderer that turns `\frac{\pi}{6}` into a stacked fraction, while a screen reader has no such renderer and reads the raw control sequence character by character. Reusing `formatPiLatex`'s output as `spoken` conflated "how to typeset this" with "how to say this aloud" — one string cannot serve both once the visual form contains markup. Substituting `|θ|` makes the arc equation true for negative sweeps because `arcLength()` already returns a magnitude (`Math.abs(r * radians)`); displaying the signed `θ` on the left of `=` while showing an unsigned result on the right asserted `1.5 × (−π/6) = +0.7854`, which is false. Showing `r|θ|` and substituting the unsigned angle keeps both sides of the equation honest.
+
+**Bug Fix Context (if applicable):**
+Two defects, both in `buildReadout`. First, `spoken` interpolated the LaTeX `turn`/`pi` variables directly (e.g. `\frac{\pi}{6}`), so a screen reader consuming the Task 8 live region would read backslashes and braces aloud instead of words, or mangle the string outright; it also unconditionally pluralized "radians" even for a count of exactly 1 or -1. Second, the arc line's formula read `s = r\theta` but substituted the signed `θ` (e.g. `1.5 × -π/6`) while displaying `arcLength()`'s unsigned result (`0.7854`), making the printed equation arithmetically false for any negative angle — the left side would evaluate to −0.7854, not the +0.7854 shown. Both are fixed by using magnitude-consistent forms end to end: `formatFractionSpoken`/`formatPiSpoken` for speech, and `|θ|` substituted with the unsigned angle for the arc equation and its spoken echo.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 21:06] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added the two linked `Degrees`/`Radians` `Input` fields to `AngleExplorer.tsx`, closing the gap the diagram's `1 rad` tick exposes (the θ slider steps 1° and can never land on it). New state: `degText`/`radText` (draft field text, seeded from `formatDegrees`/`formatRadiansDecimal`), `editing` (`'deg' | 'rad' | null`, tracks which field has focus), and `inputError`. A `useEffect` reflects `theta` into whichever field is NOT being edited, so slider drags and `reset` update both fields while typing only updates the field the user isn't in. `onFieldChange` runs every keystroke through `parseAngleInput`: on success it clears `inputError` and calls `setTheta`; on failure it sets `inputError` and returns without touching `theta`, so the diagram stays on the last valid angle. `onFieldBlur` clears `editing` (letting the effect re-normalize the just-edited field) and clears `inputError`. `reset` now also clears `editing`/`inputError` alongside `theta`/`r`/`beta`. Each field has a `<Label htmlFor>`, syntax hint text (`e.g. 30 or 180/2` / `e.g. 1, pi/3, 2*pi/3`) linked via `aria-describedby`, and `aria-invalid` scoped to the field currently being edited; the error paragraph carries `data-testid="angle-input-error"`, `role="alert"`, and `aria-describedby` appends its id when present, so the message is announced and read as text, not conveyed by colour alone.
+
+**Rationale:**
+θ must stay a float degree value because the whole point of the fields is to reach angles the 1°-stepped slider cannot represent (typing `1` into Radians must produce 57.2958°, not a value coerced to the nearest integer degree) — so `onFieldChange` passes `parseAngleInput`'s `result.degrees` straight to `setTheta` with no rounding or step-snapping. The edited field is not reformatted until blur because `formatDegrees`/`formatRadiansDecimal` round to 4 decimals; re-running that formatter into the field on every keystroke (from the `theta`-reflecting effect) would fight the typist — a half-typed `-3` or `pi/` would be overwritten mid-entry. Tracking `editing` and excluding that field from the effect's writes is what makes the coexistence possible: the *other* field, and the diagram, still update live. Invalid input is non-destructive (error shown, θ and the diagram left on the last valid angle, never blanked or thrown) because a transient typo — an incomplete expression, a stray letter — is expected mid-entry, not a failure state that should discard the user's current, valid angle; `parseAngleInput`'s already-committed security whitelist and ±360° range check run unchanged on every keystroke, this task only wires its result into component state.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 21:34] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s error `<p id="angle-input-error">` is now rendered unconditionally with a `min-h-4` reserved height instead of being mounted/unmounted via `{inputError && (...)}`; its text content is `inputError ?? ''` and the `text-destructive` class is applied only while an error is present, so the row's height never changes between the error and no-error states. Separately, the SVG's `aria-label` now interpolates `round4(theta)` and `round4(r)` instead of the raw `theta`/`r` floats.
+
+**Rationale:**
+Reserving the error row's height fixes a whole class of layout-shift-eats-click bugs, not just this one instance: any conditionally-mounted element positioned above an interactive control is a latent hazard, because a mousedown/mouseup pair is not atomic with respect to a DOM reflow that happens between them — the browser resolves each event against wherever the target element currently sits, so a control that moves mid-click silently swallows the click with no error, no console warning, and no failed assertion pointing at the real cause. Keeping the element permanently mounted and toggling only its content/visibility removes the reflow trigger entirely, which is more robust than trying to sequence state updates (e.g., clearing `inputError` before vs. after the click) since that would only paper over this one call site.
+
+**Bug Fix Context (if applicable):**
+Reproduction: typing `180` into Degrees (valid, θ → 180), then `abc` (invalid; θ correctly stays 180 and the error `<p>` mounts), then clicking Reset left the fields at `180` / `3.1416` instead of resetting to `30` / `0.5236`. Root cause: Reset's click first fires the Degrees input's `onBlur`, which calls `setInputError(null)`; because the error element was conditionally rendered, this unmounted it, reflowing the control column upward between the click's mousedown and mouseup so the click missed the Reset button entirely. Separately, the SVG `aria-label` interpolated raw `theta`, so typing `pi/3` into Radians (θ = 59.99999999999999) made a screen reader announce "Angle of 59.99999999999999 degrees swept on a circle of radius 1" while the visible Degrees field correctly showed `60`; using the existing `round4` helper for both interpolated values in the label brings the accessible name back in line with what's on screen.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 21:48] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Two accessibility/layout hardening fixes in `AngleExplorer.tsx`. First, the Degrees/Radians `Input`'s `aria-describedby` now appends `angle-input-error` only when that specific field is the one being edited (`inputError !== null && editing === f.unit`), matching the guard already used for `aria-invalid`; the unconditional `hint-${f.unit}` reference is unchanged, so both fields still always describe their own syntax hint. Second, the reserved error row's `min-h-4` (a one-line minimum) was replaced with `h-8`, a fixed two-line height that cannot grow past its reservation, with an inline comment explaining why the height must be fixed rather than minimum.
+
+**Rationale:**
+`aria-invalid` was already scoped per-field with `editing === f.unit`, but `aria-describedby` was not, so a screen reader user tabbing to the untouched, valid field heard an error that `aria-invalid="false"` on that same field contradicted — the two attributes disagreed about whether the field had a problem. Applying the identical guard to both attributes keeps them consistent. `min-h-4` was a floor, not a reservation: today's longest message happens to fit on one line at the measured viewports, but a future longer message or font change would grow the row and then collapse it again on blur, reintroducing the layout-shift-eats-click bug (documented in the entry above) that a *reserved* row exists to prevent. A fixed `h-8` (two lines of `text-xs`) makes the row's height invariant regardless of message length, so the Reset button's position can never move between mousedown and mouseup.
+
+**Bug Fix Context (if applicable):**
+Accessibility defect: with either Degrees or Radians invalid, both inputs' `aria-describedby` referenced `angle-input-error`, so the valid, untouched field was also announced as having an error, even though its `aria-invalid` correctly read `false`. Fixed by gating the error reference on `editing === f.unit`, the same condition already used for `aria-invalid`. Separately hardened (no live bug today, confirmed by measurement at 1024px/1280px/1440px) the reserved error row against a future regression of the Reset-unclickable bug: `min-h-4` only reserves a floor, so a longer message or font change could still grow-then-collapse the row.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:34] Commit Summary
+
+**Change Type:** Fix
+**Scope:** UI / Slider
+
+**Summary:**
+`src/components/ui/slider.tsx`'s `Slider` component now destructures `"aria-valuetext": ariaValuetext` from props alongside the existing `"aria-label"`/`"aria-labelledby"` handling, and forwards `aria-valuetext={ariaValuetext}` onto the `<SliderPrimitive.Thumb>` the same way those two attributes are already forwarded. Purely additive: the other `Slider` consumers (`FunctionExplorer`, `TransformationExplorer`) don't pass `aria-valuetext`, so they now forward `undefined`, a no-op. (GraphingCalculator does not use this shared Slider at all.)
+
+**Rationale:**
+Radix's `SliderPrimitive.Root` is a non-interactive positioning wrapper; `SliderPrimitive.Thumb` is the element that actually carries `role="slider"` and is what a screen reader's accessibility tree exposes. Any `aria-*` attribute meant to reach assistive tech through this component has to land on the `Thumb`, not the `Root` — which is exactly what the sibling `aria-label`/`aria-labelledby` forwarding (from commit `8fcddea`) already established as the pattern. This fix mirrors that pattern for `aria-valuetext` rather than inventing a new approach.
+
+**Bug Fix Context (if applicable):**
+Verified in a real browser: `slider.tsx` forwarded `aria-label`/`aria-labelledby` to the `Thumb` but not `aria-valuetext`, which fell through `...props` onto the `Root`. Because the `Root` is not the `role="slider"` node, `page.getByRole('slider').getAttribute('aria-valuetext')` returned `null` regardless of what a consumer passed in — the attribute was present in the DOM but on the wrong element for any screen reader or accessibility-tree query to see. This was discovered as a blocker while building Task 8's richer slider announcements for the Angle Explorer (`AngleExplorer.tsx`'s `aria-valuetext={s.spoken ?? ...}`), which depends on the attribute actually reaching the `Thumb`.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:35] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s `buildReadout`, in the exact-integer branch only, now computes `const whole = Math.round(theta);` immediately after the `isIntegerDegrees(theta)` check passes, and uses `whole` — not the raw `theta` — everywhere that branch calls `turnFraction`/`piMultiple` (directly and via `Math.abs`), and everywhere it prints the degree number in both `chain` and `spoken`. The non-integer branch and the decimal radian value (`round4(degreesToRadians(theta))`) are unchanged; `angle.ts` (`isIntegerDegrees`, `turnFraction`, `piMultiple`, `reduceFraction`) is untouched.
+
+**Rationale:**
+The fix belongs at the `buildReadout` call site rather than in `angle.ts` because `turnFraction`/`piMultiple` are contractually integer-only — their doc comments already say so, and `reduceFraction`'s `gcd` is only meaningful on integers. `isIntegerDegrees` deliberately checks "within `DEG_EPS` of an integer," not "is an integer," so it accepts values like `59.99999999999999` by design; widening that epsilon or changing the gcd math would blur a boundary the type-level contract already draws correctly. Rounding once, right after the epsilon check confirms the value is close enough to treat as exact, keeps that contract intact while making the exact branch actually receive an exact integer.
+
+**Bug Fix Context (if applicable):**
+Verified in a real browser on the committed build: typing `pi/3` into the Radians field sets θ to `59.99999999999999`. `isIntegerDegrees(θ)` returns `true` (within its `1e-9` epsilon), so `buildReadout` takes the exact-π branch — but that branch then passed the raw, non-integer `theta` into `turnFraction`/`piMultiple`, whose `reduceFraction` runs Euclid's gcd on it. gcd on a float with no exact integer representation of the intended value produces a spurious near-1 divisor, so the "reduced" fraction came out unreduced and enormous: the readout rendered `59.99999999999999° = 8444249301319679/50665495807918080 of a full turn = … 8444249301319679π/25332747903959040 ≈ 1.0472` instead of `60° = 1/6 of a full turn = 1/6 × 2π = π/3 ≈ 1.0472`. Rounding to `whole` before calling `turnFraction`/`piMultiple`, and using `whole` in place of `theta` for every exact-form display (chain and spoken), fixes the garbled fraction while leaving the correct decimal value (`1.0472`) untouched.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:36] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx` now announces the angle conversion to assistive technology. A debounced `announced` state (`useState('')`, updated via a 250ms `setTimeout` in a `useEffect` keyed on `readout.spoken`, cleared on every re-run so a slider drag settles to one announcement instead of firing on every frame) feeds a visually-hidden `<p className="sr-only" role="status" aria-live="polite">` rendered immediately after the `aria-hidden` KaTeX readout box. Separately, the angle slider's `aria-valuetext` now reads `"${theta} degrees, ${round4(degreesToRadians(theta))} radians"` instead of a bare `"${theta}°"`, via a new `spoken` field added to each entry in the `sliders` array (`spoken: undefined` for `radius` and `position`, which keep their plain `"${value}${suffix}"` fallback through `s.spoken ?? \`${s.value}${s.suffix}\``).
+
+**Rationale:**
+The readout box carries `aria-hidden="true"` because its KaTeX markup is visual noise to a screen reader (backslashes, braces, nested spans) — without a separate spoken channel, the conversion the whole feature exists to show would never reach assistive tech at all. `role="status"`/`aria-live="polite"` announces without interrupting whatever the user is doing, and debouncing on settle rather than on every `onValueChange` frame keeps a slider drag from turning into a wall of announcements. A bare `"30°"` on the angle slider is not meaningful on its own — the pairing of degrees and radians is the point of the explorer — so its `aria-valuetext` was upgraded to speak both, while `radius` and `position` (whose sliders have no dual-unit story) keep the existing minimal form.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature. (This work is what surfaced both bugs fixed in the two preceding commits: the slider `aria-valuetext` forwarding bug, discovered while wiring the richer `spoken` value through to the DOM; the near-integer-degrees fraction bug, discovered while manually verifying the live region's spoken text against `pi/3` input.)
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:41] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+`AngleExplorer.tsx`'s `sliders` array entries now carry a `display` string used for the visible value chip (`{s.display}{s.suffix}`) instead of the raw `{s.value}`. The angle entry's `display` is `formatDegrees(theta)`; radius and position, which can only ever hold clean values (set via their own stepped sliders or `reset`, never free text), get `String(r)`/`String(beta)`. The angle entry's `spoken` string also switched its degree component from raw `theta` to `formatDegrees(theta)`; the radians component (`round4(degreesToRadians(theta))`) was already correct and is unchanged. `Slider`'s `value={[s.value]}` prop is still the raw number — only the human-readable text changed.
+
+**Rationale:**
+θ is legitimately a float (e.g. `57.2958` from typing `1` into Radians) and must stay that way in state and in the `Slider` widget's own `value` prop, so the fix could not be "round theta" — that would have broken real non-integer angles. `formatDegrees` was already the correct formatting tool, already imported, and already used for the Degrees text field, so reusing it for the slider chip and spoken string makes all three surfaces (Degrees field, angle chip, live region) agree on the same rounding instead of three different presentations of θ.
+
+**Bug Fix Context (if applicable):**
+The previous two commits (the `slider.tsx` `aria-valuetext` forwarding fix and the `buildReadout` rounding fix) made a pre-existing float-noise leak both visible and audible for the first time. Before the `aria-valuetext` forwarding fix, the attribute never reached the accessible slider node at all, so nothing was announced; once it did, the raw `theta` fed straight through the chip render (`{s.value}{s.suffix}`) and the `spoken` template literal. Reproduction: typing `pi/3` into Radians sets θ to `59.99999999999999`; the visible angle-slider chip read "59.99999999999999°" and `aria-valuetext` read "59.99999999999999 degrees, 1.0472 radians" — both should read "60". Root cause: the chip and `spoken` string interpolated `theta` directly rather than through a formatter, unlike the Degrees text field (which already used `formatDegrees`) and the `buildReadout` readout (fixed two commits prior for the same class of float noise). Fixed by routing both through `formatDegrees(theta)`, verified against both the garbled case (`pi/3` → "60°", no raw float) and a real non-integer case (`1` rad → "57.2958°", confirming the fix does not over-round).
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:49] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Added `/explorers/angles`: an SVG unit-circle explorer with angle, radius, and position
+sliders, whole-radian tick marks, a five-way KaTeX readout (degrees, turn fraction, ×2π,
+exact π-multiple, decimal radians) plus arc length, and linked degree/radian fields that
+convert in both directions.
+
+**Rationale:**
+Built as a standalone explorer rather than a mode in the graphing calculator: the diagram
+is polar, not y = f(x), so function-plot does not apply and a second renderer inside
+`GraphingCalculator.tsx` would have mixed two unrelated jobs. Logic lives in three pure
+modules so the exact-fraction and arc-geometry edge cases are unit-testable.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature. Two traps handled up front: a full ±360° SVG arc must be split across
+two `A` commands or it renders as nothing, and exact π forms are suppressed for
+non-integer degrees so typed radian input cannot produce absurd fractions.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-23 22:59] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Explorers / Angle Explorer
+
+**Summary:**
+Strengthened the e2e test titled "the angle slider drives the readout and both fields" (`tests/e2e/angle.spec.ts`) to actually verify what its name claims: after moving the angle slider to 35°, it now also asserts the Radians textbox reads `0.6109` and the `angle-readout` element contains `35`, not just the Degrees textbox. Also corrected `README.md`'s tool count from "four browser-based math tools" to "five" — the bullet list below it already listed five (TI-84, Graphing, Function, Transformation, and Angle Explorer).
+
+**Rationale:**
+The test's title promised it checked the readout and both fields, but its body only asserted the Degrees field — it would still pass even if the slider failed to update Radians or the readout, silently covering less than its name advertised. Adding the two missing assertions closes that gap without touching the other eleven tests. The README count was stale since the Angle Explorer bullet was added without updating the summary sentence above it; a one-word fix keeps the description in sync with the actual list.
+
+**Bug Fix Context (if applicable):**
+Not a functional bug — the underlying slider behavior was already correct (confirmed by running the strengthened test: 12/12 pass, including the new Radians and readout assertions). The defect was in test coverage: a misleadingly named test that asserted less than it claimed.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
+## [2026-07-24 00:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer — export
+
+**Summary:**
+Added PNG/PDF export to the Angle Explorer, matching the pattern already used by the Graphing Calculator, Function Explorer, and Transformation Explorer. Registered `'angle-explorer'` in the shared `ExportToolSlug` union. Extracted the diagram's inline JSX (`<line>`/`<circle>`/`<path>`/`<polygon>`/`<g>`/`<text>`) into a new pure `buildAngleDiagramSvg` builder (`src/scripts/explorer/angle-diagram.ts`) that both `AngleExplorer.tsx`'s live `<svg dangerouslySetInnerHTML>` and the export snapshot's `renderGraph` now draw through — one source of truth instead of two copies of the same geometry. `createExportSnapshot` reports the circle diagram's honest coordinate extent as `{ xMin: -1.8, xMax: 1.8, yMin: -1.8, yMax: 1.8 }` rather than a fabricated Cartesian window, since the always-printed "x […] | y […]" line in `ExportArtifact.tsx` was not touched and must stay truthful for a polar figure.
+
+**Rationale:**
+Extracting the builder was necessary, not optional: without it, the export's `renderGraph` would have had to re-implement the same betaRad-rotated geometry as a second copy, guaranteeing eventual drift between the live diagram and the exported image. Routing both consumers through one pure, DOM-free function makes that drift structurally impossible and kept the change unit-testable (`angle-diagram.test.ts`) without a browser. The ±1.8 window was chosen over reusing a fake `[-10, 10]`-style Cartesian range because the shared export header prints the window unconditionally — a dishonest number there would mislead anyone reading the exported artifact.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature, not a fix. The refactor of the live diagram into the shared builder was verified as behavior-preserving: all 12 pre-existing `angle.spec.ts` e2e tests still pass unchanged, plus a temporary diagnostic spec (written, run, and deleted per the verification protocol) re-confirmed the θ = 0 arrowhead gate, the 360° two-arc split, and that β still rotates the swept arc.
+
+**Risks & Tradeoffs:**
+The visual-regression PNG baseline for this export (mirroring the other three tools' `export-visual.spec.ts` snapshots) is deliberately deferred — those baselines must be generated on Linux/CI, never natively on macOS, or they fail deterministically on the next `verify` run. This task only added the functional export coverage (`angle-export.spec.ts`); a baseline snapshot is separate follow-up work for the CI/Linux environment.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+

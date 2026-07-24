@@ -88,6 +88,8 @@ export interface ExplorerColors {
   pointStroke: string;
   /** De-emphasised parent curve drawn dashed behind the transformed curve. */
   ghost: string;
+  /** Reference-geometry stroke: plot axes, reference circles, and tick marks. */
+  axis: string;
 }
 
 /**
@@ -106,6 +108,7 @@ export function explorerColors(dark: boolean): ExplorerColors {
         point: '#ddd6fe',
         pointStroke: '#0f172a',
         ghost: '#64748b',
+        axis: '#64748b',
       }
     : {
         curve: '#7f77dd',
@@ -117,6 +120,7 @@ export function explorerColors(dark: boolean): ExplorerColors {
         // #94a3b8 (slate-400) only clears 2.56:1 against white — below the 3:1
         // floor. Darkened to slate-500 (also used for dark's ghost) for margin.
         ghost: '#64748b',
+        axis: '#475569',
       };
 }
 

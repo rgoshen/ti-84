@@ -8,7 +8,11 @@
 // straight to one. Visibility is JS-owned (single source of truth) so `Escape`
 // can close it even while focus is still inside the nav — a CSS `:focus-within`
 // reveal cannot be dismissed that way.
-import { SITE_TITLE_FUNCTION_EXPLORER, SITE_TITLE_TRANSFORMATION_EXPLORER } from '@/config';
+import {
+  SITE_TITLE_FUNCTION_EXPLORER,
+  SITE_TITLE_TRANSFORMATION_EXPLORER,
+  SITE_TITLE_ANGLE_EXPLORER,
+} from '@/config';
 
 const links = [
   { href: '/', label: 'Home' },
@@ -20,6 +24,7 @@ const links = [
 const explorers = [
   { href: '/explorers/function', label: SITE_TITLE_FUNCTION_EXPLORER },
   { href: '/explorers/transformations', label: SITE_TITLE_TRANSFORMATION_EXPLORER },
+  { href: '/explorers/angles', label: SITE_TITLE_ANGLE_EXPLORER },
 ] as const;
 
 // Normalize a trailing slash so "/ti-84" and "/ti-84/" match the same nav link.
