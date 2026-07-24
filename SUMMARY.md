@@ -2679,3 +2679,24 @@ Not a functional bug — the underlying slider behavior was already correct (con
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+## [2026-07-24 00:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Explorers / Angle Explorer — export
+
+**Summary:**
+Added PNG/PDF export to the Angle Explorer, matching the pattern already used by the Graphing Calculator, Function Explorer, and Transformation Explorer. Registered `'angle-explorer'` in the shared `ExportToolSlug` union. Extracted the diagram's inline JSX (`<line>`/`<circle>`/`<path>`/`<polygon>`/`<g>`/`<text>`) into a new pure `buildAngleDiagramSvg` builder (`src/scripts/explorer/angle-diagram.ts`) that both `AngleExplorer.tsx`'s live `<svg dangerouslySetInnerHTML>` and the export snapshot's `renderGraph` now draw through — one source of truth instead of two copies of the same geometry. `createExportSnapshot` reports the circle diagram's honest coordinate extent as `{ xMin: -1.8, xMax: 1.8, yMin: -1.8, yMax: 1.8 }` rather than a fabricated Cartesian window, since the always-printed "x […] | y […]" line in `ExportArtifact.tsx` was not touched and must stay truthful for a polar figure.
+
+**Rationale:**
+Extracting the builder was necessary, not optional: without it, the export's `renderGraph` would have had to re-implement the same betaRad-rotated geometry as a second copy, guaranteeing eventual drift between the live diagram and the exported image. Routing both consumers through one pure, DOM-free function makes that drift structurally impossible and kept the change unit-testable (`angle-diagram.test.ts`) without a browser. The ±1.8 window was chosen over reusing a fake `[-10, 10]`-style Cartesian range because the shared export header prints the window unconditionally — a dishonest number there would mislead anyone reading the exported artifact.
+
+**Bug Fix Context (if applicable):**
+N/A — new feature, not a fix. The refactor of the live diagram into the shared builder was verified as behavior-preserving: all 12 pre-existing `angle.spec.ts` e2e tests still pass unchanged, plus a temporary diagnostic spec (written, run, and deleted per the verification protocol) re-confirmed the θ = 0 arrowhead gate, the 360° two-arc split, and that β still rotates the swept arc.
+
+**Risks & Tradeoffs:**
+The visual-regression PNG baseline for this export (mirroring the other three tools' `export-visual.spec.ts` snapshots) is deliberately deferred — those baselines must be generated on Linux/CI, never natively on macOS, or they fail deterministically on the next `verify` run. This task only added the functional export coverage (`angle-export.spec.ts`); a baseline snapshot is separate follow-up work for the CI/Linux environment.
+
+**References:**
+- TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
+- Issue: GH-14
+
