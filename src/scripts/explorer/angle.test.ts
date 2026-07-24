@@ -32,6 +32,7 @@ describe('reduceFraction', () => {
   it('keeps the sign on the numerator', () => {
     expect(reduceFraction(-90, 360)).toEqual({ n: -1, d: 4 });
     expect(reduceFraction(90, -360)).toEqual({ n: -1, d: 4 });
+    expect(reduceFraction(-90, -360)).toEqual({ n: 1, d: 4 });
   });
 
   it('reduces zero to 0/1 rather than dividing by zero', () => {
@@ -92,6 +93,7 @@ describe('formatFractionLatex', () => {
     expect(formatFractionLatex({ n: 1, d: 1 })).toBe('1');
     expect(formatFractionLatex({ n: 0, d: 1 })).toBe('0');
     expect(formatFractionLatex({ n: -1, d: 4 })).toBe('-\\frac{1}{4}');
+    expect(formatFractionLatex({ n: -1, d: 1 })).toBe('-1');
   });
 });
 
