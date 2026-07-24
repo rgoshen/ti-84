@@ -1,14 +1,191 @@
 import * as React from 'react'; // [G1] required for the React.JSX.Element return type
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { explorerColors } from '@/scripts/graphing/theme';
+import { degreesToRadians } from '@/scripts/explorer/angle';
+import {
+  arcPath,
+  arrowheadPoints,
+  polarToCartesian,
+  tickAngles,
+} from '@/scripts/explorer/angle-render';
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
 
+/** viewBox is fixed and the container is fluid, so the figure scales with no
+ *  "large format" toggle — the source Demonstration only needed one because
+ *  Mathematica cannot reflow. */
+const VIEW = 320;
+const C = VIEW / 2;
+/** Pixels per unit radius, leaving room for tick labels outside r = 1.5. */
+const UNIT = 88;
+/** Radius of the small angle-measure arc, in units. */
+const MEASURE_R = 0.3;
+
 export default function AngleExplorer(): React.JSX.Element {
-  const [theta] = useState(DEFAULTS.theta);
+  const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
+  const [r, setR] = useState(DEFAULTS.r);
+  const [beta, setBeta] = useState(DEFAULTS.beta); // degrees
+
+  const [dark, setDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
+
+  // Track the site theme so the diagram re-themes with the header toggle.
+  useEffect(() => {
+    const el = document.documentElement;
+    const obs = new MutationObserver(() => setDark(el.classList.contains('dark')));
+    obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
+  const colors = useMemo(() => explorerColors(dark), [dark]);
+  const axis = dark ? '#64748b' : '#94a3b8';
+  const tickText = dark ? '#e2e8f0' : '#334155'; // [G9] stroke colour for tick labels
+
+  const thetaRad = degreesToRadians(theta);
+  const betaRad = degreesToRadians(beta);
+  const sign = theta < 0 ? -1 : 1;
+  const endRad = betaRad + thetaRad;
+
+  // [G4] One source of truth for the measure sweep. `arcPath` returns '' at θ = 0, and
+  // the arrowhead must vanish with it — otherwise a stray head sits on the circle
+  // asserting a counter-clockwise direction for an angle that has no direction.
+  const measureArc = arcPath(C, C, MEASURE_R * UNIT, betaRad, endRad);
+
+  const reset = (): void => {
+    setTheta(DEFAULTS.theta);
+    setR(DEFAULTS.r);
+    setBeta(DEFAULTS.beta);
+  };
+
+  const initialTip = polarToCartesian(C, C, (r + 0.2) * UNIT, betaRad);
+  const terminalTip = polarToCartesian(C, C, (r + 0.2) * UNIT, endRad);
+  const initialDot = polarToCartesian(C, C, r * UNIT, betaRad);
+  const terminalDot = polarToCartesian(C, C, r * UNIT, endRad);
+
+  const sliders = [
+    {
+      id: 'angle',
+      label: 'angle',
+      value: theta,
+      min: -360,
+      max: 360,
+      step: 1,
+      set: setTheta,
+      suffix: '°',
+    },
+    { id: 'radius', label: 'radius', value: r, min: 0.5, max: 1.5, step: 0.1, set: setR, suffix: '' },
+    {
+      id: 'position',
+      label: 'position',
+      value: beta,
+      min: -360,
+      max: 360,
+      step: 1,
+      set: setBeta,
+      suffix: '°',
+    },
+  ];
+
   return (
+    // testid carried over from the Task 4 skeleton rather than dropped [G10].
     <div data-testid="angle-explorer" className="grid gap-6 lg:grid-cols-[320px_1fr]">
-      <p className="text-sm text-muted-foreground">Angle: {theta}°</p>
+      <div className="space-y-5">
+        {sliders.map((s) => (
+          <div key={s.id} className="space-y-2">
+            <Label htmlFor={`slider-${s.id}`} className="justify-between">
+              <span>{s.label}</span>
+              <span className="font-mono text-muted-foreground">
+                {s.value}
+                {s.suffix}
+              </span>
+            </Label>
+            <Slider
+              id={`slider-${s.id}`}
+              aria-label={s.label}
+              aria-valuetext={`${s.value}${s.suffix}`}
+              value={[s.value]}
+              min={s.min}
+              max={s.max}
+              step={s.step}
+              onValueChange={([v]) => s.set(v)}
+            />
+          </div>
+        ))}
+        <Button type="button" variant="outline" onClick={reset}>
+          Reset
+        </Button>
+      </div>
+
+      <div data-testid="angle-diagram" className="mx-auto w-full max-w-lg">
+        <svg
+          viewBox={`0 0 ${VIEW} ${VIEW}`}
+          className="h-auto w-full"
+          role="img"
+          aria-label={`Angle of ${theta} degrees swept on a circle of radius ${r}.`}
+        >
+          {/* Reference axes and the unit circle. */}
+          <line x1={C - 1.35 * UNIT} y1={C} x2={C + 1.35 * UNIT} y2={C} stroke={axis} strokeWidth={1} />
+          <line x1={C} y1={C - 1.35 * UNIT} x2={C} y2={C + 1.35 * UNIT} stroke={axis} strokeWidth={1} />
+          <circle cx={C} cy={C} r={UNIT} fill="none" stroke={axis} strokeWidth={1} strokeDasharray="3 3" />
+
+          {/* The adjustable circle. */}
+          <circle cx={C} cy={C} r={r * UNIT} fill="none" stroke={colors.ghost} strokeWidth={1.5} />
+
+          {/* Whole-radian ticks, scaling with r. */}
+          {tickAngles(thetaRad).map((a) => {
+            const inner = polarToCartesian(C, C, r * UNIT, betaRad + a);
+            const outer = polarToCartesian(C, C, (r + 0.1) * UNIT, betaRad + a);
+            const label = polarToCartesian(C, C, (r + 0.22) * UNIT, betaRad + a);
+            return (
+              <g key={a}>
+                <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={axis} strokeWidth={1.5} />
+                <text
+                  x={label.x}
+                  y={label.y}
+                  fill={tickText}
+                  fontSize={9}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {a} rad
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Small angle-measure arc with its direction arrowhead. Both are gated on
+              the same non-empty path, so they can never disagree at θ = 0 [G4]. */}
+          {measureArc !== '' && (
+            <>
+              <path d={measureArc} fill="none" stroke={colors.arrow} strokeWidth={1.5} />
+              <polygon
+                points={arrowheadPoints(C, C, MEASURE_R * UNIT, endRad, sign)}
+                fill={colors.arrow}
+              />
+            </>
+          )}
+
+          {/* The swept arc — its length is the radian measure when r = 1. */}
+          <path
+            d={arcPath(C, C, r * UNIT, betaRad, endRad)}
+            fill="none"
+            stroke={colors.curve}
+            strokeWidth={3}
+          />
+
+          {/* Initial and terminal rays. */}
+          <line x1={C} y1={C} x2={initialTip.x} y2={initialTip.y} stroke={colors.floor} strokeWidth={2} />
+          <line x1={C} y1={C} x2={terminalTip.x} y2={terminalTip.y} stroke={colors.wall} strokeWidth={2} />
+          <circle cx={initialDot.x} cy={initialDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
+          <circle cx={terminalDot.x} cy={terminalDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
+        </svg>
+      </div>
     </div>
   );
 }
