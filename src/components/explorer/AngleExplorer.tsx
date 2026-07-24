@@ -1,11 +1,20 @@
 import * as React from 'react'; // [G1] required for the React.JSX.Element return type
 import { useEffect, useMemo, useState } from 'react';
+import katex from 'katex';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { explorerColors } from '@/scripts/graphing/theme';
-import { degreesToRadians } from '@/scripts/explorer/angle';
+import {
+  arcLength,
+  degreesToRadians,
+  formatFractionLatex,
+  formatPiLatex,
+  isIntegerDegrees,
+  piMultiple,
+  turnFraction,
+} from '@/scripts/explorer/angle';
 import {
   arcPath,
   arrowheadPoints,
@@ -15,6 +24,41 @@ import {
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
+
+/** Round for display without exposing float noise. */
+const round4 = (n: number): string => String(Number(n.toFixed(4)));
+
+/**
+ * The five-way identity plus arc length, as KaTeX source.
+ *
+ * Exact π and turn forms are shown ONLY for whole degrees. `piMultiple` reduces
+ * deg/180 with integer gcd, so a typed 1.047 rad (59.9885°) would otherwise render
+ * as an absurd fraction. Non-integer angles fall back to decimals alone.
+ */
+function buildReadout(theta: number, r: number): { chain: string; arc: string; spoken: string } {
+  const rad = degreesToRadians(theta);
+  const decimal = round4(rad);
+  const s = arcLength(r, rad);
+
+  if (!isIntegerDegrees(theta)) {
+    return {
+      chain: `${round4(theta)}^\\circ = ${decimal}\\text{ rad}`,
+      arc: `s = r\\theta = ${round4(r)} \\times ${decimal} \\approx ${round4(s)}`,
+      spoken: `${round4(theta)} degrees is ${decimal} radians. Arc length ${round4(s)}.`,
+    };
+  }
+
+  const turn = formatFractionLatex(turnFraction(theta));
+  const pi = formatPiLatex(piMultiple(theta));
+  return {
+    chain:
+      `${theta}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
+      `= ${pi} \\approx ${decimal}\\text{ rad}`,
+    // Written out with real numbers, not a bare s = rθ.
+    arc: `s = r\\theta = ${round4(r)} \\times ${pi} \\approx ${round4(s)}`,
+    spoken: `${theta} degrees is ${turn} of a full turn, ${pi} radians, about ${decimal}. Arc length ${round4(s)}.`,
+  };
+}
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
@@ -50,6 +94,16 @@ export default function AngleExplorer(): React.JSX.Element {
   const betaRad = degreesToRadians(beta);
   const sign = theta < 0 ? -1 : 1;
   const endRad = betaRad + thetaRad;
+
+  const readout = useMemo(() => buildReadout(theta, r), [theta, r]);
+  const chainHtml = useMemo(
+    () => katex.renderToString(readout.chain, { throwOnError: false, displayMode: false, output: 'html' }),
+    [readout.chain],
+  );
+  const arcHtml = useMemo(
+    () => katex.renderToString(readout.arc, { throwOnError: false, displayMode: false, output: 'html' }),
+    [readout.arc],
+  );
 
   // [G4] One source of truth for the measure sweep. `arcPath` returns '' at θ = 0, and
   // the arrowhead must vanish with it — otherwise a stray head sits on the circle
@@ -184,6 +238,15 @@ export default function AngleExplorer(): React.JSX.Element {
           <circle cx={initialDot.x} cy={initialDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
           <circle cx={terminalDot.x} cy={terminalDot.y} r={3.5} fill={colors.point} stroke={colors.pointStroke} />
         </svg>
+
+        <div
+          data-testid="angle-readout"
+          aria-hidden="true"
+          className="mt-4 space-y-2 rounded-lg border bg-card p-4 text-center"
+        >
+          <div dangerouslySetInnerHTML={{ __html: chainHtml }} />
+          <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: arcHtml }} />
+        </div>
       </div>
     </div>
   );
