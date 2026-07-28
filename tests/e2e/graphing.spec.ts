@@ -517,6 +517,10 @@ test('a relation gets no markers, no details panel and no table column', async (
   await expect(page.locator('[data-testid="plot"] .points-overlay circle')).toHaveCount(0);
   await expect(page.getByText(/Function details/)).toHaveCount(0);
   await expect(page.getByText(/two y values at some x/)).toBeVisible();
+  // The relation must not get a value-table column. With only a relation plotted,
+  // showTable is false and no table renders at all — a regression that re-included
+  // relations in tableEquations would produce one.
+  await expect(page.locator('table')).toHaveCount(0);
 });
 
 test('a relation and a function plot together', async ({ page }) => {
@@ -529,6 +533,10 @@ test('a relation and a function plot together', async ({ page }) => {
   await expect(page.locator('[data-testid="plot"] g.graph')).toHaveCount(2);
   // The function still gets its details panel; the relation still does not.
   await expect(page.getByText(/Function details/)).toHaveCount(1);
+  // The function keeps its column; the relation does not — so exactly one table with
+  // one data column beside the x column.
+  await expect(page.locator('table')).toHaveCount(1);
+  await expect(page.locator('table thead th')).toHaveCount(2);
 });
 
 test('plots a vertical line', async ({ page }) => {
