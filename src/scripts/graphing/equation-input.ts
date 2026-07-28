@@ -43,6 +43,14 @@ export type SolveResult =
 // positive values so functions with restricted domains still get several usable
 // samples (sqrt and log need x > 0; asin needs |x| <= 1).
 const SAMPLE_XS = [-3.1, -0.7, -0.25, 0.25, 0.5, 1.7, 2.3, 4.1];
+
+// Absolute, deliberately. A relative tolerance would NOT help: the case it would need
+// to catch — a vanishing higher-order term such as `1e-10*y^2 + y = x` — differs from
+// linear by ~2e-10 against values of order 1, i.e. a relative error near 1e-10, which
+// is below any epsilon that still tolerates ordinary float noise. Catching it would
+// mean tightening to ~1e-12 and inviting false rejections instead. Such coefficients do
+// not occur in the algebra this tool teaches, and the curve is indistinguishable from
+// the linear one at any zoom level, so the limit is accepted rather than papered over.
 const LINEARITY_TOL = 1e-9;
 const ZERO_TOL = 1e-12;
 
@@ -80,38 +88,42 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
     // counted as failures.
     let usable = 0;
     let linear = true;
+    // A(x) per sample, cached so the "is y present at all" pass below can reuse it
+    // instead of evaluating the same expression at the same points a second time.
+    // Recorded for every sample, including ones this loop skips.
+    const aAt: Array<number | null> = [];
     for (const x of SAMPLE_XS) {
       const got = at(F2, x);
       const a = at(A, x);
       const b = at(B, x);
+      aAt.push(a);
       if (got === null || a === null || b === null) continue; // undefined here — skip
       usable += 1;
       // Deliberately no `break` here: usable must count every defined sample across
-      // the full sweep, not just the ones before the first mismatch. Breaking early
-      // undercounts usable for equations that mismatch on the very first sample
-      // (e.g. `y^2 = x`, defined everywhere), which would wrongly fall through to the
-      // `usable < MIN_USABLE_SAMPLES` gate below and report INVALID instead of
-      // NOT_LINEAR_IN_Y.
+      // the full sweep, not just the ones before the first mismatch.
       if (Math.abs(got - (2 * a + b)) >= LINEARITY_TOL) {
         linear = false;
       }
     }
-    // Undefined across the whole sample range: we cannot judge linearity at all, so
-    // report it as invalid rather than mislabelling a domain problem as non-linearity.
-    if (usable < MIN_USABLE_SAMPLES) return { ok: false, reason: 'INVALID' };
+    // A mismatch at any defined sample is positive proof of non-linearity, so it is
+    // reported first — even when too few samples were usable to have *confirmed*
+    // linearity. Checking `usable` first would mislabel `sqrt(x-4.05)*y^2 = x`, which
+    // is defined at only one sample and is squared in y there, as merely INVALID.
     if (!linear) return { ok: false, reason: 'NOT_LINEAR_IN_Y' };
+    // Nothing contradicted linearity, but too little was defined to confirm it either:
+    // absence of evidence, so report invalid rather than inventing a verdict.
+    if (usable < MIN_USABLE_SAMPLES) return { ok: false, reason: 'INVALID' };
 
     // A identically zero means y never appears: `2x + 3 = 7` is the vertical line
     // x = 2, which is not a function of x.
     //
-    // ORDERING INVARIANT: this loop has no MIN_USABLE_SAMPLES guard of its own. It is
+    // ORDERING INVARIANT: this pass has no MIN_USABLE_SAMPLES guard of its own. It is
     // protected transitively by the `usable < MIN_USABLE_SAMPLES` early return above,
     // which has already proved that at least two samples are defined. Do not move this
-    // loop ahead of that return, or a single lucky sample could declare "no y present".
+    // pass ahead of that return, or a single lucky sample could declare "no y present".
     let aSamples = 0;
     let aAllZero = true;
-    for (const x of SAMPLE_XS) {
-      const a = at(A, x);
+    for (const a of aAt) {
       if (a === null) continue;
       aSamples += 1;
       if (Math.abs(a) >= ZERO_TOL) {

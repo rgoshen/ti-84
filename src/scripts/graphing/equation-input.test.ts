@@ -99,6 +99,22 @@ describe('solveLinearY', () => {
   it('solves a linear equation whose pole lands on a sample point', () => {
     expect(solveLinearY('y', '1/(x-0.5)')).toMatchObject({ ok: true });
   });
+
+  // A mismatch at ANY defined sample is positive proof of non-linearity, so the reason
+  // must say so even when too few samples were usable to have confirmed linearity.
+  // `sqrt(x-4.05)` is defined at only one sample (4.1), and y is squared there.
+  it('reports non-linearity even when too few samples were usable', () => {
+    expect(solveLinearY('sqrt(x-4.05)*y^2', 'x')).toEqual({
+      ok: false,
+      reason: 'NOT_LINEAR_IN_Y',
+    });
+  });
+
+  // Still INVALID when nothing contradicted linearity but too little was defined to
+  // confirm it — absence of evidence, not evidence of non-linearity.
+  it('reports invalid when too few samples were usable and none contradicted linearity', () => {
+    expect(solveLinearY('sqrt(x-4.05)*y', 'x')).toEqual({ ok: false, reason: 'INVALID' });
+  });
 });
 
 describe('parseEquationInput', () => {
