@@ -16,13 +16,24 @@ const TEX_OPTS = { implicit: 'hide' } as const;
 export function equationToTex(raw: string): string | null {
   const split = splitEquation(raw);
   try {
-    if (split.kind === 'expression') return parse(split.expr).toTex(TEX_OPTS);
-    if (split.kind === 'equation') {
-      const lhs = parse(split.lhs).toTex(TEX_OPTS);
-      const rhs = parse(split.rhs).toTex(TEX_OPTS);
-      return `${lhs} = ${rhs}`;
+    // Exhaustive over SplitResult['kind']: adding a variant without handling it here
+    // becomes a compile error at `never` rather than a silent null.
+    switch (split.kind) {
+      case 'expression':
+        return parse(split.expr).toTex(TEX_OPTS);
+      case 'equation': {
+        const lhs = parse(split.lhs).toTex(TEX_OPTS);
+        const rhs = parse(split.rhs).toTex(TEX_OPTS);
+        return `${lhs} = ${rhs}`;
+      }
+      case 'empty':
+      case 'multiple':
+        return null;
+      default: {
+        const unhandled: never = split;
+        return unhandled;
+      }
     }
-    return null; // empty or multiple
   } catch {
     return null;
   }
