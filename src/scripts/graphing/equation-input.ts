@@ -121,3 +121,74 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
     return { ok: false, reason: 'INVALID' };
   }
 }
+
+export type ParseFailure =
+  | 'EMPTY'
+  | 'MULTIPLE_EQUALS'
+  | 'NO_Y_PRESENT'
+  | 'NOT_LINEAR_IN_Y'
+  | 'INVALID';
+
+export type EquationParse =
+  | { ok: true; expr: string; input?: string }
+  | { ok: false; reason: ParseFailure; message: string };
+
+// Static strings. The circle below is a fixed illustration, NOT derived from the
+// user's input — deriving the two halves would need the general solve this phase
+// deliberately does not do. Entering a circle as two functions is also exactly what
+// a physical TI-84 requires in Func mode, so this teaches the real workflow.
+const MESSAGES: Record<ParseFailure, string> = {
+  EMPTY: 'Enter an equation first.',
+  MULTIPLE_EQUALS: 'Enter a single equation with one = sign.',
+  NO_Y_PRESENT: 'This equation has no y, so there’s nothing to plot as y = f(x).',
+  NOT_LINEAR_IN_Y:
+    'That’s a relation, not a function — some x values have two y values. ' +
+    'Graph it as two equations, e.g. y = sqrt(25-x^2) and y = -sqrt(25-x^2).',
+  INVALID: 'Invalid expression.',
+};
+
+const fail = (reason: ParseFailure, message?: string): EquationParse => ({
+  ok: false,
+  reason,
+  message: message ?? MESSAGES[reason],
+});
+
+/** Confirm the expression parses and evaluates, mirroring the pre-existing check. */
+function validate(expr: string): EquationParse | null {
+  try {
+    evaluate(expr, { x: 1 });
+    return null;
+  } catch (e) {
+    return fail('INVALID', `Invalid expression: ${(e as Error).message}`);
+  }
+}
+
+/**
+ * Parse a typed equation into the expression to plot.
+ *
+ * `expr` is always a plain `y = f(x)` expression, identical in shape to what the
+ * components stored before this module existed. `input` is set ONLY when a genuine
+ * rearrangement happened, and drives labels alone — never evaluation.
+ */
+export function parseEquationInput(raw: string): EquationParse {
+  const split = splitEquation(raw);
+
+  if (split.kind === 'empty') return fail('EMPTY');
+  if (split.kind === 'multiple') return fail('MULTIPLE_EQUALS');
+
+  if (split.kind === 'expression') {
+    return validate(split.expr) ?? { ok: true, expr: split.expr };
+  }
+
+  const solved = solveLinearY(split.lhs, split.rhs);
+  if (!solved.ok) return fail(solved.reason);
+
+  const invalid = validate(solved.expr);
+  if (invalid) return invalid;
+
+  // A bare `y` on the left is not a rearrangement — it is the form we already show.
+  const rearranged = split.lhs !== 'y';
+  return rearranged
+    ? { ok: true, expr: solved.expr, input: `${split.lhs} = ${split.rhs}` }
+    : { ok: true, expr: solved.expr };
+}

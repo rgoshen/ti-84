@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitEquation, solveLinearY } from './equation-input';
+import { splitEquation, solveLinearY, parseEquationInput } from './equation-input';
 
 describe('splitEquation', () => {
   it('reports empty input', () => {
@@ -98,5 +98,72 @@ describe('solveLinearY', () => {
 
   it('solves a linear equation whose pole lands on a sample point', () => {
     expect(solveLinearY('y', '1/(x-0.5)')).toMatchObject({ ok: true });
+  });
+});
+
+describe('parseEquationInput', () => {
+  it('passes a bare expression through unchanged', () => {
+    expect(parseEquationInput('sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+  });
+
+  // The `y =` prefix case is subsumed by the general solver, which is what lets the
+  // three duplicated normalizeExpr regexes be deleted.
+  it('accepts a y-prefixed equation without marking it as rearranged', () => {
+    expect(parseEquationInput('y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+  });
+
+  it('accepts an uppercase Y prefix', () => {
+    expect(parseEquationInput('Y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+  });
+
+  it('records the entered form when a real rearrangement happened', () => {
+    expect(parseEquationInput('3y + 2x = 6')).toEqual({
+      ok: true,
+      expr: '(6 - 2 * x) / 3',
+      input: '3y + 2x = 6',
+    });
+  });
+
+  it('reports empty input', () => {
+    const r = parseEquationInput('  ');
+    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({ reason: 'EMPTY' });
+  });
+
+  it('explains that a relation is not a function', () => {
+    const r = parseEquationInput('x^2 + y^2 = 25');
+    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({ reason: 'NOT_LINEAR_IN_Y' });
+    if (!r.ok) expect(r.message).toContain('two y values');
+  });
+
+  it('explains that an equation without y cannot be plotted', () => {
+    const r = parseEquationInput('2x + 3 = 7');
+    expect(r).toMatchObject({ ok: false, reason: 'NO_Y_PRESENT' });
+  });
+
+  it('rejects more than one equals sign', () => {
+    expect(parseEquationInput('y = x = 3')).toMatchObject({
+      ok: false,
+      reason: 'MULTIPLE_EQUALS',
+    });
+  });
+
+  // '>=' is not split, so this reaches the expression path and fails validation on
+  // the undefined symbol y.
+  it('rejects an inequality', () => {
+    expect(parseEquationInput('y >= x')).toMatchObject({ ok: false, reason: 'INVALID' });
+  });
+
+  it('rejects an unparseable expression', () => {
+    expect(parseEquationInput('@@@')).toMatchObject({ ok: false, reason: 'INVALID' });
+  });
+
+  it('every failure carries a non-empty message', () => {
+    for (const raw of ['', 'y = x = 3', '2x + 3 = 7', 'x^2 + y^2 = 25', '@@@']) {
+      const r = parseEquationInput(raw);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.message.length).toBeGreaterThan(0);
+    }
   });
 });
