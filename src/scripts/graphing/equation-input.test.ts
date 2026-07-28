@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitEquation } from './equation-input';
+import { splitEquation, solveLinearY } from './equation-input';
 
 describe('splitEquation', () => {
   it('reports empty input', () => {
@@ -39,5 +39,49 @@ describe('splitEquation', () => {
 
   it('rejects more than one equals sign', () => {
     expect(splitEquation('y = x = 3')).toEqual({ kind: 'multiple' });
+  });
+});
+
+describe('solveLinearY', () => {
+  it.each([
+    ['2y', 'x + 4', '(x + 4) / 2'],
+    ['y - x^2', '0', 'x ^ 2'],
+    ['3y + 2x', '6', '(6 - 2 * x) / 3'],
+    ['x + y', '5', '5 - x'],
+    ['y', 'sin(x)', 'sin(x)'],
+    ['y + y', 'x', 'x / 2'],
+    ['2', 'y', '2'],
+    ['y', '5', '5'],
+  ])('solves %s = %s', (lhs, rhs, expected) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({ ok: true, expr: expected });
+  });
+
+  // A(x) = x here, which is zero AT x=0 but not identically zero. The NO_Y_PRESENT
+  // guard must not fire; the resulting 1/x handles its own asymptote via evalAt.
+  it('solves an equation whose y coefficient depends on x', () => {
+    expect(solveLinearY('x*y', '1')).toEqual({ ok: true, expr: '1 / x' });
+  });
+
+  it.each([
+    ['y^2', 'x'],
+    ['x^2 + y^2', '25'],
+    ['e^y', 'x'],
+    ['sin(y)', 'x'],
+  ])('rejects %s = %s as not linear in y', (lhs, rhs) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NOT_LINEAR_IN_Y' });
+  });
+
+  // Without the A === 0 guard this divides by zero and emits the literal string
+  // "Infinity * (4 - 2*x)".
+  it.each([
+    ['2*x + 3', '7'],
+    ['x', '3'],
+    ['0', '0'],
+  ])('rejects %s = %s because no y is present', (lhs, rhs) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NO_Y_PRESENT' });
+  });
+
+  it('reports invalid input rather than throwing', () => {
+    expect(solveLinearY('@@@', 'x')).toEqual({ ok: false, reason: 'INVALID' });
   });
 });
