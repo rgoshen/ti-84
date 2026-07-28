@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parse } from 'mathjs';
-import katex from 'katex';
+import { renderMathHtml } from '@/scripts/katex-html';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
 import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
@@ -96,29 +96,15 @@ function windowToFields(w: Window2D): WindowFields {
  */
 function exprToKatex(expr: string): string | null {
   try {
-    const tex = parse(expr).toTex({ implicit: 'hide' });
-    return katex.renderToString(`y = ${tex}`, {
-      throwOnError: false,
-      displayMode: false,
-      output: 'html',
-    });
+    return renderMathHtml(`y = ${parse(expr).toTex({ implicit: 'hide' })}`);
   } catch {
-    return null;
+    return null; // mathjs could not parse the expression
   }
 }
 
-/** KaTeX HTML for already-TeX input, or null if KaTeX refuses it. */
+/** KaTeX HTML for already-TeX input, or null if there was no TeX to render. */
 function texToHtml(tex: string | null): string | null {
-  if (tex === null) return null;
-  try {
-    return katex.renderToString(tex, {
-      throwOnError: false,
-      displayMode: false,
-      output: 'html',
-    });
-  } catch {
-    return null;
-  }
+  return tex === null ? null : renderMathHtml(tex);
 }
 
 /**

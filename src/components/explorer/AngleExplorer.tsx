@@ -1,6 +1,6 @@
 import * as React from 'react'; // [G1] required for the React.JSX.Element return type
 import { useEffect, useMemo, useState } from 'react';
-import katex from 'katex';
+import { renderMathHtml } from '@/scripts/katex-html';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,14 +139,8 @@ export default function AngleExplorer(): React.JSX.Element {
   const tickText = dark ? '#e2e8f0' : '#334155'; // [G9] stroke colour for tick labels
 
   const readout = useMemo(() => buildReadout(theta, r), [theta, r]);
-  const chainHtml = useMemo(
-    () => katex.renderToString(readout.chain, { throwOnError: false, displayMode: false, output: 'html' }),
-    [readout.chain],
-  );
-  const arcHtml = useMemo(
-    () => katex.renderToString(readout.arc, { throwOnError: false, displayMode: false, output: 'html' }),
-    [readout.arc],
-  );
+  const chainHtml = useMemo(() => renderMathHtml(readout.chain) ?? '', [readout.chain]);
+  const arcHtml = useMemo(() => renderMathHtml(readout.arc) ?? '', [readout.arc]);
   // The exact π form for the Radians field. Only meaningful for whole degrees —
   // a typed 57.2958° (from "1" radian) has no clean π multiple, so this is null
   // and the field shows only its decimal. The input keeps the decimal as its
@@ -154,11 +148,7 @@ export default function AngleExplorer(): React.JSX.Element {
   const radiansExactHtml = useMemo(
     () =>
       isIntegerDegrees(theta)
-        ? katex.renderToString(`${formatPiLatex(piMultiple(Math.round(theta)))}\\text{ rad}`, {
-            throwOnError: false,
-            displayMode: false,
-            output: 'html',
-          })
+        ? renderMathHtml(`${formatPiLatex(piMultiple(Math.round(theta)))}\\text{ rad}`)
         : null,
     [theta],
   );
@@ -168,21 +158,9 @@ export default function AngleExplorer(): React.JSX.Element {
   const coords = useMemo(() => buildCoordinateReadout(theta, r), [theta, r]);
   const coordHtml = useMemo(
     () => ({
-      triple: katex.renderToString(coords.tripleLatex, {
-        throwOnError: false,
-        displayMode: false,
-        output: 'html',
-      }),
-      x: katex.renderToString(coords.xLatex, {
-        throwOnError: false,
-        displayMode: false,
-        output: 'html',
-      }),
-      y: katex.renderToString(coords.yLatex, {
-        throwOnError: false,
-        displayMode: false,
-        output: 'html',
-      }),
+      triple: renderMathHtml(coords.tripleLatex) ?? '',
+      x: renderMathHtml(coords.xLatex) ?? '',
+      y: renderMathHtml(coords.yLatex) ?? '',
     }),
     [coords.tripleLatex, coords.xLatex, coords.yLatex],
   );
