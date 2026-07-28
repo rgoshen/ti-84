@@ -516,7 +516,7 @@ test('a relation gets no markers, no details panel and no table column', async (
   await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
   await expect(page.locator('[data-testid="plot"] .points-overlay circle')).toHaveCount(0);
   await expect(page.getByText(/Function details/)).toHaveCount(0);
-  await expect(page.getByText(/two y values at some x/)).toBeVisible();
+  await expect(page.getByText(/exactly one y for each x/)).toBeVisible();
   // The relation must not get a value-table column. With only a relation plotted,
   // showTable is false and no table renders at all — a regression that re-included
   // relations in tableEquations would produce one.
