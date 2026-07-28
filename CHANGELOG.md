@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.6.0](https://github.com/rgoshen/ti-84/compare/v0.5.0...v0.6.0) (2026-07-28)
+
+
+### Bug Fixes
+
+* **explorer:** clamp the coordinate label instead of flipping it across the origin ([358e261](https://github.com/rgoshen/ti-84/commit/358e2616d5151db9e54a6d8c05b5c7aec7d8dabc))
+* **explorer:** give the diagram figure its own e2e test id ([3d346b1](https://github.com/rgoshen/ti-84/commit/3d346b154a076481cdcc42eda1940603e8a36415))
+* **explorer:** size the coordinate label width from its text ([f55b7aa](https://github.com/rgoshen/ti-84/commit/f55b7aaf2c40baef67768b881fcd811d738252f2))
+* **explorer:** speak a whole coordinate once instead of stuttering it ([5ba7ace](https://github.com/rgoshen/ti-84/commit/5ba7acea2fa416d1373add4a3496f13251359c33))
+
+
+### Features
+
+* **explorer:** coordinate label on the angle diagram ([d6e9d7b](https://github.com/rgoshen/ti-84/commit/d6e9d7b26df214685cb281e4665a535729871622))
+* **explorer:** coordinate readout strings ([02a75d6](https://github.com/rgoshen/ti-84/commit/02a75d6f2b12085080badd72a403be1c56ed5081))
+* **explorer:** exact unit-circle coordinate maths ([ced8d37](https://github.com/rgoshen/ti-84/commit/ced8d37ba494ab9f5c038b3e94dfc77a0056592c))
+* **explorer:** export the terminal point and cover it end to end ([db2f1cc](https://github.com/rgoshen/ti-84/commit/db2f1cc490a4074c806a3b97d3ff323e7ea73e4b))
+* **explorer:** render the coordinates block ([b8c3c8e](https://github.com/rgoshen/ti-84/commit/b8c3c8e393277f68ab53bebe642b1282ce4197ca))
+
 # [0.5.0](https://github.com/rgoshen/ti-84/compare/v0.4.0...v0.5.0) (2026-07-24)
 
 
