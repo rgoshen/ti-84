@@ -493,11 +493,58 @@ test('shows only one form when no rearranging was needed', async ({ page }) => {
   await expect(page.getByTestId('eq-entered-form')).toHaveCount(0);
 });
 
-test('rejects a relation with guidance to enter it as two functions', async ({ page }) => {
+test('plots a relation as an implicit curve', async ({ page }) => {
   await page.goto('/graphing');
   await page.locator('#eq-input').fill('x^2 + y^2 = 25');
   await page.getByRole('button', { name: 'Plot' }).click();
 
-  await expect(page.getByText(/two y values/)).toBeVisible();
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+  // An implicit path is a spray of disjoint subpaths from interval subdivision, where a
+  // polyline is one continuous M...L run. Many M commands is the signature.
+  const moveCount = await page.evaluate(() => {
+    const p = document.querySelector('[data-testid="plot"] g.graph path');
+    return ((p?.getAttribute('d') ?? '').match(/M/g) ?? []).length;
+  });
+  expect(moveCount).toBeGreaterThan(50);
+});
+
+test('a relation gets no markers, no details panel and no table column', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2 + y^2 = 25');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+  await expect(page.locator('[data-testid="plot"] .points-overlay circle')).toHaveCount(0);
+  await expect(page.getByText(/Function details/)).toHaveCount(0);
+  await expect(page.getByText(/two y values at some x/)).toBeVisible();
+});
+
+test('a relation and a function plot together', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2 + y^2 = 25');
+  await page.getByRole('button', { name: 'Plot' }).click();
+  await page.locator('#eq-input').fill('sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.locator('[data-testid="plot"] g.graph')).toHaveCount(2);
+  // The function still gets its details panel; the relation still does not.
+  await expect(page.getByText(/Function details/)).toHaveCount(1);
+});
+
+test('plots a vertical line', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x = 3');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.locator('[data-testid="plot"] g.graph path')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+});
+
+test('rejects an equation that is true everywhere', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('0 = 0');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.getByText(/true at every point/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
 });

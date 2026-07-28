@@ -297,3 +297,11 @@ test('shows the entered equation beside the solved form, and clears it afterward
   await expect(page.getByTestId('fx-entered-form')).toHaveCount(0);
   await expect(page.getByTestId('fx-solved-form')).toHaveText('f(x) = 1/x^2');
 });
+
+test('a relation is rejected and points at the graphing calculator', async ({ page }) => {
+  await page.goto('/explorers/function');
+  await page.locator('#fx-input').fill('x^2 + y^2 = 25');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.getByText(/Graph it on the Graphing Calculator/)).toBeVisible();
+});
