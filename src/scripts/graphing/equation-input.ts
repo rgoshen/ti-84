@@ -246,7 +246,12 @@ export function parseEquationInput(raw: string): EquationParse {
     const renderable =
       solved.reason === 'NOT_LINEAR_IN_Y' ||
       (solved.reason === 'NO_Y_PRESENT' && !solved.degenerate);
-    if (!renderable) return fail('DEGENERATE');
+    if (!renderable) {
+      // Only NO_Y_PRESENT-with-degenerate means "true at every point". A solver INVALID
+      // is a broken expression and must keep saying so — telling a student their typo is
+      // true everywhere sends them hunting for a maths error instead of a syntax one.
+      return fail(solved.reason === 'INVALID' ? 'INVALID' : 'DEGENERATE');
+    }
 
     // `lhs - rhs` is exactly the form fnType: 'implicit' consumes.
     const implicitExpr = `(${split.lhs}) - (${split.rhs})`;

@@ -265,4 +265,13 @@ describe('parseEquationInput', () => {
   it('validates a relation with both x and y bound', () => {
     expect(parseEquationInput('x^2 + y^2 = 25')).toMatchObject({ ok: true });
   });
+
+  // A solver INVALID must keep its own reason. Routing it to DEGENERATE would tell a
+  // student their typo is an equation that is true everywhere.
+  it.each([['@@@ = 3'], ['x @ = 3'], ['z^2 + y^2 = 25']])(
+    'reports %s as invalid rather than degenerate',
+    (raw) => {
+      expect(parseEquationInput(raw)).toMatchObject({ ok: false, reason: 'INVALID' });
+    },
+  );
 });
