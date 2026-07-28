@@ -2804,3 +2804,23 @@ float is meaningless — a radian-typed `pi/3` arrives as 59.99999999999999.
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 18:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinate readout strings
+
+**Summary:**
+Added `src/scripts/explorer/angle-coordinates.ts`, building every display string the
+coordinate readout needs: the chart-style triple line, the worked `x = r·cos θ`
+equations, the narrow SVG label, four-decimal export text, and screen-reader prose.
+
+**Rationale:**
+This is where the feature's real branching lives — dropping the `1 ×` prefix at r = 1,
+falling back from a radical to a named `cos 37°`, choosing `=` over `≈` when the
+decimal is exact. Putting it in a pure module rather than inside `AngleExplorer.tsx`
+keeps it reachable by the node test runner, since the project has no jsdom and tests
+`.ts` only. The component is left with nothing to do but render.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
