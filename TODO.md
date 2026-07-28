@@ -826,3 +826,50 @@ One Playwright spec for the two-line label, asserting on text not `svg` descenda
 **References:**
 - Issue: GH-26
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1
+
+**Objective:**
+Correct every deferred finding from the Phase 1 review loop rather than filing them.
+Seven items were parked as "SHIP with follow-up"; standing policy is to fix debt when
+it is encountered, while the context that found it is still loaded.
+
+**Approach:**
+- **Accessibility (WCAG 2.1 AA).** KaTeX ran with `output: 'html'`, which marks its
+  visual spans `aria-hidden` and emits no MathML — every rendered equation on the site
+  was silent to screen readers. Consolidated all 8 `renderToString` call sites into one
+  pure `src/scripts/katex-html.ts` using `htmlAndMathml`. Fixes the a11y defect and the
+  DRY violation in a single move, and being DOM-free it is unit-testable in the node env.
+- **Reason accuracy.** `solveLinearY` checked `usable < MIN_USABLE_SAMPLES` before
+  `!linear`, so an equation that is provably non-linear but defined at only one sample
+  (`sqrt(x-4.05)*y^2 = x`) was reported INVALID. A mismatch at any defined sample is
+  positive proof, so `!linear` is now checked first.
+- **Double evaluation.** `A(x)` was evaluated twice per sample. Cached from the first
+  pass; semantics unchanged because every sample's value is recorded, skipped or not.
+- **Exhaustiveness.** `equationToTex` used if/if/return-null; now a `switch` with a
+  `never` default, so a new `SplitResult` variant is a compile error, not a silent null.
+- **Function Explorer export.** Its on-screen card showed both entered and solved forms
+  while its exported legend and details title showed only the solved form. Threaded
+  `entered` through, matching the Graphing Calculator: entered form in the legend and
+  details title, solved form retained in the table header (that column holds f(x)).
+- **LINEARITY_TOL.** Investigated and deliberately NOT changed — documented instead.
+
+**Tests:**
+New `katex-html.test.ts` (5 tests) asserting a MathML track is emitted and the visual
+track stays `aria-hidden`. Two new `solveLinearY` cases pinning NOT_LINEAR_IN_Y vs
+INVALID. Full suite 334/334, integration 4/4, e2e 83/83.
+
+**Risks & Tradeoffs:**
+- The MathML change was the only real risk, since it alters KaTeX's DOM and the export
+  path rasterises the DOM to PNG. Verified by same-platform A/B: exported PNGs are
+  BYTE-IDENTICAL with and without MathML, so visual baselines cannot shift. This is
+  stronger evidence than a Docker run, being platform-independent.
+- `LINEARITY_TOL` stays absolute. A relative tolerance would not fix the reported case
+  (`1e-10*y^2 + y = x` differs from linear by ~2e-10 against values of order 1, i.e. a
+  relative error ~1e-10, below any epsilon that still tolerates float noise). Catching
+  it needs ~1e-12 absolute, which invites false rejections. The limit is documented in
+  the code rather than traded for a worse failure mode.
+
+**References:**
+- Issue: GH-26 (PR #27)
+- Ledger: .superpowers/sdd/2026-07-28-full-equation-input/progress.md

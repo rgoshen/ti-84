@@ -3565,3 +3565,51 @@ inside it could not, so it overflowed the row rather than being clipped by it.
 **References:**
 - Issue: GH-26
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 12:16] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/scripts/katex-html.ts, src/scripts/graphing, src/components
+
+**Summary:**
+Cleared all seven technical-debt items parked during the GH-26 Phase 1 review loop.
+Centralised KaTeX rendering into one pure module and switched it to `htmlAndMathml`;
+reordered the linearity and usable-sample checks so a provably non-linear equation
+reports NOT_LINEAR_IN_Y rather than INVALID; cached the per-sample `A(x)` evaluation;
+made `equationToTex` exhaustive over `SplitResult`; threaded the entered form into the
+Function Explorer's export. 334/334 unit, 4/4 integration, 83/83 e2e.
+
+**Rationale:**
+The accessibility item was the most consequential and was NOT introduced by this branch
+— it predates it and affected every rendered equation on the site. KaTeX's
+`output: 'html'` builds its visual layout from `aria-hidden` spans and emits no MathML,
+so the graphing labels, angle readouts, and coordinate triples were all silent to screen
+readers, against the WCAG 2.1 AA bar this project holds itself to. Because eight call
+sites across two components each repeated the same options object, fixing the a11y
+defect and the DRY violation were the same edit: one `src/scripts/katex-html.ts`. Putting
+it under `src/scripts` was not stylistic — `katex.renderToString` needs no DOM, so it is
+unit-testable in the node environment, which a `.tsx` helper could not be.
+
+The reason-ordering fix rests on an asymmetry worth stating: a mismatch at any single
+defined sample is *positive proof* of non-linearity, whereas confirming linearity needs
+several samples. Checking the sample count first therefore discarded evidence the probe
+had already gathered.
+
+`LINEARITY_TOL` was deliberately left absolute after investigation. A relative tolerance
+does not fix the reported case — `1e-10*y^2 + y = x` deviates from linear by ~2e-10
+against values of order 1, a relative error near 1e-10, below any epsilon that still
+tolerates ordinary float noise. Catching it would mean tightening to ~1e-12 absolute and
+inviting false rejections of valid input. The limit is now documented in the code; a
+comment that explains why a plausible fix is wrong is worth more than the fix.
+
+**Verification:**
+The MathML change was the only item carrying real risk, since the export path rasterises
+the live DOM to PNG and could have shifted the Linux-only visual baselines. Verified by
+same-platform A/B — rendered the three export PNGs with and without the change on the
+same machine and byte-compared them: IDENTICAL. KaTeX's stylesheet clips the MathML
+track, so nothing reaches the raster. This is stronger evidence than a Docker run, since
+it isolates the variable rather than changing platform and font stack at once.
+
+**References:**
+- Issue: GH-26 (PR #27)
+- TODO.md: [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1
