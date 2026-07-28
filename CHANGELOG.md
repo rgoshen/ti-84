@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.7.0](https://github.com/rgoshen/ti-84/compare/v0.6.2...v0.7.0) (2026-07-28)
+
+
+### Bug Fixes
+
+* **a11y:** render equations with MathML so screen readers can read them ([e5836fe](https://github.com/rgoshen/ti-84/commit/e5836fe72566d1ee8bc6fdf0cdae331f0cc05db0))
+* **explorer:** carry the entered equation into the Function Explorer export ([4aae911](https://github.com/rgoshen/ti-84/commit/4aae911c93536aa5c2eab2f78d4d0adbd7cf9ea5))
+* **graphing:** keep long equation labels inside their row ([abd0061](https://github.com/rgoshen/ti-84/commit/abd00612a71ffa44cc46db890d1fc531e2038796))
+* **graphing:** report proven non-linearity ahead of insufficient samples ([720c592](https://github.com/rgoshen/ti-84/commit/720c5923b754f4fb9133588becc0e25b60593e6d))
+* **graphing:** short-circuit the y= path so shifted domains still plot ([64e7f1d](https://github.com/rgoshen/ti-84/commit/64e7f1da5e11cf3246cf9f611b7af135627d3308))
+* **graphing:** skip undefined samples in the y-linearity probe ([94c7132](https://github.com/rgoshen/ti-84/commit/94c71322ab0bb7769cff1f0e6801f31db5a17784))
+
+
+### Features
+
+* **explorer:** accept full equations in the function explorer ([0a7c68d](https://github.com/rgoshen/ti-84/commit/0a7c68daa7bb6ad03dd29fe8d3cf5a16b2311c0a))
+* **explorer:** show the entered equation beside the solved form ([519c33f](https://github.com/rgoshen/ti-84/commit/519c33f5048f8ef092f5dbc184bec9e42b73c3f0))
+* **graphing:** accept full equations in the graphing calculator ([356523d](https://github.com/rgoshen/ti-84/commit/356523d42f3affa070eeb8c39274e53ff30f306d))
+* **graphing:** add parseEquationInput with per-reason messages ([e148f51](https://github.com/rgoshen/ti-84/commit/e148f51ec0c526637d4bccfd0f1866d89fc228a7))
+* **graphing:** render entered equations to LaTeX side by side ([ac047e4](https://github.com/rgoshen/ti-84/commit/ac047e446e90b7b8f0ae72f86d53f53472c7b1e5))
+* **graphing:** show entered and solved forms for rearranged equations ([eeff91b](https://github.com/rgoshen/ti-84/commit/eeff91b2e0412e09be95e052e24bc73150351f0a))
+* **graphing:** solve equations linear in y via symbolic probe ([6a41483](https://github.com/rgoshen/ti-84/commit/6a41483f83caa4c577d283d214b1a1981fe8830c))
+* **graphing:** split equation input on a bare equals sign ([15c5bbb](https://github.com/rgoshen/ti-84/commit/15c5bbb39d6a2f882694ebe86485eb934c3a5fc8))
+
 ## [0.6.2](https://github.com/rgoshen/ti-84/compare/v0.6.1...v0.6.2) (2026-07-28)
 
 
