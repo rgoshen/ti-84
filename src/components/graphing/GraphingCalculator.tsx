@@ -12,7 +12,7 @@ import {
   type PlotEquation,
   type PointShape,
 } from '@/scripts/graphing/plot';
-import { parseEquationInput } from '@/scripts/graphing/equation-input';
+import { parseEquationInput, type EquationKind } from '@/scripts/graphing/equation-input';
 import { equationToTex } from '@/scripts/graphing/equation-tex';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,20 +59,27 @@ interface EquationItem extends PlotEquation {
   input?: string;
 }
 
+/** Only functions have a single y per x, so only they get a table column or a details entry. */
+const isFunctionEquation = (eq: EquationItem): boolean => eq.kind === 'function';
+
 function buildEquationDetails(
   equations: EquationItem[],
   window: Window2D,
 ): FunctionDetailsPanelEntry[] {
-  return equations.map((equation) => ({
-    id: equation.id,
-    title: `Function details · ${
-      equation.input
-        ? formatExportEquation(equation.input)
-        : `y = ${formatExportEquation(equation.expr)}`
-    }`,
-    color: equation.color,
-    facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
-  }));
+  return equations
+    // A relation has no single-valued domain, range, intercepts, or asymptotes to
+    // report — analyzeFunction assumes one y per x throughout.
+    .filter(isFunctionEquation)
+    .map((equation) => ({
+      id: equation.id,
+      title: `Function details · ${
+        equation.input
+          ? formatExportEquation(equation.input)
+          : `y = ${formatExportEquation(equation.expr)}`
+      }`,
+      color: equation.color,
+      facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
+    }));
 }
 
 type WindowFields = Record<keyof Window2D, string>;
@@ -113,23 +120,23 @@ function texToHtml(tex: string | null): string | null {
  * When `input` is present the equation was rearranged, so both forms are shown: the
  * equation as entered, then the solved `y = f(x)` beneath it. Seeing the rearrangement
  * is the point — for `3y + 2x = 6` it is the lesson itself.
+ *
+ * Relations are the exception, and they always carry `input`. A relation's `expr` is
+ * `(lhs) - (rhs)` in x AND y, which is NOT what y equals, so a solved-form line would
+ * state false mathematics: `x^2 + y^2 = 25` would render `y = (x^2 + y^2) - (25)`, and
+ * KaTeX's MathML would read it aloud too. Relations therefore show the entered form only.
  */
 function EquationLabel({
   expr,
   input,
+  kind,
   className,
 }: {
   expr: string;
   input?: string;
+  kind?: EquationKind;
   className?: string;
 }): React.JSX.Element {
-  const solvedHtml = exprToKatex(expr);
-  const solved = solvedHtml ? (
-    <span dangerouslySetInnerHTML={{ __html: solvedHtml }} />
-  ) : (
-    <span>{`y = ${expr}`}</span>
-  );
-
   // `.katex` sets `white-space: nowrap`, so a long expression cannot wrap and would run
   // past the Remove button. Each LINE clips itself instead; the wrapper is deliberately
   // left un-clipped so the two-line form still shows both lines. `min-w-0` overrides the
@@ -137,28 +144,45 @@ function EquationLabel({
   // shrink and the inner clipping never engages. The `title` carries the full text.
   const wrapper = cn('min-w-0', className);
 
+  const renderSolved = (): React.JSX.Element => {
+    const html = exprToKatex(expr);
+    return html ? (
+      <span dangerouslySetInnerHTML={{ __html: html }} />
+    ) : (
+      <span>{`y = ${expr}`}</span>
+    );
+  };
+
   if (!input) {
     return (
       <span className={wrapper}>
         <span className="block truncate" title={`y = ${expr}`}>
-          {solved}
+          {renderSolved()}
         </span>
       </span>
     );
   }
 
   const enteredHtml = texToHtml(equationToTex(input));
+  const entered = (
+    <span className="block truncate" data-testid="eq-entered-form" title={input}>
+      {enteredHtml ? <span dangerouslySetInnerHTML={{ __html: enteredHtml }} /> : input}
+    </span>
+  );
+
+  if (kind === 'relation') {
+    return <span className={wrapper}>{entered}</span>;
+  }
+
   return (
     <span className={wrapper}>
-      <span className="block truncate" data-testid="eq-entered-form" title={input}>
-        {enteredHtml ? <span dangerouslySetInnerHTML={{ __html: enteredHtml }} /> : input}
-      </span>
+      {entered}
       <span
         className="block truncate text-muted-foreground"
         data-testid="eq-solved-form"
         title={`y = ${expr}`}
       >
-        {solved}
+        {renderSolved()}
       </span>
     </span>
   );
@@ -304,6 +328,7 @@ export default function GraphingCalculator(): React.JSX.Element {
     const item: EquationItem = {
       id: `eq-${nextId.current++}`,
       expr: parsed.expr,
+      kind: parsed.kind,
       input: parsed.input,
       color,
       showPoints: false,
@@ -345,7 +370,10 @@ export default function GraphingCalculator(): React.JSX.Element {
   };
 
   const tableXs = integerXs(displayWindow);
-  const showTable = equations.length > 0 && tableXs.length > 0;
+  // The value table has one column per equation, which only makes sense when each x maps
+  // to a single y. Relations are omitted rather than shown as a column of blanks.
+  const tableEquations = equations.filter(isFunctionEquation);
+  const showTable = tableEquations.length > 0 && tableXs.length > 0;
   const liveFunctionDetails = useMemo(
     () => buildEquationDetails(equations, displayWindow),
     [equations, displayWindow],
@@ -354,6 +382,7 @@ export default function GraphingCalculator(): React.JSX.Element {
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotWindow = { ...displayWindow };
     const snapshotEquations = equations.map((equation) => ({ ...equation }));
+    const snapshotTableEquations = snapshotEquations.filter(isFunctionEquation);
     const snapshotXs = selectRepresentativeRows(tableXs);
     const snapshotDetails = buildEquationDetails(snapshotEquations, snapshotWindow);
 
@@ -368,19 +397,35 @@ export default function GraphingCalculator(): React.JSX.Element {
             ? formatExportEquation(equation.input)
             : `y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
-          detail: equation.showPoints
-            ? `Points shown (${equation.pointShape})`
-            : 'Points hidden',
+          // Relations get no detail at all: their points are unavailable, not merely
+          // toggled off, so "Points hidden" would imply a switch the student could flip.
+          detail: !isFunctionEquation(equation)
+            ? undefined
+            : equation.showPoints
+              ? `Points shown (${equation.pointShape})`
+              : 'Points hidden',
         })),
         sections: snapshotDetails,
-        table: {
-          title: 'Selected values',
-          headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
-          rows: snapshotXs.map((x) => [
-            String(x),
-            ...snapshotEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
-          ]),
-        },
+        // With only relations plotted there is no y for any x, so the section is dropped
+        // rather than exported as a lone x column.
+        table:
+          snapshotTableEquations.length === 0
+            ? undefined
+            : {
+                title: 'Selected values',
+                headers: [
+                  'x',
+                  ...snapshotTableEquations.map(
+                    (equation) => `y = ${formatExportEquation(equation.expr)}`,
+                  ),
+                ],
+                rows: snapshotXs.map((x) => [
+                  String(x),
+                  ...snapshotTableEquations.map((equation) =>
+                    formatExportValue(evalAt(equation.expr, x)),
+                  ),
+                ]),
+              },
       },
       renderGraph: (target) => {
         renderGraph({
@@ -473,7 +518,12 @@ export default function GraphingCalculator(): React.JSX.Element {
                           onChange={(e) => updateEquation(eq.id, { color: e.target.value })}
                         />
                       </label>
-                      <EquationLabel expr={eq.expr} input={eq.input} className="text-xs" />
+                      <EquationLabel
+                        expr={eq.expr}
+                        input={eq.input}
+                        kind={eq.kind}
+                        className="text-xs"
+                      />
                     </div>
                     <Button
                       type="button"
@@ -486,6 +536,12 @@ export default function GraphingCalculator(): React.JSX.Element {
                     </Button>
                   </div>
 
+                  {eq.kind === 'relation' ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      A relation — it doesn’t give exactly one y for each x, so the table
+                      and details don’t apply.
+                    </p>
+                  ) : (
                   <div className="mt-2 flex items-center gap-3 text-xs">
                     <label className="inline-flex cursor-pointer items-center gap-1.5">
                       <Checkbox
@@ -517,6 +573,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                       </Select>
                     </label>
                   </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -588,7 +645,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                     <th className="whitespace-nowrap border-b px-2 py-1.5 text-left font-medium">
                       x
                     </th>
-                    {equations.map((eq) => (
+                    {tableEquations.map((eq) => (
                       <th
                         key={eq.id}
                         className="whitespace-nowrap border-b px-2 py-1.5 text-left font-medium"
@@ -603,7 +660,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                   {tableXs.map((x, idx) => (
                     <tr key={x} className={idx % 2 ? 'bg-muted/40' : ''}>
                       <td className="whitespace-nowrap border-b px-2 py-1 font-mono">{x}</td>
-                      {equations.map((eq) => {
+                      {tableEquations.map((eq) => {
                         const y = evalAt(eq.expr, x);
                         return (
                           <td
@@ -621,7 +678,9 @@ export default function GraphingCalculator(): React.JSX.Element {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Add an equation to see its value table.
+              {equations.length > 0 && tableEquations.length === 0
+                ? 'Relations don’t have a value table — each x can have more than one y.'
+                : 'Add an equation to see its value table.'}
             </p>
           )}
         </Card>

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { splitEquation, solveLinearY, parseEquationInput } from './equation-input';
+import {
+  splitEquation,
+  solveLinearY,
+  parseEquationInput,
+  RELATION_NOT_SUPPORTED_MESSAGE,
+} from './equation-input';
 
 describe('splitEquation', () => {
   it('reports empty input', () => {
@@ -71,14 +76,26 @@ describe('solveLinearY', () => {
     expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NOT_LINEAR_IN_Y' });
   });
 
-  // Without the A === 0 guard this divides by zero and emits the literal string
-  // "Infinity * (4 - 2*x)".
+  // `2x + 3 = 7` and `x = 3` describe the vertical line x = 2 and x = 3. There is no y,
+  // but there IS a curve — Phase 2 draws them implicitly.
   it.each([
     ['2*x + 3', '7'],
     ['x', '3'],
-    ['0', '0'],
-  ])('rejects %s = %s because no y is present', (lhs, rhs) => {
-    expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NO_Y_PRESENT' });
+  ])('reports %s = %s as having no y but not degenerate', (lhs, rhs) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({
+      ok: false,
+      reason: 'NO_Y_PRESENT',
+      degenerate: false,
+    });
+  });
+
+  // `0 = 0` is true at every point, so there is nothing to draw at all.
+  it('reports 0 = 0 as degenerate', () => {
+    expect(solveLinearY('0', '0')).toEqual({
+      ok: false,
+      reason: 'NO_Y_PRESENT',
+      degenerate: true,
+    });
   });
 
   it('reports invalid input rather than throwing', () => {
@@ -119,18 +136,26 @@ describe('solveLinearY', () => {
 
 describe('parseEquationInput', () => {
   it('passes a bare expression through unchanged', () => {
-    expect(parseEquationInput('sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+    expect(parseEquationInput('sin(x)')).toEqual({ ok: true, kind: 'function', expr: 'sin(x)' });
   });
 
   // The `y =` prefix case short-circuits: it returns the right-hand side verbatim,
   // without sampling or simplify(), which is what replaces the three duplicated
   // normalizeExpr regexes.
   it('accepts a y-prefixed equation without marking it as rearranged', () => {
-    expect(parseEquationInput('y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+    expect(parseEquationInput('y = sin(x)')).toEqual({
+      ok: true,
+      kind: 'function',
+      expr: 'sin(x)',
+    });
   });
 
   it('accepts an uppercase Y prefix', () => {
-    expect(parseEquationInput('Y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
+    expect(parseEquationInput('Y = sin(x)')).toEqual({
+      ok: true,
+      kind: 'function',
+      expr: 'sin(x)',
+    });
   });
 
   // A restricted domain that starts beyond the probe's sample range must not be
@@ -141,12 +166,16 @@ describe('parseEquationInput', () => {
     ['y = asin(x-3)', 'asin(x-3)'],
     ['y = 1/sqrt(x-9)', '1/sqrt(x-9)'],
   ])('passes %s through untouched', (raw, expected) => {
-    expect(parseEquationInput(raw)).toEqual({ ok: true, expr: expected });
+    expect(parseEquationInput(raw)).toEqual({ ok: true, kind: 'function', expr: expected });
   });
 
   // The student's own arrangement of terms must survive; simplify() would reorder it.
   it('does not rewrite the expression on the y= path', () => {
-    expect(parseEquationInput('y = x^2-4x+3')).toEqual({ ok: true, expr: 'x^2-4x+3' });
+    expect(parseEquationInput('y = x^2-4x+3')).toEqual({
+      ok: true,
+      kind: 'function',
+      expr: 'x^2-4x+3',
+    });
   });
 
   // `evaluate('')` returns undefined rather than throwing, so the y= short-circuit
@@ -158,6 +187,7 @@ describe('parseEquationInput', () => {
   it('records the entered form when a real rearrangement happened', () => {
     expect(parseEquationInput('3y + 2x = 6')).toEqual({
       ok: true,
+      kind: 'function',
       expr: '(6 - 2 * x) / 3',
       input: '3y + 2x = 6',
     });
@@ -169,16 +199,36 @@ describe('parseEquationInput', () => {
     expect(r).toMatchObject({ reason: 'EMPTY' });
   });
 
-  it('explains that a relation is not a function', () => {
-    const r = parseEquationInput('x^2 + y^2 = 25');
-    expect(r.ok).toBe(false);
-    expect(r).toMatchObject({ reason: 'NOT_LINEAR_IN_Y' });
-    if (!r.ok) expect(r.message).toContain('two y values');
+  // A relation parses fine — it just is not a function. It routes to the implicit
+  // renderer rather than being rejected.
+  it.each([
+    ['x^2 + y^2 = 25', '(x^2 + y^2) - (25)'],
+    ['y^2 = x', '(y^2) - (x)'],
+    ['e^y = x', '(e^y) - (x)'],
+    ['sin(y) = x', '(sin(y)) - (x)'],
+  ])('routes %s to the implicit renderer', (raw, expected) => {
+    expect(parseEquationInput(raw)).toEqual({
+      ok: true,
+      kind: 'relation',
+      expr: expected,
+      input: raw,
+    });
   });
 
-  it('explains that an equation without y cannot be plotted', () => {
-    const r = parseEquationInput('2x + 3 = 7');
-    expect(r).toMatchObject({ ok: false, reason: 'NO_Y_PRESENT' });
+  // No y, but still a curve: the vertical line x = 3.
+  it.each([
+    ['x = 3', '(x) - (3)'],
+    ['2x + 3 = 7', '(2x + 3) - (7)'],
+  ])('routes %s to the implicit renderer as a vertical line', (raw, expected) => {
+    expect(parseEquationInput(raw)).toMatchObject({
+      ok: true,
+      kind: 'relation',
+      expr: expected,
+    });
+  });
+
+  it('still rejects an equation that is true everywhere', () => {
+    expect(parseEquationInput('0 = 0')).toMatchObject({ ok: false, reason: 'DEGENERATE' });
   });
 
   it('rejects more than one equals sign', () => {
@@ -199,10 +249,40 @@ describe('parseEquationInput', () => {
   });
 
   it('every failure carries a non-empty message', () => {
-    for (const raw of ['', 'y = x = 3', '2x + 3 = 7', 'x^2 + y^2 = 25', '@@@']) {
+    for (const raw of ['', 'y = x = 3', '0 = 0', '@@@']) {
       const r = parseEquationInput(raw);
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.message.length).toBeGreaterThan(0);
     }
+  });
+
+  // Functions keep their existing shape, now explicitly tagged.
+  it.each([
+    ['sin(x)', 'sin(x)'],
+    ['y = sin(x)', 'sin(x)'],
+    ['3y + 2x = 6', '(6 - 2 * x) / 3'],
+  ])('tags %s as a function', (raw, expr) => {
+    expect(parseEquationInput(raw)).toMatchObject({ ok: true, kind: 'function', expr });
+  });
+
+  // A solver INVALID must keep its own reason. Routing it to DEGENERATE would tell a
+  // student their typo is an equation that is true everywhere.
+  it.each([
+    ['@@@ = 3'],
+    ['x @ = 3'],
+    ['z^2 + y^2 = 25'],
+    ['( = 3'],
+    ['sqrt(x-4.05)*y = x'],
+  ])('reports %s as invalid rather than degenerate', (raw) => {
+    expect(parseEquationInput(raw)).toMatchObject({ ok: false, reason: 'INVALID' });
+  });
+});
+
+describe('RELATION_NOT_SUPPORTED_MESSAGE', () => {
+  // The message must be accurate for BOTH shapes of relation: a circle (two y at some x)
+  // and a vertical line (no y at most x, infinitely many at one).
+  it('explains relations in terms that cover vertical lines too', () => {
+    expect(RELATION_NOT_SUPPORTED_MESSAGE).toContain('exactly one y for each x');
+    expect(RELATION_NOT_SUPPORTED_MESSAGE).toContain('Graphing Calculator');
   });
 });

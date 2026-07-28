@@ -2,7 +2,10 @@ import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
-import { parseEquationInput } from '@/scripts/graphing/equation-input';
+import {
+  parseEquationInput,
+  RELATION_NOT_SUPPORTED_MESSAGE,
+} from '@/scripts/graphing/equation-input';
 import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
@@ -410,6 +413,12 @@ export default function FunctionExplorer(): React.JSX.Element {
     if (!parsed.ok) {
       // Keep this surface's existing wording for the empty case.
       setError(parsed.reason === 'EMPTY' ? 'Enter a function first.' : parsed.message);
+      return;
+    }
+    // This surface's slider drag, vertical asymptotes and end-behaviour panels are all
+    // defined by one y per x, so a relation would blank most of the UI.
+    if (parsed.kind === 'relation') {
+      setError(RELATION_NOT_SUPPORTED_MESSAGE);
       return;
     }
     stopSweep();

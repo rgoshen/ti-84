@@ -43,7 +43,11 @@ export interface ExportArtifactModel {
   window: Window2D;
   legend: ExportLegendItem[];
   sections: ExportSection[];
-  table: ExportTable;
+  /**
+   * Omitted when there is nothing to tabulate — a graph of relations alone has no
+   * single y per x, so a table would render as a lone x column with no y beside it.
+   */
+  table?: ExportTable;
 }
 
 export type ExportGraphRenderer = (target: HTMLElement) => void;

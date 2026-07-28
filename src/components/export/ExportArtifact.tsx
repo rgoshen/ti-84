@@ -196,50 +196,52 @@ export default function ExportArtifact({
         </div>
       ) : null}
 
-      <section style={{ marginTop: 24 }}>
-        <h2
-          style={{ margin: '0 0 8px', color: '#475569', fontSize: 12, textTransform: 'uppercase' }}
-        >
-          {model.table.title}
-        </h2>
-        <table
-          style={{
-            width: '100%',
-            tableLayout: 'fixed',
-            borderCollapse: 'collapse',
-            background: '#ffffff',
-            fontSize: 12,
-          }}
-        >
-          <thead>
-            <tr>
-              {model.table.headers.map((header, index) => (
-                <th
-                  key={`${header}-${index}`}
-                  scope="col"
-                  style={{ padding: '7px 10px', border: `1px solid ${BORDER}`, background: '#e8eef5', textAlign: 'right', overflowWrap: 'anywhere' }}
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {model.table.rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((value, columnIndex) => (
-                  <td
-                    key={columnIndex}
-                    style={{ padding: '6px 10px', border: `1px solid ${BORDER}`, textAlign: 'right' }}
+      {model.table ? (
+        <section style={{ marginTop: 24 }}>
+          <h2
+            style={{ margin: '0 0 8px', color: '#475569', fontSize: 12, textTransform: 'uppercase' }}
+          >
+            {model.table.title}
+          </h2>
+          <table
+            style={{
+              width: '100%',
+              tableLayout: 'fixed',
+              borderCollapse: 'collapse',
+              background: '#ffffff',
+              fontSize: 12,
+            }}
+          >
+            <thead>
+              <tr>
+                {model.table.headers.map((header, index) => (
+                  <th
+                    key={`${header}-${index}`}
+                    scope="col"
+                    style={{ padding: '7px 10px', border: `1px solid ${BORDER}`, background: '#e8eef5', textAlign: 'right', overflowWrap: 'anywhere' }}
                   >
-                    {value}
-                  </td>
+                    {header}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {model.table.rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((value, columnIndex) => (
+                    <td
+                      key={columnIndex}
+                      style={{ padding: '6px 10px', border: `1px solid ${BORDER}`, textAlign: 'right' }}
+                    >
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      ) : null}
 
       <footer
         style={{ display: 'flex', justifyContent: 'space-between', marginTop: 18, color: MUTED, fontSize: 11 }}

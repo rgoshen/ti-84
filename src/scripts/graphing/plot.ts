@@ -2,6 +2,7 @@ import functionPlotDefault from 'function-plot';
 import type { FunctionPlotDatum, FunctionPlotScale } from 'function-plot';
 import { evalAt, gridlineCrossings, type Window2D } from '@/scripts/graphing/math';
 import { themeColors, type ThemeColors } from '@/scripts/graphing/theme';
+import type { EquationKind } from '@/scripts/graphing/equation-input';
 import {
   DOT_HIT_RADIUS_PX,
   CURVE_HIT_RADIUS_PX,
@@ -25,6 +26,8 @@ export type PointShape = 'circle' | 'square' | 'triangle';
 /** One plotted curve and its presentation options. */
 export interface PlotEquation {
   expr: string;
+  /** 'function' expressions are in x alone; 'relation' expressions are in x AND y. */
+  kind: EquationKind;
   color: string;
   showPoints: boolean;
   pointShape: PointShape;
@@ -175,7 +178,10 @@ function drawPointsOverlay(
   const canvas = svg.querySelector('g.canvas') ?? svg;
 
   for (const eq of equations) {
-    if (!eq.showPoints) continue;
+    // gridlineCrossings walks evalAt across integer x, which has no meaning for a
+    // relation — and its path is a spray of disjoint segments, not a stroke, so there
+    // is nothing coherent to place markers on.
+    if (eq.kind === 'relation' || !eq.showPoints) continue;
     const overlay = document.createElementNS(SVG_NS, 'g');
     overlay.setAttribute('class', 'points-overlay');
     for (const { x, y } of gridlineCrossings(eq.expr, win)) {
@@ -270,6 +276,9 @@ function attachHoverReadout(opts: AttachHoverOptions): () => void {
     const pixelYs: number[] = [];
     const candidates: Array<{ y: number; color: string }> = [];
     for (const eq of getEquations()) {
+      // A relation's expression contains an unbound y, so evalAt would throw — and this
+      // runs on every pointer move.
+      if (eq.kind === 'relation') continue;
       const y = evalAt(eq.expr, dataX);
       if (y === null) continue; // undefined / asymptote
       pixelYs.push(yScale(y));
@@ -324,11 +333,13 @@ export function renderGraph(opts: RenderGraphOptions): FunctionPlotInstance {
   const { target, window: win, equations, dark, height = PLOT_HEIGHT, onViewChange, onHover } = opts;
   const colors = themeColors(dark);
 
-  const data: FunctionPlotDatum[] = equations.map((eq) => ({
-    fn: eq.expr,
-    color: eq.color,
-    graphType: 'polyline',
-  }));
+  const data: FunctionPlotDatum[] = equations.map((eq) =>
+    eq.kind === 'relation'
+      ? // The interval sampler tests rectangles for sign changes rather than marching
+        // left to right, which is what lets it draw a curve with two y values at one x.
+        { fn: eq.expr, color: eq.color, fnType: 'implicit', graphType: 'interval' }
+      : { fn: eq.expr, color: eq.color, graphType: 'polyline' },
+  );
 
   const instance = functionPlot({
     target,

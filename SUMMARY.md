@@ -3613,3 +3613,189 @@ it isolates the variable rather than changing platform and font stack at once.
 **References:**
 - Issue: GH-26 (PR #27)
 - TODO.md: [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1
+
+## [2026-07-28 13:53] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/specs, TODO.md
+
+**Summary:**
+Design spec for GH-26 Phase 2: render implicit relations and vertical lines on the
+Graphing Calculator, with the one-x-one-y features standing down for those rows. No code
+changed yet.
+
+**Rationale:**
+Phase 1's post-mortem was that reasoning about a library, rather than exercising it, is
+where its two regressions came from. So function-plot's implicit support was verified in
+a real browser before a line of this spec was written: five relations rendered (4–25 ms),
+and a mixed plot of `sin(x)` + `x²+y²−25` + `0.5x` produced three correctly-coloured
+`g.graph` groups in datum order, confirmed by screenshot. That probe also established the
+implicit series leaves `g.canvas`, the `.origin` paths, the zoom rect and the live scales
+intact — which is why this is a one-line branch in the datum builder rather than a
+parallel rendering path, and why the design could be written with confidence instead of
+hedging.
+
+The probe also produced the fact that shaped the degradation design: an implicit path
+carries 2052 `M` commands where a polyline carries 1. It is a disjoint spray of segments,
+not a stroke — so marker snapping and path-length sampling are meaningless on it,
+independently of multi-valuedness.
+
+Chose a `kind` discriminator on the success branch over bolting an optional
+`implicitExpr` onto the failure branch. The latter would leave both explorers untouched,
+but it types a successful parse as a failure. The discriminator's apparent cost is its
+real benefit: every consumer of `expr` must narrow on `kind`, so the compiler enumerates
+the five degradation sites rather than relying on memory.
+
+Spec self-review caught a defect that would have blocked the feature entirely: Phase 1's
+`validate()` calls `evaluate(expr, { x: 1 })`, and a relation's expression contains an
+unbound `y`, so mathjs would throw and every relation would be rejected as INVALID before
+reaching the renderer. The spec now specifies binding both variables.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+
+## [2026-07-28 14:00] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/plans
+
+**Summary:**
+Six-task TDD implementation plan for GH-26 Phase 2, derived from the approved spec.
+Tasks 1–2 extend the pure parser (degenerate-vs-vertical-line detection, then the `kind`
+discriminator and routing); Tasks 3–5 wire the three components; Task 6 adds e2e coverage
+and runs full verification. No code changed yet.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could reject one unit while approving its
+neighbour. Splitting the degenerate bit (Task 1) from the routing (Task 2) is the
+non-obvious one: they touch the same function, but Task 1's question is numerical — is
+`B` identically zero across the samples — while Task 2's is a routing policy. They fail
+in different ways and deserve separate gates.
+
+Task 4 deliberately ends with `astro check` still reporting errors, because adding `kind`
+to `PlotEquation` makes the Graphing Calculator's object literal incomplete until Task 5.
+The step says so explicitly and tells the implementer to confirm the ONLY errors are that
+missing property — an expected-red checkpoint is safer than a plan that looks broken.
+
+Self-review replaced the one placeholder-shaped step: Task 5's checkbox-hiding originally
+said "move the existing markup here" with a comment stub. It now names the exact opening
+line (`<div className="mt-2 flex items-center gap-3 text-xs">`) and the exact closing
+anchor, so the implementer wraps real code rather than reconstructing it. The e2e
+selectors were also checked against the existing specs rather than assumed — `#fx-input`
+and the `Plot` button name both match.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+- Plan: docs/superpowers/plans/2026-07-28-implicit-relations.md
+
+## [2026-07-28 14:55] Commit Summary
+
+**Change Type:** Feature
+**Scope:** src/scripts/graphing, src/components
+
+**Summary:**
+Closes out the six-task GH-26 Phase 2 plan with end-to-end coverage and a full
+verification sweep. Deleted the Phase 1 e2e test asserting the Graphing Calculator
+refuses relations — this phase deliberately reverses that behavior, so the assertion
+was obsolete, not broken. Added five graphing tests (a relation renders as one `path`
+with over 3000 `M` commands proving the disjoint-subpath signature vs. a polyline's
+single `M`; a relation gets no point markers, no details panel, and its "two y values at some
+x" note; a relation and `sin(x)` stack together with the function still getting its
+details panel; a vertical line renders as one path with the Remove button present;
+`0 = 0` is still rejected with a "true at every point" message) and one explorer test
+(a relation is rejected pointing at "Graph it on the Graphing Calculator"). All five
+new assertions passed on the first run against the already-shipped Tasks 1–5
+implementation — no component code changed. Full verification: `astro check` (0
+errors, 0 warnings, 0 hints on the real 96 source files), `vitest run` (346/346),
+`test:integration` (4/4), `playwright test --grep-invert "approved downloaded PNG"`
+(88/88). Coverage on `equation-input.ts`: 96.87% statements, 94.11% branches.
+
+**Rationale:**
+`kind` was kept as a discriminator on the parser's success branch rather than an
+optional `implicitExpr` bolted onto the failure branch, because a relation IS a
+successful parse — typing it as a failure would tell the next reader something false.
+The apparent cost is the real benefit: every one of the five call sites that assumed
+one y per x (points overlay, hover readout, details panel, value table, export table)
+had to narrow on `kind` to type-check, so the compiler enumerated the degradation work
+across Tasks 3–5 instead of relying on a checklist someone could forget an item from.
+
+Relation rows drop the table, details panel, and markers entirely rather than showing
+a "not applicable" placeholder, because `analyzeFunction`'s domain/range/intercepts and
+the value table's per-x sampling both assume a single y per x — a relation has no such
+value to report, so a placeholder would be confidently wrong rather than honestly
+absent. The short note ("two y values at some x") tells the student why, without
+implying a value exists that just isn't shown.
+
+The vertical-line assertion (`toHaveCount(1)` on `g.graph path`) held exactly as
+predicted rather than needing correction — a vertical line is a single disjoint-enough
+interval-sampled path, same as any other relation, just one function-plot renders as
+one path element regardless of shape.
+
+`astro check`'s 0-hints reading differs from the 4-hints baseline recorded in Task 5's
+report and this task's own brief. Both prior readings included a stale, gitignored
+`coverage/` directory (regenerated by an earlier `vitest run --coverage`, last modified
+before this task started) that `astro check`'s full-project scan picked up and flagged;
+Task 4 and Task 5 already identified that noise as pre-existing and unrelated to the
+feature. Removing the stale directory before running `astro check`, then regenerating
+it fresh via this task's own Step 5 coverage run and discarding it again afterward,
+leaves 0 errors / 0 warnings / 0 hints on the 96 real project files — no regression,
+just the noise source removed.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+- Plan: docs/superpowers/plans/2026-07-28-implicit-relations.md
+
+## [2026-07-28 15:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/components/graphing, src/components/export, src/scripts/graphing, src/scripts/export, docs/superpowers/specs
+
+**Summary:**
+Cleared the nine findings from the final whole-branch review of the implicit-relations
+feature. `EquationLabel` takes a `kind` prop and suppresses the solved-form line for
+relations. The export snapshot omits its `table` entirely when no function is plotted,
+and gives relation legend rows no `detail`. The shared relation-refusal message and the
+equation-list note are reworded to name the failed one-y-per-x test. The value table's
+empty state distinguishes "nothing plotted" from "only relations plotted". A single
+`isFunctionEquation` helper replaces four inline `kind === 'function'` checks. Dead
+`rearranged` branch collapsed; two comments corrected. Tests: `RELATION_NOT_SUPPORTED_MESSAGE`
+now has unit coverage, `ExportArtifact` pins the omitted-table branch, `( = 3` and
+`sqrt(x-4.05)*y = x` join the INVALID cases, and a redundant `toMatchObject({ ok: true })`
+test was deleted. Verification: `astro check` 0 errors / 0 warnings / 0 hints,
+`vitest run` 349/349, `playwright test --grep-invert "approved downloaded PNG"` 88/88.
+
+**Rationale:**
+The label defect was the blocker: a relation always carries `input`, so the two-line
+label always drew `y = <expr>` beneath it — but a relation's `expr` is `(lhs) - (rhs)`,
+which is not what y equals. `x^2 + y^2 = 25` rendered as `y = (x^2 + y^2) - (25)` and
+`x = 3` as `y = (x) - (3)`: false mathematics in a teaching tool, now also read aloud
+since KaTeX emits MathML. Suppressing the line — rather than trying to synthesise a
+solved form that does not exist — is the only honest option.
+
+"Some x values have two y values" was true of a circle and false of a vertical line,
+where most x have no y at all and one x has infinitely many. Both the explorer message
+and the equation-list note now state the definition that actually fails, which covers
+every shape the relation path accepts.
+
+`ExportArtifactModel.table` became optional rather than being emitted empty, matching
+the legend and details sections which were already conditionally rendered; the artifact
+guards it the same way. Emitting the section with zero function columns produced a
+one-column `x` table with nine rows and no y beside it.
+
+**Bug Fix Context:**
+Root cause of the label defect was the assumption, recorded in the spec, that "the label
+needs no work" because relations carry `input` — true of the entered-form line, but it
+overlooked that the second line is derived from `expr`, whose meaning changed for
+relations. The spec has been corrected so the assumption is not inherited by a later
+phase.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md

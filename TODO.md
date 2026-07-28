@@ -873,3 +873,44 @@ INVALID. Full suite 334/334, integration 4/4, e2e 83/83.
 **References:**
 - Issue: GH-26 (PR #27)
 - Ledger: .superpowers/sdd/2026-07-28-full-equation-input/progress.md
+
+## [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+
+**Objective:**
+Render true relations — `x² + y² = 25`, `y² = x`, `e^y = x` — on the Graphing Calculator
+via function-plot's implicit sampler, closing the half of GH-26 that Phase 1 deliberately
+deferred. Also picks up vertical lines (`x = 3`), which fall out of the same path and
+which a physical TI-84 cannot graph in Func mode at all.
+
+**Approach:**
+`parseEquationInput` gains a `kind: 'function' | 'relation'` discriminator on its SUCCESS
+branch; a relation's `expr` is `(lhs) - (rhs)` in x and y, exactly what `fnType: 'implicit'`
+consumes. `NOT_LINEAR_IN_Y` routes to relation, as does `NO_Y_PRESENT` unless `B` is also
+identically zero (`0 = 0` stays rejected). `plot.ts` branches its datum builder one line;
+`drawPointsOverlay` and `attachHoverReadout` skip relations. The details panel, value
+table, export table and points checkbox stand down for relation rows, which instead show
+a short note; the export legend still lists them because the exported graph shows them.
+Both explorers reject relations with a message naming the Graphing Calculator.
+
+**Tests:**
+Unit coverage of the full routing table (relations, vertical lines, degenerate `0 = 0`,
+and every Phase 1 function case still `kind: 'function'`). E2E: a circle renders with many
+subpaths, no markers, no details entry, no table column; mixed with `sin(x)` to pin
+stacking; `x = 3` for the vertical line; explorer rejection message. Phase 1's suite must
+pass unmodified. No new visual snapshot — baselines are Linux/Docker-only.
+
+**Risks & Tradeoffs:**
+- `attachHoverReadout` is the sharpest edge: `evalAt` on a relation throws because `y` is
+  unbound, and it runs on every pointer move.
+- `validate()` must bind BOTH x and y for relations, or every relation is rejected as
+  INVALID before reaching the renderer. Caught during spec self-review.
+- Implicit sampling costs 22–25 ms per relation at 600×400 (measured); several at once
+  re-sampled per zoom frame could feel sluggish. Not pre-optimised — the zoom handler is
+  already rAF-throttled.
+- Interval sampling can miss very thin features. Inherent to the sampler.
+- `kind` touches every consumer of `expr` — deliberate, so the compiler enumerates the
+  degradation work, but a wider diff than the user-visible surface suggests.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
