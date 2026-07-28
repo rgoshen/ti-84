@@ -11,7 +11,18 @@
 ## Global Constraints
 
 - **Vitest runs in the `node` environment with no jsdom**, and `include` is `src/**/*.{test,spec}.ts` — only `.ts`. All branching logic must live in pure `src/scripts/**` modules or it cannot be unit-tested at all.
-- **Strict TDD.** Red → Green → Refactor. Write the failing test, run it, watch it fail, then implement.
+- **TDD, scoped by task type.** This is forced by the environment above: `.tsx` is not
+  collected and there is no jsdom, so React components cannot be unit-tested in this repo
+  at all — which is exactly why the logic lives in pure modules.
+  - **Tasks 1–4 (new logic):** strict Red → Green → Refactor. Write the failing test, run
+    it, watch it fail, then implement. Non-negotiable.
+  - **Tasks 5–8 (component wiring):** the *refactor* leg of Red → Green → Refactor. There
+    is no new logic to test — behavior is already pinned by Tasks 1–4's unit tests. The
+    red condition is that **the existing suite must stay green**; a failure there means
+    `expr`'s shape changed. Reviewers: absence of a new failing test is correct here, not
+    a defect.
+  - **Task 9 (integration):** regression coverage added after the wiring exists, since
+    Playwright cannot assert on `data-testid`s that do not yet exist.
 - **≥80% coverage on changed code.**
 - **Commits:** Conventional Commits. **No `Co-authored-by` and no AI-generation tags** — this is a hard project rule.
 - **GitFlow:** all work stays on `feature/full-equation-input`. Never commit to `main`.
