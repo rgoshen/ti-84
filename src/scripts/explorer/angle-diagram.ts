@@ -55,8 +55,46 @@ export interface AngleDiagramOptions {
  * needless clamp at the default view) or too narrow for a long one like
  * `(-0.71, -0.71)`.
  */
-export function labelWidth(text: string): number {
-  return text.length * 5.6;
+export function labelWidth(text: string, fontSize: number = COORD_FONT_SIZE): number {
+  return text.length * 0.56 * fontSize;
+}
+
+/** Font size of the coordinate label, in px. */
+const COORD_FONT_SIZE = 10;
+/** Font size of the whole-radian tick labels, in px. */
+const TICK_FONT_SIZE = 9;
+
+/**
+ * Half-height of a text box, in px. Estimated a little taller than the font size
+ * suggests so ascenders and descenders are covered — the same deliberate
+ * generosity as `labelWidth`, and for the same reason: suppressing a hair early
+ * beats letting two labels touch.
+ */
+function labelHalfHeight(fontSize: number): number {
+  return fontSize * 0.6;
+}
+
+interface LabelBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+function boxesOverlap(a: LabelBox, b: LabelBox): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+}
+
+/** Box for text centred on (x, y) — the tick labels' `text-anchor="middle"`. */
+function centredBox(x: number, y: number, text: string, fontSize: number): LabelBox {
+  const halfWidth = labelWidth(text, fontSize) / 2;
+  const halfHeight = labelHalfHeight(fontSize);
+  return {
+    left: x - halfWidth,
+    right: x + halfWidth,
+    top: y - halfHeight,
+    bottom: y + halfHeight,
+  };
 }
 /** Radial gap between the terminal dot and the label anchor, in px. */
 const LABEL_GAP = 14;
@@ -87,14 +125,13 @@ const LABEL_NUDGE = 12;
  * the x-clamp engages, so `y` stays well inside the viewBox by construction.
  * The domain sweep in the tests holds it to that.
  */
-function coordinateLabelMarkup(
+function coordinateLabelLayout(
   c: number,
   dotRadiusPx: number,
   endRad: number,
   view: number,
   text: string,
-  fill: string,
-): string {
+): { x: number; y: number; textAnchor: 'start' | 'end'; box: LabelBox } {
   const width = labelWidth(text);
   const outward = polarToCartesian(c, c, dotRadiusPx + LABEL_GAP, endRad);
   const rightSide = outward.x >= c;
@@ -109,9 +146,28 @@ function coordinateLabelMarkup(
 
   if (clamped) anchorY += Math.sin(endRad) >= 0 ? -LABEL_NUDGE : LABEL_NUDGE;
 
+  const halfHeight = labelHalfHeight(COORD_FONT_SIZE);
+  return {
+    x: anchorX,
+    y: anchorY,
+    textAnchor,
+    box: {
+      left: rightSide ? anchorX : anchorX - width,
+      right: rightSide ? anchorX + width : anchorX,
+      top: anchorY - halfHeight,
+      bottom: anchorY + halfHeight,
+    },
+  };
+}
+
+function coordinateLabelMarkup(
+  layout: ReturnType<typeof coordinateLabelLayout>,
+  text: string,
+  fill: string,
+): string {
   return (
-    `<text data-role="coordinate-label" x="${anchorX}" y="${anchorY}" fill="${fill}" ` +
-    `font-size="10" font-weight="600" text-anchor="${textAnchor}" ` +
+    `<text data-role="coordinate-label" x="${layout.x}" y="${layout.y}" fill="${fill}" ` +
+    `font-size="${COORD_FONT_SIZE}" font-weight="600" text-anchor="${layout.textAnchor}" ` +
     `dominant-baseline="middle">${text}</text>`
   );
 }
@@ -142,15 +198,37 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   // its arrowhead must vanish together at θ = 0, never one without the other.
   const measureArc = arcPath(c, c, measureR * unit, betaRad, endRad);
 
+  const hasCoordinateLabel =
+    opts.coordinateLabel !== undefined && opts.coordinateLabel !== '';
+  const coordinateLayout = hasCoordinateLabel
+    ? coordinateLabelLayout(c, r * unit, endRad, view, opts.coordinateLabel!)
+    : null;
+
   const ticks = tickAngles(thetaRad)
     .map((a) => {
       const inner = polarToCartesian(c, c, r * unit, betaRad + a);
       const outer = polarToCartesian(c, c, (r + 0.1) * unit, betaRad + a);
       const label = polarToCartesian(c, c, (r + 0.22) * unit, betaRad + a);
+
+      // Near θ ≈ a rad the tick label and the coordinate readout are drawn a few
+      // pixels apart on the same circle, and neither can move outward to escape:
+      // at the maximum radius the tick label already sits within ~9px of the
+      // viewBox edge. Drop the text for the duration of the overlap and keep the
+      // tick line, so the radian position stays marked even while unnamed.
+      const text = `${a} rad`;
+      const hidden =
+        coordinateLayout !== null &&
+        boxesOverlap(
+          centredBox(label.x, label.y, text, TICK_FONT_SIZE),
+          coordinateLayout.box,
+        );
+
       return (
-        `<g>` +
+        `<g data-role="radian-tick">` +
         `<line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" stroke="${colors.axis}" stroke-width="1.5" />` +
-        `<text x="${label.x}" y="${label.y}" fill="${tickText}" font-size="9" text-anchor="middle" dominant-baseline="middle">${a} rad</text>` +
+        (hidden
+          ? ''
+          : `<text x="${label.x}" y="${label.y}" fill="${tickText}" font-size="${TICK_FONT_SIZE}" text-anchor="middle" dominant-baseline="middle">${text}</text>`) +
         `</g>`
       );
     })
@@ -171,8 +249,8 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   // white, below the 4.5:1 floor for text. Weight and size carry the emphasis
   // instead.
   const labelMarkup =
-    opts.coordinateLabel !== undefined && opts.coordinateLabel !== ''
-      ? coordinateLabelMarkup(c, r * unit, endRad, view, opts.coordinateLabel, tickText)
+    coordinateLayout !== null
+      ? coordinateLabelMarkup(coordinateLayout, opts.coordinateLabel!, tickText)
       : '';
 
   return (

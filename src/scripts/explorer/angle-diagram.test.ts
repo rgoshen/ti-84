@@ -165,3 +165,76 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
     expect(readLabel(rotated)!.x).not.toBeCloseTo(readLabel(atZero)!.x, 3);
   });
 });
+
+/**
+ * Around θ ≈ 1 rad (57.296°) the `1 rad` tick label and the coordinate readout are
+ * drawn at nearly the same point: the tick label sits at (r + 0.22)·unit from centre
+ * and the coordinate anchor at r·unit + LABEL_GAP, about 5px apart radially on the
+ * same circle. As θ approaches 1 rad the only separation left is angular, and it goes
+ * to zero — so the two texts land on top of each other and neither can be read.
+ *
+ * Neither label can move outward to escape: at the maximum radius 1.5 the tick label
+ * already sits 151px from centre inside a 160px half-viewBox. The tick's text is
+ * therefore dropped for the duration of the overlap while its tick line stays drawn,
+ * so the radian position remains marked even when it is not named.
+ */
+describe('buildAngleDiagramSvg — tick label vs coordinate label', () => {
+  const tickLines = (svg: string) => (svg.match(/data-role="radian-tick"/g) ?? []).length;
+
+  it('drops the tick text where the coordinate label would cover it', () => {
+    // 60° is 1.047 rad — 2.7° from the tick, the worst of the measured 55–70° band.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 60,
+      coordinateLabel: '(1/2, √3/2)',
+    });
+    expect(svg).not.toContain('1 rad');
+  });
+
+  it('still draws the tick line it suppressed the text for', () => {
+    // Dropping the text must not drop the mark: 1 rad stays located, just unnamed.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 60,
+      coordinateLabel: '(1/2, √3/2)',
+    });
+    expect(tickLines(svg)).toBe(1);
+  });
+
+  it('keeps the tick text when the sweep is well short of it', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 30,
+      coordinateLabel: '(√3/2, 1/2)',
+    });
+    expect(svg).toContain('1 rad');
+  });
+
+  it('keeps the tick text once the sweep has moved past it', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 90,
+      coordinateLabel: '(0, 1)',
+    });
+    expect(svg).toContain('1 rad');
+  });
+
+  it('keeps the tick text when there is no coordinate label to collide with', () => {
+    // Suppression is a response to a specific overlap, not a property of the angle.
+    const svg = buildAngleDiagramSvg({ ...base, theta: 60 });
+    expect(svg).toContain('1 rad');
+  });
+
+  it('suppresses only the overlapping tick, not every tick on the figure', () => {
+    // 60° into the second radian: the 1 rad tick is far behind the terminal point
+    // and must keep its text while the 2 rad tick, sitting under the label, loses it.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 118, // 2.06 rad — just past the 2 rad tick
+      coordinateLabel: '(-0.47, 0.88)',
+    });
+    expect(svg).toContain('1 rad');
+    expect(svg).not.toContain('2 rad');
+    expect(tickLines(svg)).toBe(2);
+  });
+});

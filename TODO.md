@@ -746,3 +746,38 @@ with `astro preview`, which never loads `nginx.conf`.
 
 **References:**
 - RFC 9111 §4.2.2 (heuristic freshness)
+
+## [2026-07-27] Fix: whole-radian tick label collides with the coordinate readout
+
+**Objective:**
+Around θ ≈ 1 rad the `1 rad` tick label and the terminal point's coordinate readout
+render on top of each other, leaving both unreadable. Measured on the built site, the
+overlap runs from roughly 55° to 70°, worst at 60–65° (~28–34px of horizontal overlap).
+
+**Approach:**
+The collision is structural, not a rounding artifact: the tick label sits at
+`(r + 0.22) · unit` from centre and the coordinate anchor at `r · unit + LABEL_GAP` —
+about 5px apart radially on the same circle — so as θ approaches 1 rad the only
+separation left is angular, and it goes to zero. Pushing either label outward is not
+available: at the maximum radius 1.5 the tick label already sits 151px from centre in a
+160px half-viewBox.
+
+Suppress the tick's *text* while it would overlap, keeping its tick *line* drawn, so the
+radian position stays marked. Implemented by giving the coordinate label a single
+geometry function that both the markup builder and the overlap test consume, so the two
+cannot disagree about where the label is.
+
+**Tests:**
+Unit tests over the pure builder: text dropped at 60°, kept at 30° and 90°, kept at 60°
+when no coordinate label is drawn at all, and the tick line present in every case.
+Verified against the built site by measuring rendered bounding boxes across a θ sweep.
+
+**Risks & Tradeoffs:**
+- Loses the radian cue at the angles where degrees-vs-radians is most instructive; the
+  tick line remains as the positional marker.
+- Width is estimated from character count (no font metrics in a pure string builder), so
+  the band is approximate. Erring wide costs a slightly early suppression, which is the
+  cheaper failure than two overlapping labels.
+
+**References:**
+- Screenshot: Angle Explorer at 30°, reported 2026-07-27
