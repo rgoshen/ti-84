@@ -39,11 +39,17 @@ export type SolveResult =
   | { ok: true; expr: string }
   | { ok: false; reason: 'NOT_LINEAR_IN_Y' | 'NO_Y_PRESENT' | 'INVALID' };
 
-// Spread across negative, positive, and fractional values so a curve that happens to
-// be linear-looking near one point cannot pass by coincidence.
-const SAMPLE_XS = [-3.1, -0.7, 0.5, 2.3];
+// Sample x values for the linearity probe. Spread across negative, fractional, and
+// positive values so functions with restricted domains still get several usable
+// samples (sqrt and log need x > 0; asin needs |x| <= 1).
+const SAMPLE_XS = [-3.1, -0.7, -0.25, 0.25, 0.5, 1.7, 2.3, 4.1];
 const LINEARITY_TOL = 1e-9;
 const ZERO_TOL = 1e-12;
+
+// Samples where the equation is undefined are skipped, so a probe must still land on
+// at least this many usable points. One point cannot distinguish A*y + B from a curve
+// that merely touches it there.
+const MIN_USABLE_SAMPLES = 2;
 
 /** Evaluate `expr` at x, or null if it is undefined/non-finite there. */
 function at(expr: string, x: number): number | null {
@@ -69,23 +75,46 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
     const A = simplify(`(${F1}) - (${B})`).toString();
     const F2 = simplify(F, { y: 2 }).toString();
 
-    // F(y=2) must equal 2A + B everywhere if F really is linear in y.
-    const linear = SAMPLE_XS.every((x) => {
+    // F(y=2) must equal 2A + B everywhere if F really is linear in y. Samples where
+    // the equation is undefined (e.g. sqrt(x) for x < 0) are skipped rather than
+    // counted as failures.
+    let usable = 0;
+    let linear = true;
+    for (const x of SAMPLE_XS) {
       const got = at(F2, x);
       const a = at(A, x);
       const b = at(B, x);
-      if (got === null || a === null || b === null) return false;
-      return Math.abs(got - (2 * a + b)) < LINEARITY_TOL;
-    });
+      if (got === null || a === null || b === null) continue; // undefined here — skip
+      usable += 1;
+      // Deliberately no `break` here: usable must count every defined sample across
+      // the full sweep, not just the ones before the first mismatch. Breaking early
+      // undercounts usable for equations that mismatch on the very first sample
+      // (e.g. `y^2 = x`, defined everywhere), which would wrongly fall through to the
+      // `usable < MIN_USABLE_SAMPLES` gate below and report INVALID instead of
+      // NOT_LINEAR_IN_Y.
+      if (Math.abs(got - (2 * a + b)) >= LINEARITY_TOL) {
+        linear = false;
+      }
+    }
+    // Undefined across the whole sample range: we cannot judge linearity at all, so
+    // report it as invalid rather than mislabelling a domain problem as non-linearity.
+    if (usable < MIN_USABLE_SAMPLES) return { ok: false, reason: 'INVALID' };
     if (!linear) return { ok: false, reason: 'NOT_LINEAR_IN_Y' };
 
     // A identically zero means y never appears: `2x + 3 = 7` is the vertical line
     // x = 2, which is not a function of x.
-    const noY = SAMPLE_XS.every((x) => {
+    let aSamples = 0;
+    let aAllZero = true;
+    for (const x of SAMPLE_XS) {
       const a = at(A, x);
-      return a !== null && Math.abs(a) < ZERO_TOL;
-    });
-    if (noY) return { ok: false, reason: 'NO_Y_PRESENT' };
+      if (a === null) continue;
+      aSamples += 1;
+      if (Math.abs(a) >= ZERO_TOL) {
+        aAllZero = false;
+        break;
+      }
+    }
+    if (aSamples > 0 && aAllZero) return { ok: false, reason: 'NO_Y_PRESENT' };
 
     return { ok: true, expr: simplify(`-(${B}) / (${A})`).toString() };
   } catch {

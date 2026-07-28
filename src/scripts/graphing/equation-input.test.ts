@@ -84,4 +84,19 @@ describe('solveLinearY', () => {
   it('reports invalid input rather than throwing', () => {
     expect(solveLinearY('@@@', 'x')).toEqual({ ok: false, reason: 'INVALID' });
   });
+
+  // Domain-restricted functions must not be mistaken for non-linear ones. sqrt, log
+  // and cbrt are all parent functions in this app, so `y = sqrt(x)` is real input and
+  // worked before this module replaced the y= regex.
+  it.each([
+    ['y', 'sqrt(x)', 'sqrt(x)'],
+    ['y', 'log(x)', 'log(x)'],
+    ['2y', 'sqrt(x)', 'sqrt(x) / 2'],
+  ])('solves %s = %s despite an undefined region', (lhs, rhs, expected) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({ ok: true, expr: expected });
+  });
+
+  it('solves a linear equation whose pole lands on a sample point', () => {
+    expect(solveLinearY('y', '1/(x-0.5)')).toMatchObject({ ok: true });
+  });
 });
