@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+## [0.6.1](https://github.com/rgoshen/ti-84/compare/v0.6.0...v0.6.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **docker:** revalidate HTML so a release is not masked by browser cache ([67965f1](https://github.com/rgoshen/ti-84/commit/67965f108025616e19fcc14c8ed04a54467bc88c))
+
 # [0.6.0](https://github.com/rgoshen/ti-84/compare/v0.5.0...v0.6.0) (2026-07-28)
 
 
