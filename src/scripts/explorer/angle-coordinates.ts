@@ -13,6 +13,7 @@
  */
 import { degreesToRadians, formatPiLatex, piMultiple } from './angle';
 import { formatDegrees } from './angle-parse';
+import { formatFourDecimals as round4 } from './format';
 import {
   exactCoordinates,
   formatExactLatex,
@@ -37,9 +38,6 @@ export interface CoordinateReadout {
   xText: string;
   yText: string;
 }
-
-/** Four decimals, matching the rest of the readout, with no float noise. */
-const round4 = (n: number): string => String(Number(n.toFixed(4)));
 
 /**
  * Two fixed decimals for the diagram label, where width is the constraint —

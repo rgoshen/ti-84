@@ -27,6 +27,7 @@ import {
 } from '@/scripts/explorer/angle-parse';
 import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
+import { formatFourDecimals as round4 } from '@/scripts/explorer/format';
 import {
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,
@@ -35,9 +36,6 @@ import {
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
-
-/** Round for display without exposing float noise. */
-const round4 = (n: number): string => String(Number(n.toFixed(4)));
 
 /**
  * The five-way identity plus arc length, as KaTeX source.

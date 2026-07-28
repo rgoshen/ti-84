@@ -7,6 +7,7 @@
  */
 import { evaluate } from 'mathjs';
 import { degreesToRadians, radiansToDegrees } from './angle';
+import { formatFourDecimals as trim } from './format';
 
 export type ParseResult = { ok: true; degrees: number } | { ok: false; error: string };
 
@@ -54,11 +55,6 @@ export function parseAngleInput(raw: string, unit: 'deg' | 'rad'): ParseResult {
   }
   return { ok: true, degrees };
 }
-
-/** Four decimals is enough to show 57.2958 without exposing float noise. */
-const DECIMALS = 4;
-
-const trim = (n: number): string => String(Number(n.toFixed(DECIMALS)));
 
 export function formatDegrees(deg: number): string {
   return trim(deg);

@@ -3058,3 +3058,30 @@ the algorithm's actual behaviour.
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Commit: 358e261 (removed the inward flip)
+
+## [2026-07-27 20:11] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — shared display formatter
+
+**Summary:**
+Added `src/scripts/explorer/format.ts`, a dependency-free module exporting
+`formatFourDecimals`, and pointed `angle-coordinates.ts`'s `round4`,
+`angle-parse.ts`'s `trim`, and `AngleExplorer.tsx`'s `round4` at it via aliased
+imports (`import { formatFourDecimals as round4 } from '.../format'`),
+deleting all three local one-line copies and the now-unused `DECIMALS`
+constant in `angle-parse.ts`. Added `format.test.ts` covering rounding,
+an already-exact value, a whole number, zero, and negative zero.
+
+**Rationale:**
+The three copies (`angle-coordinates.ts:42`, `AngleExplorer.tsx:40`,
+`angle-parse.ts`'s `trim`) were byte-identical in behaviour — verified before
+consolidating. A new neutral module was chosen over importing the formatter
+out of `angle-parse.ts` because `angle-parse.ts` imports `mathjs`; making the
+presentation layer and the React component depend on a parsing module (and
+drag `mathjs` along) just to borrow a one-line formatter would be worse
+layering than the duplication it removes. `format.ts` has no imports, so
+none of the three consuming layers picks up another's dependency by using it.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
