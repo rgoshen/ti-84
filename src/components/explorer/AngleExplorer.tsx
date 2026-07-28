@@ -27,7 +27,7 @@ import {
 } from '@/scripts/explorer/angle-parse';
 import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
-import { formatFourDecimals as round4 } from '@/scripts/explorer/format';
+import { round4 } from '@/scripts/explorer/format';
 import {
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,

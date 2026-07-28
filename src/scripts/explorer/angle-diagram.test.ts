@@ -150,29 +150,6 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
     expect(label.x).toBeGreaterThan(236.2); // outside the terminal dot
   });
 
-  it('clamps the label y at a small, non-default view/unit where the anchor would otherwise leave the viewBox', () => {
-    // The default figure (view=320, unit=88) never drives anchorY outside
-    // [12, view - 6] — see the guard note on coordinateLabelMarkup — so this
-    // drives it with a much smaller view/unit instead, both of which are
-    // public options on buildAngleDiagramSvg. At view=60, unit=20, r=1,
-    // θ=90°: the outward anchor is (30, -4); its own x-clamp then nudges the
-    // anchor vertically by -12 (θ's sine is non-negative) to y=-16, well
-    // below the 12px floor. Computed independently in Node against this same
-    // arithmetic before writing this test — not guessed.
-    const view = 60;
-    const unit = 20;
-    const svg = buildAngleDiagramSvg({
-      ...base,
-      view,
-      unit,
-      theta: 90,
-      coordinateLabel: '(0.00, 1.00)',
-    });
-    const label = readLabel(svg)!;
-    expect(label).not.toBeNull();
-    expect(label.y).toBe(12);
-  });
-
   it('places the label at β + θ, so it travels with the dot it belongs to', () => {
     const atZero = buildAngleDiagramSvg({
       ...base,

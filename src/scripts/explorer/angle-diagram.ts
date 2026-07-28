@@ -82,12 +82,10 @@ const LABEL_NUDGE = 12;
  * `labelWidth(text)` estimates from character count rather than a fixed budget,
  * so a short label like `(1, 0)` is not needlessly clamped at the default view.
  *
- * The final vertical clamp guards `view`/`unit` callers smaller than the live
- * diagram's defaults (320 / 88) — both pre-date this feature and remain public
- * options on `buildAngleDiagramSvg`. Across the app's actual reachable domain
- * (r 0.5–1.5, θ ±360°, default view/unit) the anchor never leaves [14, 306]
- * against a [12, view − 6] bound, so at the live figure's own settings this
- * clamp never engages — it exists for a smaller figure, where it does.
+ * There is deliberately no vertical clamp: the anchor is `dotRadiusPx + GAP`
+ * from centre and the nudge only fires on the near-horizontal positions where
+ * the x-clamp engages, so `y` stays well inside the viewBox by construction.
+ * The domain sweep in the tests holds it to that.
  */
 function coordinateLabelMarkup(
   c: number,
@@ -111,11 +109,8 @@ function coordinateLabelMarkup(
 
   if (clamped) anchorY += Math.sin(endRad) >= 0 ? -LABEL_NUDGE : LABEL_NUDGE;
 
-  // Dead at the live figure's own view/unit (see the guard note above) — this
-  // is for callers that pass a smaller view/unit than the 320/88 defaults.
-  const y = Math.min(Math.max(anchorY, 12), view - 6);
   return (
-    `<text data-role="coordinate-label" x="${anchorX}" y="${y}" fill="${fill}" ` +
+    `<text data-role="coordinate-label" x="${anchorX}" y="${anchorY}" fill="${fill}" ` +
     `font-size="10" font-weight="600" text-anchor="${textAnchor}" ` +
     `dominant-baseline="middle">${text}</text>`
   );

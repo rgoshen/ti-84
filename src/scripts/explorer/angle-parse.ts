@@ -7,7 +7,7 @@
  */
 import { evaluate } from 'mathjs';
 import { degreesToRadians, radiansToDegrees } from './angle';
-import { formatFourDecimals as trim } from './format';
+import { round4 } from './format';
 
 export type ParseResult = { ok: true; degrees: number } | { ok: false; error: string };
 
@@ -57,9 +57,9 @@ export function parseAngleInput(raw: string, unit: 'deg' | 'rad'): ParseResult {
 }
 
 export function formatDegrees(deg: number): string {
-  return trim(deg);
+  return round4(deg);
 }
 
 export function formatRadiansDecimal(deg: number): string {
-  return trim(degreesToRadians(deg));
+  return round4(degreesToRadians(deg));
 }

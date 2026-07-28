@@ -18,4 +18,4 @@
  * rounds to negative zero (e.g. `cos(270°)` landing on `-1.8e-16`) already
  * displays as `"0"` rather than `"-0"`.
  */
-export const formatFourDecimals = (n: number): string => String(Number(n.toFixed(4)));
+export const round4 = (n: number): string => String(Number(n.toFixed(4)));

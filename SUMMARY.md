@@ -3145,3 +3145,45 @@ hypothetical.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:20] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — correcting two over-corrections
+
+**Summary:**
+Removed the coordinate label's vertical clamp and the contrived test written to
+exercise it, and dropped the import aliases introduced when the shared decimal
+formatter was consolidated. The formatter is now named `round4` at its definition and
+at every call site.
+
+**Rationale:**
+Two of the three debt-clearing changes made things worse rather than better, and are
+reverted here.
+
+The vertical clamp never fires at the live figure's view/unit — the anchor sits at
+`dotRadiusPx + GAP` from centre and the nudge only fires on the near-horizontal
+positions where the x-clamp engages, so y stays inside the viewBox by construction.
+The previous commit kept the clamp and added a test driving it with `view=60, unit=20`
+— values no caller uses and that would render an unusable figure. That converted a
+dead line into a dead line plus a test that makes the dead line look load-bearing, so
+a future reader deleting it would appear to be removing coverage. The clamp is gone;
+the existing domain sweep holds y inside the viewBox on real values instead.
+
+The formatter consolidation was correct in substance but was wired up with
+`formatFourDecimals as round4` and `as trim`, leaving one function known by three
+names — a reader who greps `round4` lands on an aliased import of something else.
+Worse for comprehension than the three one-line duplicates it replaced. Now one name.
+
+Verified with a full-domain sweep (r 0.5–1.5, θ ±360°, four β values, real labels from
+`buildCoordinateReadout`): y stays within [12, 314] of a [0, 320] viewBox with no
+clamp present.
+
+**Bug Fix Context:**
+While renaming, a `sed` with `\b` silently no-opped on BSD sed, leaving `formatDegrees`
+and `formatRadiansDecimal` calling a `trim` that no longer existed — 22 test failures.
+Both call sites corrected. The same pattern had also risked rewriting `raw.trim()`, the
+String method; it was left intact.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates

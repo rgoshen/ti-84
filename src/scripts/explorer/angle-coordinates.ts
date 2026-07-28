@@ -13,7 +13,7 @@
  */
 import { degreesToRadians, formatPiLatex, piMultiple } from './angle';
 import { formatDegrees } from './angle-parse';
-import { formatFourDecimals as round4 } from './format';
+import { round4 } from './format';
 import {
   exactCoordinates,
   formatExactLatex,
