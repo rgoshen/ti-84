@@ -3535,3 +3535,33 @@ scopes the TeX path to the Graphing Calculator.
 **References:**
 - Issue: GH-26
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:17] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/components/graphing/GraphingCalculator.tsx
+
+**Summary:**
+`EquationLabel` clips each rendered LINE (`block truncate`) and gives its wrapper
+`min-w-0`, so a long expression stays inside its row instead of running past the Remove
+button, while the two-line form still shows both lines. `equation.input` now goes
+through `formatExportEquation` in the details title and the export legend, and the
+colour swatch's `aria-label` names the entered form when there is one.
+
+**Rationale:**
+`truncate` was previously on the call site, where it clipped the two-line label to one
+line; removing it left nothing to contain `.katex`'s `white-space: nowrap`. Moving the
+clip to the inner lines fixes the overflow without collapsing the second line.
+`min-w-0` is required as well: a flex item's default `min-width: auto` refuses to shrink
+below its content, so the inner clipping would never engage without it. Routing `input`
+through `formatExportEquation` stops the entered form from showing literal `x^2` beside
+a solved form rendered as `x²`, and the aria-label now matches the details title it sits
+next to.
+
+**Bug Fix Context:**
+Root cause: the label's containing row (`flex min-w-0`) can shrink, but the label span
+inside it could not, so it overflowed the row rather than being clipped by it.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md

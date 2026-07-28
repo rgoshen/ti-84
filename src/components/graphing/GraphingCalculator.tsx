@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import FunctionDetailsPanels, {
   type FunctionDetailsPanelEntry,
@@ -64,7 +65,11 @@ function buildEquationDetails(
 ): FunctionDetailsPanelEntry[] {
   return equations.map((equation) => ({
     id: equation.id,
-    title: `Function details · ${equation.input ?? `y = ${formatExportEquation(equation.expr)}`}`,
+    title: `Function details · ${
+      equation.input
+        ? formatExportEquation(equation.input)
+        : `y = ${formatExportEquation(equation.expr)}`
+    }`,
     color: equation.color,
     facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
   }));
@@ -139,18 +144,31 @@ function EquationLabel({
     <span>{`y = ${expr}`}</span>
   );
 
+  // `.katex` sets `white-space: nowrap`, so a long expression cannot wrap and would run
+  // past the Remove button. Each LINE clips itself instead; the wrapper is deliberately
+  // left un-clipped so the two-line form still shows both lines. `min-w-0` overrides the
+  // `min-width: auto` a flex item gets by default, without which the wrapper refuses to
+  // shrink and the inner clipping never engages. The `title` carries the full text.
+  const wrapper = cn('min-w-0', className);
+
   if (!input) {
-    return <span className={className}>{solved}</span>;
+    return (
+      <span className={wrapper}>
+        <span className="block truncate" title={`y = ${expr}`}>
+          {solved}
+        </span>
+      </span>
+    );
   }
 
   const enteredHtml = texToHtml(equationToTex(input));
   return (
-    <span className={className}>
-      <span className="block" data-testid="eq-entered-form" title={input}>
+    <span className={wrapper}>
+      <span className="block truncate" data-testid="eq-entered-form" title={input}>
         {enteredHtml ? <span dangerouslySetInnerHTML={{ __html: enteredHtml }} /> : input}
       </span>
       <span
-        className="block text-muted-foreground"
+        className="block truncate text-muted-foreground"
         data-testid="eq-solved-form"
         title={`y = ${expr}`}
       >
@@ -360,7 +378,9 @@ export default function GraphingCalculator(): React.JSX.Element {
         exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
         window: snapshotWindow,
         legend: snapshotEquations.map((equation) => ({
-          label: equation.input ?? `y = ${formatExportEquation(equation.expr)}`,
+          label: equation.input
+            ? formatExportEquation(equation.input)
+            : `y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
           detail: equation.showPoints
             ? `Points shown (${equation.pointShape})`
@@ -461,7 +481,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                         />
                         <input
                           type="color"
-                          aria-label={`Color for y = ${eq.expr}`}
+                          aria-label={`Color for ${eq.input ?? `y = ${eq.expr}`}`}
                           value={eq.color}
                           className="absolute inset-0 cursor-pointer opacity-0"
                           onChange={(e) => updateEquation(eq.id, { color: e.target.value })}
