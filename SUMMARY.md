@@ -2740,3 +2740,42 @@ angle-explorer baseline.
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 17:55] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — Unit Circle Coordinates
+
+**Summary:**
+Added the five-task implementation plan and corrected two things in the spec that the
+plan's research disproved. No code changed in this commit.
+
+**Rationale:**
+Writing the plan surfaced a wrong assumption in the spec: it said the readout would be
+covered "via the existing component test approach," but `vitest.config.ts` runs in the
+node environment, collects `src/**/*.{test,spec}.ts` only, and the project has no jsdom
+or `@testing-library`. The one component test that exists
+(`FunctionDetailsPanels.test.ts`) uses `renderToStaticMarkup`, which does not work for
+`AngleExplorer.tsx` — it uses `useState`, `useEffect`, and `document`.
+
+That would have left the feature's real branching untested, so the design gained a
+second pure module, `angle-coordinates.ts`, holding every display string: the
+chart-style triple line, the worked equations, the narrow SVG label, export text, and
+spoken prose. The component is left with nothing to do but render, and all the
+branching is reachable by the node test runner.
+
+Also settled during planning: a whole coordinate is stated once rather than as `0 = 0`,
+since at 90° the exact x and its decimal are the same string.
+
+**Bug Fix Context (if applicable):**
+Three defects were caught in the plan's own self-review before any code was written:
+the diagram-label test regex listed SVG attributes in an order the builder does not
+emit and would never have matched; a rounding expectation read 0.9583 where
+`1.2 × cos 37°` is 0.95836, which rounds to 0.9584; and the Playwright slider locator
+used `getByRole('slider', {name})`, which does not resolve because Radix puts
+`role="slider"` on the thumb while the accessible name sits on the root.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Plan: docs/superpowers/plans/2026-07-27-unit-circle-coordinates.md
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md

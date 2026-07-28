@@ -132,6 +132,27 @@ readout, where there is room for it.
 measured from θ. A note under the diagram states this: *"β rotates the view;
 coordinates are measured from θ."*
 
+### New module: `src/scripts/explorer/angle-coordinates.ts`
+
+Where `unit-circle.ts` answers *what is the exact point*, this module answers *how
+should it read*. It composes `unit-circle.ts` with the existing `angle.ts` and
+`angle-parse.ts` into every display string the readout needs: the chart-style triple
+line, the worked equations, the narrow SVG label, plain export text, and
+screen-reader prose.
+
+It exists as a module rather than as functions inside the React component because the
+feature's real branching lives here — dropping a `1 ×` prefix on the unit circle,
+falling back from a radical to a named `cos 37°`, choosing `=` over `≈` when the
+decimal is exact, and stating a whole coordinate once instead of writing `0 = 0`.
+The project's test runner uses the node environment with no jsdom and collects `.ts`
+files only, so logic inside a `.tsx` component is unreachable by unit tests. Placing
+it here makes all of it testable and leaves the component with nothing to do but
+render.
+
+**Public API:** `buildCoordinateReadout(theta: number, r: number): CoordinateReadout`,
+returning `tripleLatex`, `xLatex`, `yLatex`, `spoken`, `labelText`, `pairText`,
+`xText`, and `yText`.
+
 ### Modified: `src/components/explorer/AngleExplorer.tsx`
 
 A coordinates block below the existing conversion chain:
@@ -166,7 +187,8 @@ transformation-explorer — so this change requires no PNG baseline regeneration
 
 ## Testing
 
-Strict TDD, red before green, in this order:
+Strict TDD, red before green. The implementation plan fixes the task sequence; this
+section states what must be covered:
 
 1. **`unit-circle.test.ts`** — all 16 angles cross-checked against `Math.cos`/`Math.sin`
    within epsilon via `exactToNumber`; negative and past-360° inputs normalise
@@ -177,9 +199,18 @@ Strict TDD, red before green, in this order:
    inside the viewBox across the full `r × θ` extremes; the anchor flips inward and the
    `text-anchor` swaps at the overflow boundary; the label shows the exact pair at
    `r = 1` on a special angle and decimals otherwise.
-3. **`AngleExplorer` readout** — via the existing component test approach: the `1 ×`
-   prefix is dropped at `r = 1`; a non-special angle produces `cos 37°` rather than a
-   radical; the spoken string includes coordinates.
+3. **`angle-coordinates.test.ts`** — the `1 ×` prefix is dropped at `r = 1`; a
+   non-special angle produces `cos 37°` rather than a radical; `=` is used for rational
+   values and `≈` only where a radical forces rounding; a whole coordinate is stated
+   once rather than as `0 = 0`; the label folds `-0.00` to `0.00`; the spoken string
+   carries no latex markup.
+
+   The readout strings are tested here rather than through the component because
+   `vitest.config.ts` runs in the node environment, collects `src/**/*.{test,spec}.ts`
+   only, and the project has no jsdom or `@testing-library`. `AngleExplorer.tsx` uses
+   `useState`, `useEffect`, and `document`, so the `renderToStaticMarkup` pattern used
+   for stateless components (`src/components/FunctionDetailsPanels.test.ts`) does not
+   apply to it. Its verification is a type-check plus Playwright.
 4. **`tests/e2e/angle.spec.ts`** — the coordinates block renders and updates when the
    radius slider moves.
 5. **`tests/e2e/angle-export.spec.ts`** — the new fact and table rows appear in the
