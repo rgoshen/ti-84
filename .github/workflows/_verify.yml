@@ -28,6 +28,12 @@ jobs:
       - name: Unit tests
         run: npx vitest run
 
+      # Runs the real nginx.conf under nginx:alpine. The E2E suite serves the site
+      # with `astro preview` and so cannot catch a regression in the shipped
+      # container's cache headers. Docker is preinstalled on ubuntu-latest.
+      - name: Integration tests (nginx config)
+        run: npm run test:integration
+
       - name: Build
         run: npm run build
 

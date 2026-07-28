@@ -3237,3 +3237,67 @@ generated; `npm ci` produced no lockfile drift.
 **References:**
 - Upstream: GH-17 (dependabot npm_and_yarn group)
 - Branch PR: GH-22
+
+## [2026-07-27 21:05] Commit Summary
+
+**Change Type:** Fix
+**Scope:** nginx / Docker image
+
+**Summary:**
+Gave the nginx image an explicit cache policy: `Cache-Control: no-cache` on documents
+served by `location /`, and `public, max-age=31536000, immutable` on `/_astro/`. Added
+`tests/integration/nginx-headers.test.ts`, which runs the real `nginx.conf` under
+`nginx:alpine` and asserts both policies plus the existing clean-URL behaviour, along
+with a separate `vitest.integration.config.ts` and a `test:integration` script.
+
+**Bug Fix Context:**
+Root cause: `nginx.conf` emitted `ETag` and `Last-Modified` but no `Cache-Control`, so
+browsers applied heuristic freshness (RFC 9111 §4.2.2) — reusing a cached document for
+roughly 10% of its age since `Last-Modified` without sending any request. Because Astro
+content-hashes its bundles, a stale document keeps referencing the previous bundle
+filename, so the freshly built one is never requested. The visible symptom was a correct
+`docker compose up --build` appearing to change nothing; rebuilding could not fix it,
+because the request that would discover the new bundle was never sent. Confirmed by
+inspecting the running container: the merged feature was present in
+`_astro/AngleExplorer.DVuvR4UI.js` and rendered correctly in a cold-cache browser while
+the user's own browser showed the previous build.
+
+**Rationale:**
+`no-cache` rather than `no-store` — it permits storage and still allows a conditional
+request to 304, so the cost is a round trip rather than a re-download. The long-lived
+rule is scoped to the `/_astro/` prefix rather than by file extension because the safety
+of `immutable` comes from the hashed filename, not the file type; applying it by
+extension would pin unhashed files in `public/` for a year. Testing through Playwright
+was rejected as false confidence: that suite serves the site with `astro preview`, which
+never reads `nginx.conf`, so it would pass while the shipped container regressed.
+
+**Verification:**
+Integration suite red before the config change (3 failing cache assertions, clean-URL
+assertion already green), green after — 4/4. 269/269 unit tests; 75/75 e2e; `astro
+check` 0 errors / 0 warnings. Verified against a real image built from this branch:
+HTML returns `no-cache`, the actual emitted bundle
+`/_astro/AngleExplorer.DVuvR4UI.js` returns `max-age=31536000, immutable`, and
+`/explorers/angles` still answers 200 with no redirect.
+
+**References:**
+- TODO.md: [2026-07-27] Fix: HTML cache headers in the nginx image
+- RFC 9111 §4.2.2 (heuristic freshness)
+
+## [2026-07-27 21:07] Commit Summary
+
+**Change Type:** CI
+**Scope:** .github/workflows
+
+**Summary:**
+Added an "Integration tests (nginx config)" step to the reusable verify workflow,
+running `npm run test:integration` after the unit tests.
+
+**Rationale:**
+A test that only runs locally does not prevent a regression. The step sits outside
+`npm test` so the unit loop stays hermetic and daemon-free, and runs before the build
+because it exercises `nginx.conf` rather than the compiled site — failing early costs
+less than failing after a build and a browser install. Docker is preinstalled on
+`ubuntu-latest`, so no extra setup action is needed.
+
+**References:**
+- TODO.md: [2026-07-27] Fix: HTML cache headers in the nginx image
