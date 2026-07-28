@@ -3750,3 +3750,52 @@ just the noise source removed.
 - TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
 - Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
 - Plan: docs/superpowers/plans/2026-07-28-implicit-relations.md
+
+## [2026-07-28 15:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/components/graphing, src/components/export, src/scripts/graphing, src/scripts/export, docs/superpowers/specs
+
+**Summary:**
+Cleared the nine findings from the final whole-branch review of the implicit-relations
+feature. `EquationLabel` takes a `kind` prop and suppresses the solved-form line for
+relations. The export snapshot omits its `table` entirely when no function is plotted,
+and gives relation legend rows no `detail`. The shared relation-refusal message and the
+equation-list note are reworded to name the failed one-y-per-x test. The value table's
+empty state distinguishes "nothing plotted" from "only relations plotted". A single
+`isFunctionEquation` helper replaces four inline `kind === 'function'` checks. Dead
+`rearranged` branch collapsed; two comments corrected. Tests: `RELATION_NOT_SUPPORTED_MESSAGE`
+now has unit coverage, `ExportArtifact` pins the omitted-table branch, `( = 3` and
+`sqrt(x-4.05)*y = x` join the INVALID cases, and a redundant `toMatchObject({ ok: true })`
+test was deleted. Verification: `astro check` 0 errors / 0 warnings / 0 hints,
+`vitest run` 349/349, `playwright test --grep-invert "approved downloaded PNG"` 88/88.
+
+**Rationale:**
+The label defect was the blocker: a relation always carries `input`, so the two-line
+label always drew `y = <expr>` beneath it — but a relation's `expr` is `(lhs) - (rhs)`,
+which is not what y equals. `x^2 + y^2 = 25` rendered as `y = (x^2 + y^2) - (25)` and
+`x = 3` as `y = (x) - (3)`: false mathematics in a teaching tool, now also read aloud
+since KaTeX emits MathML. Suppressing the line — rather than trying to synthesise a
+solved form that does not exist — is the only honest option.
+
+"Some x values have two y values" was true of a circle and false of a vertical line,
+where most x have no y at all and one x has infinitely many. Both the explorer message
+and the equation-list note now state the definition that actually fails, which covers
+every shape the relation path accepts.
+
+`ExportArtifactModel.table` became optional rather than being emitted empty, matching
+the legend and details sections which were already conditionally rendered; the artifact
+guards it the same way. Emitting the section with zero function columns produced a
+one-column `x` table with nine rows and no y beside it.
+
+**Bug Fix Context:**
+Root cause of the label defect was the assumption, recorded in the spec, that "the label
+needs no work" because relations carry `input` — true of the entered-form line, but it
+overlooked that the second line is derived from `expr`, whose meaning changed for
+relations. The spec has been corrected so the assumption is not inherited by a later
+phase.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md

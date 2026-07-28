@@ -59,7 +59,10 @@ snapping and path-length sampling are meaningless on it.
    details-panel entry — and a short note saying why.
 6. Relations DO appear in the export legend, because the exported graph shows them.
 7. Both explorers still reject relations, with a message naming the Graphing Calculator.
-8. Existing function behavior is untouched — Phase 1's suite must pass unmodified.
+8. Existing FUNCTION behavior is unregressed. Test updates are limited to assertions that
+   encode behavior this phase deliberately changes — the shared relation message and the
+   equation-list note are both reworded here, and the assertions pinning their old text
+   move with them.
 
 ## Decisions
 
@@ -185,11 +188,19 @@ DOM they depend on is unchanged.
 | Points checkbox | Hidden on relation rows |
 | Equation list | Note under the label explaining the missing features |
 
-The label needs no work: relations always carry `input`, so the existing two-line
-`EquationLabel` renders the typed equation through `equationToTex`, which already handles
-`=` by rendering each side separately.
+`EquationLabel` takes a `kind` prop and must **suppress the solved-form line for
+relations**. Relations always carry `input`, so the entered-form line comes for free
+through `equationToTex`, which already handles `=` by rendering each side separately — but
+the second line the two-line label draws beneath it is `y = <expr>`, and a relation's
+`expr` is `(lhs) - (rhs)`, which is *not* what y equals. Left in, it renders
+`y = (x^2 + y^2) - (25)` for `x^2 + y^2 = 25` and `y = (x) - (3)` for `x = 3`: false
+mathematics in a teaching tool, and spoken aloud too, since KaTeX emits MathML. A relation
+gets the entered-form line only; functions keep both.
 
-Note text: *"A relation — two y values at some x, so the table and details don't apply."*
+Note text: *"A relation — it doesn't give exactly one y for each x, so the table and
+details don't apply."* Phrased about the failed one-y-per-x test rather than "two y values
+at some x", which is true of a circle but false of a vertical line — where most x have no
+y at all and one x has infinitely many.
 
 ### Modified: `FunctionExplorer.tsx` and `TransformationExplorer.tsx`
 
@@ -200,9 +211,13 @@ per x.
 The shared `NOT_LINEAR_IN_Y` message is rewritten, since the old advice to hand-decompose
 is now advice for a problem the student no longer has:
 
-> That's a relation, not a function — some x values have two y values.
+> That's a relation, not a function — it doesn't give exactly one y for each x.
 > Graph it on the Graphing Calculator, or enter it here as two functions:
 > `y = sqrt(25-x^2)` and `y = -sqrt(25-x^2)`.
+
+The first clause names the failed *definition* of a function rather than the circle's
+symptom, because the explorers route vertical lines here too: for `2x + 3 = 7` there is no
+y at all except at one x, so "some x values have two y values" would be simply untrue.
 
 Both halves earn their place: the first is the direct answer to "how do I see it?", the
 second is the real TI-84 skill AND the only way to use *this* explorer's analysis panels
@@ -223,8 +238,10 @@ no value-table column for it. Plot it **alongside** `sin(x)` to pin that mixing 
 **E2E** (`explorer.spec.ts`) — `x^2+y^2=25` is still rejected and the message names the
 Graphing Calculator.
 
-**Regression** — Phase 1's suite must pass unmodified. Any failure means `kind: 'function'`
-did not preserve existing behavior.
+**Regression** — existing function behavior must be unregressed. Any failure on a case
+this phase did not deliberately change means `kind: 'function'` did not preserve existing
+behavior. Assertions that pin wording this phase rewrites (the relation message, the
+equation-list note) are updated with the wording, not treated as regressions.
 
 **Not added: a visual snapshot for relations.** `export-visual.spec.ts` baselines are
 Linux/Docker-only and cannot be generated on the development machine. If exporting a
@@ -258,6 +275,10 @@ does mean a wider diff than Phase 2's user-visible surface suggests.
   redefine it, which is worse than showing nothing in a teaching tool.
 - **Relations in the explorers.** Their analysis panels are function-only by Phase 1's
   design.
+- **Contradiction relations drawing an empty plot with no feedback.** `1 = 2` and
+  `x^2 = -1` route to the implicit renderer and draw nothing. An empty solution set IS the
+  mathematically correct picture, and detecting emptiness reliably would need
+  window-scoped sampling that false-positives on a legitimate curve sitting off-window.
 - **Inequalities** (`y >= x`) as shaded regions.
 - **Parametric or polar input.**
 - **Cross-page equation passing** (an "open this in the Graphing Calculator" link) — the
