@@ -203,3 +203,47 @@ test('falls back to a named cosine for an angle off the chart', async ({ page })
   // the absence of KaTeX's own radical marker is the real "no radical" proof.
   await expect(coords.locator('.sqrt')).toHaveCount(0);
 });
+
+// The unit tests estimate text width from character count — a pure string builder
+// has no font metrics. These run in a real browser, so they are what proves the
+// suppression band still matches where the glyphs actually land.
+const tickText = (page: Page) =>
+  page.locator(`${FIGURE} g[data-role="radian-tick"] text`);
+const tickLine = (page: Page) =>
+  page.locator(`${FIGURE} g[data-role="radian-tick"] line`);
+
+test('hides the radian tick label that the coordinate readout would cover', async ({
+  page,
+}) => {
+  await goto(page);
+  await deg(page).fill('60');
+  // 60° is 1.047 rad — 2.7° from the 1 rad tick, where the two labels overlap.
+  await expect(tickText(page)).toHaveCount(0);
+  await expect(
+    page.locator(`${DIAGRAM} [data-role="coordinate-label"]`),
+  ).toContainText('√3/2');
+});
+
+test('keeps the tick line when it hides that tick label', async ({ page }) => {
+  await goto(page);
+  await deg(page).fill('60');
+  // Hiding the name must not unmark the position.
+  await expect(tickLine(page)).toHaveCount(1);
+});
+
+test('hides only the covered tick, leaving the others named', async ({ page }) => {
+  await goto(page);
+  await deg(page).fill('118');
+  // 2.06 rad: the 2 rad tick sits under the readout, the 1 rad tick is well clear.
+  await expect(tickLine(page)).toHaveCount(2);
+  await expect(tickText(page)).toHaveCount(1);
+  await expect(tickText(page)).toHaveText('1 rad');
+});
+
+test('restores the tick label once the sweep moves clear', async ({ page }) => {
+  await goto(page);
+  await deg(page).fill('60');
+  await expect(tickText(page)).toHaveCount(0);
+  await deg(page).fill('90');
+  await expect(tickText(page)).toHaveText('1 rad');
+});

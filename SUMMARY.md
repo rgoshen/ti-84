@@ -3301,3 +3301,50 @@ less than failing after a build and a browser install. Docker is preinstalled on
 
 **References:**
 - TODO.md: [2026-07-27] Fix: HTML cache headers in the nginx image
+
+## [2026-07-27 21:35] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer diagram
+
+**Summary:**
+A whole-radian tick now drops its `n rad` text while the terminal point's coordinate
+readout would cover it, keeping its tick line drawn. Split the coordinate label's
+placement into `coordinateLabelLayout()` — returning both the anchor and its bounding
+box — so the markup builder and the overlap test read the same geometry. Tick groups
+carry `data-role="radian-tick"` so tests can assert on lines and text separately.
+
+**Bug Fix Context:**
+Reported from a screenshot: at 60° the `1 rad` label and the coordinate readout render
+on top of each other. The cause is structural rather than a rounding artifact — the tick
+label sits at `(r + 0.22) · unit` from centre and the coordinate anchor at
+`r · unit + LABEL_GAP`, about 5px apart radially on the same circle, so as θ approaches
+1 rad (57.296°) the only remaining separation is angular and it goes to zero. Measured on
+the built site, the overlap runs ~55°–70°, worst at 60–65° with 28–34px of horizontal
+overlap. It also fires at 55° and 70°, where the labels do not look adjacent — the
+overlap is driven by text width, not centre distance alone.
+
+**Rationale:**
+Moving either label outward was not available: at the maximum radius 1.5 the tick label
+already sits 151px from centre inside a 160px half-viewBox. Of the remaining options,
+suppressing the tick's text keeps the coordinate readout — the information the user is
+reading — unobstructed, while its tick line preserves the radian position. The cost is
+losing the radian name at the angles where degrees-versus-radians is most instructive;
+the line keeps the position marked.
+
+Extracting a single layout function was the load-bearing decision: recomputing the label
+box inside the tick loop would have let the clamp-and-nudge path (which fires at large r)
+diverge from the box used for collision, misfiring exactly where the layout is hardest.
+
+**Verification:**
+Unit suite red first on the three suppression assertions with the three "keeps the text"
+guards already passing, green after — 275/275 across 24 files. 4 new e2e tests added
+because the unit tests estimate text width from character count while a browser uses real
+font metrics. Measured on the built site: text absent across 55–70°, present at 0/30/45/90;
+at 118° two tick lines with one label, confirming suppression is per-tick, not global.
+79/79 e2e, 4/4 integration, `astro check` 0 errors / 0 warnings. Visual snapshot baselines
+are unaffected — `export-visual.spec.ts` covers graphing, function, and transformations,
+not the Angle Explorer.
+
+**References:**
+- TODO.md: [2026-07-27] Fix: whole-radian tick label collides with the coordinate readout
