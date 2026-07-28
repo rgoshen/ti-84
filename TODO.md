@@ -713,3 +713,36 @@ terminal dot it would otherwise sit on top of.
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27] Fix: HTML cache headers in the nginx image
+
+**Objective:**
+Stop the container serving stale pages after a release. `nginx.conf` sets no
+`Cache-Control`, so browsers fall back to heuristic freshness (RFC 9111 §4.2.2) and
+treat cached HTML as fresh for roughly 10% of its age at `Last-Modified` — without
+revalidating. Astro fingerprints its bundles (`AngleExplorer.DVuvR4UI.js`), so a stale
+HTML document keeps pointing at the previous bundle name and the newly built one is
+never requested. Symptom: a correct `docker compose up --build` appears to change
+nothing.
+
+**Approach:**
+- `Cache-Control: no-cache` on HTML documents — permits caching but forces
+  revalidation, so a changed page is picked up on the next load. Not `no-store`, which
+  would forbid caching entirely and discard the cheap 304 path.
+- `Cache-Control: public, max-age=31536000, immutable` on `/_astro/` — those filenames
+  are content-hashed, so a changed file is a changed URL and can never go stale.
+
+**Tests:**
+Integration test running `nginx:alpine` against this repo's real `nginx.conf` over a
+fixture root, asserting both header policies plus the existing clean-URL behaviour.
+Testing through the Playwright suite would be false confidence — it serves the site
+with `astro preview`, which never loads `nginx.conf`.
+
+**Risks & Tradeoffs:**
+- Adds a Docker dependency to a new `test:integration` script. Kept out of `npm test`
+  so the unit loop stays fast and daemon-free; wired into CI separately.
+- `immutable` is unsafe for any non-fingerprinted asset, so the long-cache rule is
+  scoped to `/_astro/` rather than by file extension.
+
+**References:**
+- RFC 9111 §4.2.2 (heuristic freshness)

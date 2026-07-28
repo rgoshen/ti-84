@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:visual": "playwright test tests/e2e/export-visual.spec.ts",
     "test:e2e:update-snapshots": "playwright test tests/e2e/export-visual.spec.ts --update-snapshots"
