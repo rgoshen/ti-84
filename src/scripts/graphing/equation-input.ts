@@ -1,10 +1,11 @@
 /**
- * Parses a typed equation into the `y = f(x)` expression the rest of the app plots.
+ * Parses a typed equation into either a `y = f(x)` expression or a relation.
  *
  * Accepts any equation LINEAR IN y — `3y + 2x = 6`, `x*y = 1`, `y = sin(x)` — and
- * rearranges it. Equations that are not linear in y (`x^2 + y^2 = 25`) are relations,
- * not functions: they have two y values at some x, which `evalAt`'s single-valued
- * contract cannot represent. They are rejected here rather than mis-plotted.
+ * rearranges it into `y = f(x)`, tagged `kind: 'function'`. Equations that are not
+ * linear in y (`x^2 + y^2 = 25`) are relations, not functions: they have two y values
+ * at some x, which `evalAt`'s single-valued contract cannot represent. Those are
+ * tagged `kind: 'relation'` and routed to the implicit renderer instead.
  */
 
 import { simplify, evaluate } from 'mathjs';
@@ -158,30 +159,33 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
   }
 }
 
-export type ParseFailure =
-  | 'EMPTY'
-  | 'MULTIPLE_EQUALS'
-  | 'NO_Y_PRESENT'
-  | 'NOT_LINEAR_IN_Y'
-  | 'INVALID';
+export type EquationKind = 'function' | 'relation';
+
+export type ParseFailure = 'EMPTY' | 'MULTIPLE_EQUALS' | 'DEGENERATE' | 'INVALID';
 
 export type EquationParse =
-  | { ok: true; expr: string; input?: string }
+  | { ok: true; kind: 'function'; expr: string; input?: string }
+  | { ok: true; kind: 'relation'; expr: string; input: string }
   | { ok: false; reason: ParseFailure; message: string };
 
-// Static strings. The circle below is a fixed illustration, NOT derived from the
-// user's input — deriving the two halves would need the general solve this phase
-// deliberately does not do. Entering a circle as two functions is also exactly what
-// a physical TI-84 requires in Func mode, so this teaches the real workflow.
 const MESSAGES: Record<ParseFailure, string> = {
   EMPTY: 'Enter an equation first.',
   MULTIPLE_EQUALS: 'Enter a single equation with one = sign.',
-  NO_Y_PRESENT: 'This equation has no y, so there’s nothing to plot as y = f(x).',
-  NOT_LINEAR_IN_Y:
-    'That’s a relation, not a function — some x values have two y values. ' +
-    'Graph it as two equations, e.g. y = sqrt(25-x^2) and y = -sqrt(25-x^2).',
+  DEGENERATE: 'That equation is true at every point, so there’s no curve to draw.',
   INVALID: 'Invalid expression.',
 };
+
+/**
+ * Shown by the explorers when a relation is entered. They reject relations because
+ * their x-slider drag, vertical asymptotes and end-behaviour panels are all defined by
+ * one y per x. The Graphing Calculator renders them, so the message points there first;
+ * the two-function decomposition is kept because it is the real TI-84 workflow AND the
+ * only way to use these explorers' analysis panels on a circle.
+ */
+export const RELATION_NOT_SUPPORTED_MESSAGE =
+  'That’s a relation, not a function — some x values have two y values. ' +
+  'Graph it on the Graphing Calculator, or enter it here as two functions: ' +
+  'y = sqrt(25-x^2) and y = -sqrt(25-x^2).';
 
 const fail = (reason: ParseFailure, message?: string): EquationParse => ({
   ok: false,
@@ -190,9 +194,11 @@ const fail = (reason: ParseFailure, message?: string): EquationParse => ({
 });
 
 /** Confirm the expression parses and evaluates, mirroring the pre-existing check. */
-function validate(expr: string): EquationParse | null {
+function validate(expr: string, kind: EquationKind): EquationParse | null {
   try {
-    evaluate(expr, { x: 1 });
+    // A relation's expression contains y. Binding only x would make mathjs throw on
+    // every relation, rejecting the whole feature as INVALID.
+    evaluate(expr, kind === 'relation' ? { x: 1, y: 1 } : { x: 1 });
     return null;
   } catch (e) {
     return fail('INVALID', `Invalid expression: ${(e as Error).message}`);
@@ -202,9 +208,12 @@ function validate(expr: string): EquationParse | null {
 /**
  * Parse a typed equation into the expression to plot.
  *
- * `expr` is always a plain `y = f(x)` expression, identical in shape to what the
- * components stored before this module existed. `input` is set ONLY when a genuine
- * rearrangement happened, and drives labels alone — never evaluation.
+ * `kind: 'function'` results carry a plain `y = f(x)` expression, identical in shape
+ * to what the components stored before this module existed; `input` is set ONLY when
+ * a genuine rearrangement happened, and drives labels alone — never evaluation.
+ * `kind: 'relation'` results carry a `(lhs) - (rhs)` expression in x and y for the
+ * implicit renderer, with `input` always set since there is no solved form to fall
+ * back on for a label.
  */
 export function parseEquationInput(raw: string): EquationParse {
   const split = splitEquation(raw);
@@ -213,7 +222,7 @@ export function parseEquationInput(raw: string): EquationParse {
   if (split.kind === 'multiple') return fail('MULTIPLE_EQUALS');
 
   if (split.kind === 'expression') {
-    return validate(split.expr) ?? { ok: true, expr: split.expr };
+    return validate(split.expr, 'function') ?? { ok: true, kind: 'function', expr: split.expr };
   }
 
   // A bare `y` on the left means there is nothing to solve: the right side already IS
@@ -226,15 +235,38 @@ export function parseEquationInput(raw: string): EquationParse {
     // slip past validate() as a plottable expression. The regex path reported it as
     // empty input; keep doing that.
     if (!split.rhs) return fail('EMPTY');
-    return validate(split.rhs) ?? { ok: true, expr: split.rhs };
+    return validate(split.rhs, 'function') ?? { ok: true, kind: 'function', expr: split.rhs };
   }
 
   const solved = solveLinearY(split.lhs, split.rhs);
-  if (!solved.ok) return fail(solved.reason);
+  if (!solved.ok) {
+    // A relation parses successfully — it simply is not a function. Route it to the
+    // implicit renderer instead of rejecting it. `0 = 0` is the one exception: it is
+    // true at every point, so there is no curve to draw.
+    const renderable =
+      solved.reason === 'NOT_LINEAR_IN_Y' ||
+      (solved.reason === 'NO_Y_PRESENT' && !solved.degenerate);
+    if (!renderable) return fail('DEGENERATE');
 
-  const invalid = validate(solved.expr);
+    // `lhs - rhs` is exactly the form fnType: 'implicit' consumes.
+    const implicitExpr = `(${split.lhs}) - (${split.rhs})`;
+    return (
+      validate(implicitExpr, 'relation') ?? {
+        ok: true,
+        kind: 'relation',
+        expr: implicitExpr,
+        // Always set: a relation has no solved form to fall back on, so the label must
+        // show what the student typed.
+        input: `${split.lhs} = ${split.rhs}`,
+      }
+    );
+  }
+
+  const invalid = validate(solved.expr, 'function');
   if (invalid) return invalid;
 
-  // The bare-`y` case returned above, so anything reaching here genuinely was rearranged.
-  return { ok: true, expr: solved.expr, input: `${split.lhs} = ${split.rhs}` };
+  const rearranged = split.lhs !== 'y';
+  return rearranged
+    ? { ok: true, kind: 'function', expr: solved.expr, input: `${split.lhs} = ${split.rhs}` }
+    : { ok: true, kind: 'function', expr: solved.expr };
 }
