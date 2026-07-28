@@ -3391,3 +3391,41 @@ all three are deleted rather than two fixed and one left behind.
 - Issue: GH-26
 - TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 09:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/plans
+
+**Summary:**
+Nine-task TDD implementation plan for GH-26 Phase 1, derived from the approved design
+spec. Tasks 1–4 build two pure modules (`equation-input.ts`, `equation-tex.ts`) with
+full unit coverage; tasks 5–8 wire the three components and delete the duplicated
+`normalizeExpr` regex; task 9 adds e2e coverage and runs full verification. No code
+changed yet.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could meaningfully reject one unit while
+approving its neighbor, and where each deliverable carries its own test cycle. The
+splitter, the solver, and the public API are separated because each has distinct
+failure modes worth gating independently — the splitter's is comparison operators
+(`'y >= x'.split('=')` has length 2), the solver's is the A-identically-zero
+divide-by-zero, and the API's is message wording.
+
+Both new modules are pure `.ts` under `src/scripts/` rather than helpers inside the
+components. This is forced, not stylistic: vitest runs in the node environment with no
+jsdom and collects only `.ts`, so branching logic left in a `.tsx` component cannot be
+unit-tested at all in this repo.
+
+The self-review pass corrected one factual error before the plan was committed: it had
+claimed `evaluate` remained in use in `FunctionExplorer.tsx` for readouts, but `:411`
+is its only call site — the import is fully orphaned once `plot()` is rewritten, as it
+also is in `TransformationExplorer.tsx:157`. `GraphingCalculator.tsx` keeps `parse` for
+`exprToKatex` and narrows its import instead. Left uncorrected, this would have left
+dead imports in two files, against the no-dead-code rule.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+- Plan: docs/superpowers/plans/2026-07-28-full-equation-input.md
