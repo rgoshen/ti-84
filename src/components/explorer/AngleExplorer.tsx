@@ -454,6 +454,7 @@ export default function AngleExplorer(): React.JSX.Element {
             builder the export snapshot draws through — so the live figure and
             the exported PNG/PDF can never drift apart. */}
         <svg
+          data-testid="angle-figure"
           viewBox={`0 0 ${VIEW} ${VIEW}`}
           className="h-auto w-full"
           role="img"

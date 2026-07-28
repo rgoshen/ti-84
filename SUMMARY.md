@@ -3085,3 +3085,32 @@ none of the three consuming layers picks up another's dependency by using it.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — e2e selector stability
+
+**Summary:**
+Added `data-testid="angle-figure"` directly on the figure's `<svg>` element
+in `AngleExplorer.tsx` (the `angle-diagram` testid stays on the surrounding
+column, which other assertions legitimately target). Replaced the
+`DIAGRAM_SVG = \`${DIAGRAM} > svg\`` constant in `tests/e2e/angle.spec.ts`
+and `tests/e2e/angle-export.spec.ts` with `FIGURE =
+'[data-testid="angle-figure"]'` and updated every use. Reworded the
+constant's comment in both files to explain the actual lesson.
+
+**Bug Fix Context:**
+Root cause: `angle-diagram` wraps the whole right-hand column — the figure,
+the readout box, the coordinates box, and two note paragraphs — so once the
+coordinates box started rendering KaTeX radicals (which emit their own
+nested `<svg>` elements), `${DIAGRAM} svg` went from one match to three and
+broke every e2e test sharing the page helper. It was patched with a
+direct-child selector (`> svg`), which happened to still work but silently
+depended on the figure's `<svg>` never being wrapped by anything — a wrapper
+`<div>` added around the figure alone would have broken it again with no
+warning. Giving the figure its own test id removes that dependency on
+markup shape entirely.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
