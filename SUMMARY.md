@@ -2779,3 +2779,28 @@ used `getByRole('slider', {name})`, which does not resolve because Radix puts
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Plan: docs/superpowers/plans/2026-07-27-unit-circle-coordinates.md
 - Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 18:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-circle exact coordinates
+
+**Summary:**
+Added `src/scripts/explorer/unit-circle.ts`: an `ExactValue` type covering the five
+chart magnitudes (`0, 1/2, √2/2, √3/2, 1`), a five-entry first-quadrant table, and
+reference-angle derivation for the other twelve chart angles, plus latex/text/spoken
+formatters.
+
+**Rationale:**
+Deriving twelve angles from five keeps the quadrant rule in one place and makes the
+code encode the same reasoning the student is learning, rather than smearing it across
+sixteen literals. The trade — a sign slip would be invisible on inspection — is covered
+by cross-checking every chart angle against `Math.cos`/`Math.sin` in the tests.
+
+`sign: 0` is immune to negation so `-0` can never reach the screen, and the
+`isIntegerDegrees` gate is reused from `angle.ts` because exact treatment of a raw
+float is meaningless — a radian-typed `pi/3` arrives as 59.99999999999999.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
