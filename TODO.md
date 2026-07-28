@@ -702,8 +702,13 @@ crowd a whole-radian tick label near the terminal side; accepted, since true col
 avoidance needs text metrics a pure string builder does not have. Coordinates are
 measured from θ and ignore β, so with β ≠ 0 the label travels with the dot while
 reporting θ's values — intentional, because using `β + θ` would kill exact radicals for
-every non-zero β. Overflow detection uses a reserved width constant rather than measured
-text.
+every non-zero β. Overflow detection uses `labelWidth(text)`, a character-count estimate
+rather than measured text, since the builder has no access to font metrics; when the
+outward anchor would overflow the viewBox, the anchor clamps at the edge rather than
+flipping inward — flipping would grow the text toward the centre and, at mid radii near
+the horizontal, run it across the origin and onto the far side of its own dot — and a
+12px vertical nudge (away from the horizontal) keeps the clamped label clear of the
+terminal dot it would otherwise sit on top of.
 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md

@@ -102,23 +102,26 @@ source of truth for both the live figure and the export artifact, the label appe
 the exported PNG/PDF without additional work.
 
 **Placement algorithm** — deterministic and clamped, so no input can push the label
-out of the 320-unit viewBox:
+out of the 320-unit viewBox and it can never run back across the origin:
 
 1. Anchor at `r·unit + 14px` radially outward from the terminal dot.
-2. `text-anchor` is `start` when the dot is right of centre, `end` when left, so the
-   text grows away from the figure.
-3. If the label would overflow the viewBox — reachable only at large `r` — flip to
-   `r·unit − 14px` (inward) and swap the anchor. At `r = 1.5, θ = 0°` the label lands
-   inside the circle rather than clipping off the right edge.
-4. Clamp `y` into `[12, view − 6]`.
+2. `text-anchor` is fixed to its natural side — `start` when the dot is right of
+   centre, `end` when left — so the text always grows away from the figure. This
+   never changes; there is no inward flip.
+3. If the outward anchor would overflow the viewBox — reachable only at large `r` —
+   clamp `x` back to the edge (`view − MARGIN − width` on the right, `MARGIN + width`
+   on the left) rather than flipping the anchor inward. A flip would grow the text
+   toward the centre, which at mid radii near the horizontal runs it across the
+   origin and onto the far side of its own dot.
+4. When (and only when) that clamp engaged, nudge `y` by 12px, away from the
+   horizontal (`Math.sin(endRad) >= 0 ? -12 : 12`), so the clamped label sits clear
+   of the terminal dot it would otherwise sit directly on top of.
+5. Clamp `y` into `[12, view − 6]` as the final step.
 
-Overflow is tested against a reserved label width constant rather than measured text,
-since the builder is a pure string function with no access to font metrics. The
-reserved width is sized for the widest label the feature can produce.
-
-The inward flip cannot collide with the angle-measure arc: the arc sits at `0.3·unit`
-(26.4px) from centre, and the flip only triggers at radii large enough that the inward
-anchor is far outside it.
+Overflow is tested against `labelWidth(text)`, which estimates from character count
+rather than a fixed budget, since the builder is a pure string function with no
+access to font metrics — a single reserved width would either be too wide for a short
+label like `(1, 0)` or too narrow for a long one.
 
 **Label content**
 
@@ -236,9 +239,10 @@ metrics a pure string builder does not have.
 θ-based coordinates. This is intentional — the alternative kills exact radicals for
 every non-zero β — and is disclosed in the note under the diagram.
 
-**Reserved label width.** Overflow detection uses a constant rather than measured text.
-If the label content ever grows past the reserved width, it could clip at extreme radii.
-Sized with headroom for the widest label the feature produces.
+**Label width estimate.** Overflow detection uses `labelWidth(text)`, a character-count
+estimate rather than measured text, since the builder is a pure string function with no
+access to font metrics. It is deliberately generous, so the failure mode is clamping
+slightly sooner than strictly necessary rather than clipping.
 
 ## Out of Scope
 
