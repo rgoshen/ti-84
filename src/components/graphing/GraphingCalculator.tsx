@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { evaluate, parse } from 'mathjs';
+import { parse } from 'mathjs';
 import katex from 'katex';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
@@ -12,6 +12,7 @@ import {
   type PlotEquation,
   type PointShape,
 } from '@/scripts/graphing/plot';
+import { parseEquationInput } from '@/scripts/graphing/equation-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +53,8 @@ const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 /** A plotted equation plus a stable id for React keys and list mutations. */
 interface EquationItem extends PlotEquation {
   id: string;
+  /** The equation as entered, present only when it was rearranged into `expr`. */
+  input?: string;
 }
 
 function buildEquationDetails(
@@ -67,11 +70,6 @@ function buildEquationDetails(
 }
 
 type WindowFields = Record<keyof Window2D, string>;
-
-/** Strip a leading "y =" so "y = sin(x)" and "sin(x)" both plot. */
-function normalizeExpr(raw: string): string {
-  return raw.trim().replace(/^y\s*=\s*/i, '');
-}
 
 function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6;
@@ -243,22 +241,16 @@ export default function GraphingCalculator(): React.JSX.Element {
   }, [equations, appliedWindow, dark]);
 
   const addEquation = (): void => {
-    const expr = normalizeExpr(exprInput);
-    if (!expr) {
-      setError('Enter an equation first.');
-      return;
-    }
-    // Validate that the expression parses/evaluates, mirroring graphing.html.
-    try {
-      evaluate(expr, { x: 1 });
-    } catch (e) {
-      setError(`Invalid expression: ${(e as Error).message}`);
+    const parsed = parseEquationInput(exprInput);
+    if (!parsed.ok) {
+      setError(parsed.message);
       return;
     }
     const color = PALETTE[equations.length % PALETTE.length];
     const item: EquationItem = {
       id: `eq-${nextId.current++}`,
-      expr,
+      expr: parsed.expr,
+      input: parsed.input,
       color,
       showPoints: false,
       pointShape: 'circle',
