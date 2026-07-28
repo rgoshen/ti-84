@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.8.0](https://github.com/rgoshen/ti-84/compare/v0.7.0...v0.8.0) (2026-07-28)
+
+
+### Bug Fixes
+
+* **export:** make the value table section optional ([f742b87](https://github.com/rgoshen/ti-84/commit/f742b875845e4e80185d8c5dbdc67621accdc4ec))
+* **graphing:** preserve INVALID reason instead of misreporting it as DEGENERATE ([ad3f8d1](https://github.com/rgoshen/ti-84/commit/ad3f8d1752d57e3e9383591800b66e5baed3bc3c))
+* **graphing:** reword the relation refusal to cover vertical lines ([1940060](https://github.com/rgoshen/ti-84/commit/194006046f1af567d1b0aaa1f524187566733708))
+* **graphing:** stop relations rendering false mathematics ([5ee25c1](https://github.com/rgoshen/ti-84/commit/5ee25c14de7ee76400351aa7ad1feb1e3ac9fea8))
+
+
+### Features
+
+* **explorer:** point relations at the graphing calculator ([da41057](https://github.com/rgoshen/ti-84/commit/da410570ef44bcaae680c9604af930e6606753f5))
+* **graphing:** distinguish a vertical line from a degenerate equation ([fb195f5](https://github.com/rgoshen/ti-84/commit/fb195f53318b95a6d929c22b2b719f1c20719cef))
+* **graphing:** draw relations with function-plot's implicit sampler ([6c71699](https://github.com/rgoshen/ti-84/commit/6c71699753dfe8d4ae6a5b437f819ea98c47b434))
+* **graphing:** route relations and vertical lines to the implicit renderer ([d93c46e](https://github.com/rgoshen/ti-84/commit/d93c46e75b9e035eeed3f805930738dc4238c579))
+* **graphing:** stand down single-valued features for relations ([da4151c](https://github.com/rgoshen/ti-84/commit/da4151c35c4085a592fc7d20e3c05c63386eee25))
+
 # [0.7.0](https://github.com/rgoshen/ti-84/compare/v0.6.2...v0.7.0) (2026-07-28)
 
 
