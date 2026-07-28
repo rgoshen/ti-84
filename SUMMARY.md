@@ -2700,3 +2700,540 @@ The visual-regression PNG baseline for this export (mirroring the other three to
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+
+## [2026-07-27 17:45] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — Unit Circle Coordinates
+
+**Summary:**
+Added the approved design spec for Unit Circle Coordinates, which puts the terminal
+point `(x, y)` into the Angle Explorer in the reference chart's three-part form
+(degrees — radians — exact coordinates), plus the matching TODO.md feature plan. No
+code changed in this commit.
+
+**Rationale:**
+The explorer already teaches θ as one quantity in several costumes (degrees, turn
+fraction, exact π multiple, decimal radians) but stops short of where the terminal side
+lands — the fact that makes the unit circle worth memorising.
+
+Four design decisions were settled before writing anything:
+
+- Exact form when `r ≠ 1` shows `r × unit-circle value` (`1.2 × √3/2`) rather than a
+  fully reduced `(3√3)/5`. The reduced form is equally exact but hides that the unit
+  circle is the reference and `r` merely scales it — which is what the radius slider
+  exists to demonstrate.
+- Coordinates are measured from θ alone, ignoring the β position slider, consistent
+  with how arc length already treats β. Using `β + θ` would mean exact radicals vanish
+  the moment β moves, gutting the feature.
+- Exact coverage is the chart's 16 angles (multiples of 30° and 45°). Multiples of 15°
+  would add `(√6 ± √2)/4`, past what the reference chart teaches.
+- The new module derives twelve angles from a five-entry first-quadrant table via
+  reference angle plus quadrant sign, rather than listing sixteen literals, so the code
+  encodes the same rule the student is learning. Tests cross-check every angle against
+  `Math.cos`/`Math.sin` to catch the sign error this trades for.
+
+Confirmed no PNG baseline regeneration is needed: `export-visual.spec.ts` covers only
+graphing-calculator, function-explorer, and transformation-explorer — there is no
+angle-explorer baseline.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 17:55] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — Unit Circle Coordinates
+
+**Summary:**
+Added the five-task implementation plan and corrected two things in the spec that the
+plan's research disproved. No code changed in this commit.
+
+**Rationale:**
+Writing the plan surfaced a wrong assumption in the spec: it said the readout would be
+covered "via the existing component test approach," but `vitest.config.ts` runs in the
+node environment, collects `src/**/*.{test,spec}.ts` only, and the project has no jsdom
+or `@testing-library`. The one component test that exists
+(`FunctionDetailsPanels.test.ts`) uses `renderToStaticMarkup`, which does not work for
+`AngleExplorer.tsx` — it uses `useState`, `useEffect`, and `document`.
+
+That would have left the feature's real branching untested, so the design gained a
+second pure module, `angle-coordinates.ts`, holding every display string: the
+chart-style triple line, the worked equations, the narrow SVG label, export text, and
+spoken prose. The component is left with nothing to do but render, and all the
+branching is reachable by the node test runner.
+
+Also settled during planning: a whole coordinate is stated once rather than as `0 = 0`,
+since at 90° the exact x and its decimal are the same string.
+
+**Bug Fix Context (if applicable):**
+Three defects were caught in the plan's own self-review before any code was written:
+the diagram-label test regex listed SVG attributes in an order the builder does not
+emit and would never have matched; a rounding expectation read 0.9583 where
+`1.2 × cos 37°` is 0.95836, which rounds to 0.9584; and the Playwright slider locator
+used `getByRole('slider', {name})`, which does not resolve because Radix puts
+`role="slider"` on the thumb while the accessible name sits on the root.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Plan: docs/superpowers/plans/2026-07-27-unit-circle-coordinates.md
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 18:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-circle exact coordinates
+
+**Summary:**
+Added `src/scripts/explorer/unit-circle.ts`: an `ExactValue` type covering the five
+chart magnitudes (`0, 1/2, √2/2, √3/2, 1`), a five-entry first-quadrant table, and
+reference-angle derivation for the other twelve chart angles, plus latex/text/spoken
+formatters.
+
+**Rationale:**
+Deriving twelve angles from five keeps the quadrant rule in one place and makes the
+code encode the same reasoning the student is learning, rather than smearing it across
+sixteen literals. The trade — a sign slip would be invisible on inspection — is covered
+by cross-checking every chart angle against `Math.cos`/`Math.sin` in the tests.
+
+`sign: 0` is immune to negation so `-0` can never reach the screen, and the
+`isIntegerDegrees` gate is reused from `angle.ts` because exact treatment of a raw
+float is meaningless — a radian-typed `pi/3` arrives as 59.99999999999999.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
+
+## [2026-07-27 18:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinate readout strings
+
+**Summary:**
+Added `src/scripts/explorer/angle-coordinates.ts`, building every display string the
+coordinate readout needs: the chart-style triple line, the worked `x = r·cos θ`
+equations, the narrow SVG label, four-decimal export text, and screen-reader prose.
+
+**Rationale:**
+This is where the feature's real branching lives — dropping the `1 ×` prefix at r = 1,
+falling back from a radical to a named `cos 37°`, choosing `=` over `≈` when the
+decimal is exact. Putting it in a pure module rather than inside `AngleExplorer.tsx`
+keeps it reachable by the node test runner, since the project has no jsdom and tests
+`.ts` only. The component is left with nothing to do but render.
+
+**Bug Fix Context:**
+The plan's supplied code for `radianLatex` gated the triple line's radian column on
+`isIntegerDegrees(theta)`. That gate is too broad: it renders 37° as `\frac{37\pi}{180}`,
+a fabricated exact radian for an angle with no exact form, directly contradicting the
+plan's own 37° test (`37^\circ \quad 0.6458\text{ rad} \quad ...`). The implementer
+corrected the gate to `exact !== null`, the same non-null check the coordinate pair and
+the SVG label already use, so all three chart-style facts appear or fall back together.
+Consequence: 15° now shows a decimal radian rather than `π/12`, because 15° is not one
+of the chart's 16 angles — `exact` is null there — and the design treats the
+degrees/radians/pair triple as a single fact that exists only at those 16 angles, not as
+independently-derivable quantities.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 18:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram coordinate label
+
+**Summary:**
+`buildAngleDiagramSvg` accepts an optional pre-formatted `coordinateLabel` and draws it
+beside the terminal dot, with placement clamped so no combination of r and θ can push
+it out of the viewBox. At large radii the anchor flips inward and the alignment swaps
+rather than clipping the edge.
+
+**Rationale:**
+The label text is passed in already formatted so this builder keeps knowing nothing
+about exact maths — it stays a pure geometry-to-markup function. Because it is the
+single source of truth for both the live figure and the export artifact, the label
+reaches the exported PNG/PDF with no additional work.
+
+Overflow is tested against a reserved width constant rather than measured text, since a
+pure string builder has no font metrics. The label uses `tickText` rather than the
+terminal-side red, which clears only 3.93:1 against white — below the 4.5:1 floor for
+text; weight and size carry the emphasis instead.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinates block
+
+**Summary:**
+`AngleExplorer.tsx` renders the coordinates block below the existing conversion chain,
+passes the formatted label into the shared diagram builder, appends the spoken
+coordinate sentence to the live region, and notes that β rotates the view while
+coordinates are measured from θ.
+
+**Rationale:**
+The component only renders — every branch (prefix dropping, exact-versus-decimal,
+`=` versus `≈`) already lives in `angle-coordinates.ts` where the node test runner can
+reach it. The coordinates box is `aria-hidden` for the same reason the existing readout
+is: KaTeX markup is noise to a screen reader, and the debounced live region carries the
+same facts as prose.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — coordinate label placement
+
+**Summary:**
+Replaced the fixed `LABEL_WIDTH = 96` constant in `angle-diagram.ts` with an exported
+`labelWidth(text)` function that estimates width from character count
+(`text.length * 5.6`). `coordinateLabelMarkup` now computes the reserved width from the
+actual label text instead of a single worst-case constant.
+
+**Rationale:**
+Code review traced the real geometry and found `LABEL_WIDTH = 96` — sized for the
+longest label the feature produces, `(-0.71, -0.71)` — was wide enough to trigger the
+inward-flip branch at the *default* view (r = 1, θ = 30°, label `(√3/2, 1/2)`, and even
+the short `(1, 0)` at θ = 0), not only at the large radii the original design intended.
+The label ended up sitting inside the circle, crossing the swept sector, at the most
+common state a student would see. A single fixed width cannot serve every label: it is
+either too wide for a short one (forcing a needless flip at the default view, the bug
+here) or too narrow for the longest one (risking a clip). Sizing the reserved width to
+the actual text removes that tradeoff. Per the user's explicit ruling, this supersedes
+the original brief's instruction not to tune `LABEL_WIDTH` down — that instruction
+assumed a fixed constant was the only lever available; the fix instead makes the width
+correct for every label rather than picking a different single number.
+
+Added a regression test — `keeps the label outside the dot at the default view, where
+it fits` — pinning that `(√3/2, 1/2)` at r = 1, θ = 30° stays outward (`anchor:
+'start'`, `x > 236.2`) so this cannot silently regress back to the over-wide-constant
+behavior.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Task 3 review finding: `LABEL_WIDTH` fixed-constant overflow at default view
+
+## [2026-07-27 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export and end-to-end coverage
+
+**Summary:**
+The export artifact gains a `Point (x, y)` fact, `x = r·cos θ` and `y = r·sin θ` table
+rows (7 of the 9-row cap), and the coordinate label in its diagram. Added Playwright
+coverage for the exact point at the default angle, the on-diagram label, the switch to
+decimals and `r ×` scaling when the radius moves, the named-cosine fallback off the
+chart, and the new export rows. README updated.
+
+Also fixed two pre-existing e2e test defects surfaced while running the suite for the
+first time since Task 4 landed (Task 4's own verification was browser-MCP only, not
+`npm run test:e2e`): the shared `goto()` helper in both `angle.spec.ts` and
+`angle-export.spec.ts` asserted `${DIAGRAM} svg` was visible, but the coordinates block
+Task 4 added renders KaTeX radicals (e.g. the default 30° angle's √3/2) as their own
+nested `<svg>` elements, making that locator match three elements and fail every single
+test in both files with a strict-mode violation. Scoped it to the direct-child diagram
+svg (`${DIAGRAM} > svg`) instead. Separately, the brief's own new test asserted
+`toContainText('√3')` against that same KaTeX-rendered block; KaTeX draws `\sqrt{}` as a
+vector path (confirmed against `katex.renderToString` for both `html` and
+`htmlAndMathml` output — neither embeds a literal "√" character), so no text-content
+assertion can ever match it. Replaced it with a check against KaTeX's own `.sqrt` CSS
+marker, which verifies the same "exact radical, not decimal" intent without depending on
+an unrenderable string.
+
+**Rationale:**
+Keeps the exported sheet a faithful record of the screen. No PNG baseline regeneration
+was needed: `export-visual.spec.ts` covers only graphing-calculator, function-explorer,
+and transformation-explorer — there is no angle-explorer baseline. Confirmed its three
+failures on this machine are pre-existing and unrelated to this change (identical pixel
+diff counts with these three files stashed back to their pre-Task-5 state) — the known
+macOS-vs-Linux visual-baseline mismatch, not a regression.
+
+**Bug Fix Context:**
+Root cause of both e2e defects: the coordinates block's KaTeX rendering was never
+exercised through the real Playwright suite before now. The locator fix is scoped to
+test code only (no component change); the assertion fix trades a string search that
+cannot succeed against vector-rendered math for a structural check of the same intent.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — e2e test correctness
+
+**Summary:**
+Fresh-eyes self-review of the previous commit found `expect(coords).not.toContainText('√')`
+in the "falls back to a named cosine" test was vacuously true for the same reason the
+sibling test's positive check needed fixing: KaTeX never emits a literal "√" text node,
+so this could never fail even if the fallback regressed and an exact radical rendered
+instead. Replaced it with `expect(coords.locator('.sqrt')).toHaveCount(0)` — the real
+"no radical" proof — plus a positive `toContainText('cos')` check (`\cos` DOES render as
+literal text in KaTeX, confirmed directly, unlike `\sqrt`).
+
+**Rationale:**
+A test that cannot fail is not coverage. Caught during the self-review pass required
+before reporting the task complete, not by CI or a reviewer.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — final whole-branch review fixes
+
+**Summary:**
+Fixed four findings from the final whole-branch code review before merge.
+`coordinateLabelMarkup` in `angle-diagram.ts` no longer flips the label anchor
+inward when the outward placement would overflow the viewBox — it clamps the
+anchor at the edge and, only when the clamp engages, nudges it 12px vertically
+clear of the terminal dot. `spokenEquation` in `angle-coordinates.ts` now
+collapses a whole coordinate (`x equals 0, 0`) to a single spoken value the same
+way `equation()` already does for the visual channel. The diagram's viewBox sweep
+test now drives its label text from `buildCoordinateReadout(...).labelText`
+instead of a hardcoded string, so it is pinned to the real widest label rather
+than to a length nothing else enforces. The `[2026-07-27 18:20]` entry above gained
+a Bug Fix Context section recording the `radianLatex` gate correction.
+
+**Rationale:**
+The inward flip grew the label text toward the centre of the figure, so at mid
+radii near the horizontal the label ran across the origin and ended up on the far
+side of its own dot — confirmed against the real geometry and reproduced by a
+domain-sweep test (added to `angle-diagram.test.ts`) before the fix, then shown
+green after. A clamp alone would still leave the label sitting on top of its own
+dot at the boundary, hence the nudge. The spoken-channel fix matters because both
+KaTeX boxes in the readout are `aria-hidden`, so the live region is the only
+channel a screen-reader user has for the coordinate values — the stutter isn't
+compensated by a visual form the way it is for `equation()`. The test-seam fix
+closes a gap where the sweep test's hardcoded label length happened to match the
+current maximum by coincidence, so a real label that grew past it would have
+clipped without any test catching it.
+
+**Bug Fix Context:**
+Root cause: `coordinateLabelMarkup` treated "flip the anchor and swap
+`text-anchor`" as the overflow remedy, which is correct at the direction the text
+grows but wrong about where the anchor point itself lands — swapping the anchor
+without also reasoning about the origin let the anchor land on the near side of
+centre while the text still grew across it. Fix: keep `text-anchor` fixed to the
+dot's natural side always (so text only ever grows away from the figure), and
+replace the flip with an `x` clamp at the viewBox edge plus a conditional
+vertical nudge. Verified across the full reachable domain (`r` 0.5–1.5 step 0.1,
+`θ` −360–360 step 1): 0 origin crossings, 0 dot overlaps, 0 out-of-bounds anchors,
+versus 783 origin crossings under the old code.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Report: .superpowers/sdd/2026-07-27-unit-circle-coordinates/final-fix-report.md
+
+## [2026-07-27 20:30] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — coordinate label placement description
+
+**Summary:**
+Corrected four remaining passages that still described the retired inward-flip
+placement algorithm (removed in `358e261`) as though it were current. The
+`labelWidth` docstring in `angle-diagram.ts` now attributes an over-wide estimate
+to premature clamping rather than a needless flip. The design spec's Testing
+Strategy §2 now states what `angle-diagram.test.ts` actually asserts: the clamp
+engages at the overflow boundary with the anchor unchanged, and the label never
+crosses the origin or overlaps its own terminal dot. `TODO.md`'s Approach and
+Tests sections for the `[2026-07-27] Feature: Unit Circle Coordinates` entry
+received the matching correction. No code, tests, or behaviour changed.
+
+**Rationale:**
+`coordinateLabelMarkup`'s own docstring and the TODO.md Risks & Tradeoffs
+paragraph were already corrected in the `[2026-07-27 20:15]` fix commit above,
+but four other passages — written before that fix — kept describing the flip
+that the fix removed, leaving the documentation internally contradictory.
+Rewriting them to match the code that now exists, rather than editing them
+again later piecemeal, keeps the spec and TODO.md trustworthy as a reference for
+the algorithm's actual behaviour.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Commit: 358e261 (removed the inward flip)
+
+## [2026-07-27 20:11] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — shared display formatter
+
+**Summary:**
+Added `src/scripts/explorer/format.ts`, a dependency-free module exporting
+`formatFourDecimals`, and pointed `angle-coordinates.ts`'s `round4`,
+`angle-parse.ts`'s `trim`, and `AngleExplorer.tsx`'s `round4` at it via aliased
+imports (`import { formatFourDecimals as round4 } from '.../format'`),
+deleting all three local one-line copies and the now-unused `DECIMALS`
+constant in `angle-parse.ts`. Added `format.test.ts` covering rounding,
+an already-exact value, a whole number, zero, and negative zero.
+
+**Rationale:**
+The three copies (`angle-coordinates.ts:42`, `AngleExplorer.tsx:40`,
+`angle-parse.ts`'s `trim`) were byte-identical in behaviour — verified before
+consolidating. A new neutral module was chosen over importing the formatter
+out of `angle-parse.ts` because `angle-parse.ts` imports `mathjs`; making the
+presentation layer and the React component depend on a parsing module (and
+drag `mathjs` along) just to borrow a one-line formatter would be worse
+layering than the duplication it removes. `format.ts` has no imports, so
+none of the three consuming layers picks up another's dependency by using it.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — e2e selector stability
+
+**Summary:**
+Added `data-testid="angle-figure"` directly on the figure's `<svg>` element
+in `AngleExplorer.tsx` (the `angle-diagram` testid stays on the surrounding
+column, which other assertions legitimately target). Replaced the
+`DIAGRAM_SVG = \`${DIAGRAM} > svg\`` constant in `tests/e2e/angle.spec.ts`
+and `tests/e2e/angle-export.spec.ts` with `FIGURE =
+'[data-testid="angle-figure"]'` and updated every use. Reworded the
+constant's comment in both files to explain the actual lesson.
+
+**Bug Fix Context:**
+Root cause: `angle-diagram` wraps the whole right-hand column — the figure,
+the readout box, the coordinates box, and two note paragraphs — so once the
+coordinates box started rendering KaTeX radicals (which emit their own
+nested `<svg>` elements), `${DIAGRAM} svg` went from one match to three and
+broke every e2e test sharing the page helper. It was patched with a
+direct-child selector (`> svg`), which happened to still work but silently
+depended on the figure's `<svg>` never being wrapped by anything — a wrapper
+`<div>` added around the figure alone would have broken it again with no
+warning. Giving the figure its own test id removes that dependency on
+markup shape entirely.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:35] Commit Summary
+
+**Change Type:** Test
+**Scope:** Angle Explorer — coordinate label vertical clamp
+
+**Summary:**
+Added a test to `angle-diagram.test.ts` that calls `buildAngleDiagramSvg`
+with `view=60, unit=20` (both smaller than the live diagram's 320/88
+defaults) at `r=1, θ=90°`, where the pre-clamp anchor is computed at
+y=-16 — well outside `[12, view - 6]` — and asserts the emitted label `y`
+comes out clamped to exactly `12`. Updated `coordinateLabelMarkup`'s
+docstring and the clamp line itself to say plainly that the clamp guards
+non-default `view`/`unit` callers and is dead at the live figure's own
+settings, rather than leaving that unstated.
+
+**Rationale:**
+Swept the app's full reachable domain (r 0.5–1.5 step 0.1, θ −360–360 step
+1, default view/unit) and found the pre-clamp `y` never leaves [14.0,
+306.0] against the [12, 314] clamp — zero engagements at the values the
+live figure actually uses. But `view` and `unit` are public options on
+`buildAngleDiagramSvg` that pre-date this feature, so the clamp is not dead
+by construction: computed in Node against the exact
+`coordinateLabelMarkup` arithmetic that a small view/unit (60/20) drives
+the anchor to y=-16, confirming the clamp does real work there. Chose to
+make it live and covered rather than delete it, since a caller passing a
+smaller view/unit is a real, supported use of the public API, not a
+hypothetical.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:20] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — correcting two over-corrections
+
+**Summary:**
+Removed the coordinate label's vertical clamp and the contrived test written to
+exercise it, and dropped the import aliases introduced when the shared decimal
+formatter was consolidated. The formatter is now named `round4` at its definition and
+at every call site.
+
+**Rationale:**
+Two of the three debt-clearing changes made things worse rather than better, and are
+reverted here.
+
+The vertical clamp never fires at the live figure's view/unit — the anchor sits at
+`dotRadiusPx + GAP` from centre and the nudge only fires on the near-horizontal
+positions where the x-clamp engages, so y stays inside the viewBox by construction.
+The previous commit kept the clamp and added a test driving it with `view=60, unit=20`
+— values no caller uses and that would render an unusable figure. That converted a
+dead line into a dead line plus a test that makes the dead line look load-bearing, so
+a future reader deleting it would appear to be removing coverage. The clamp is gone;
+the existing domain sweep holds y inside the viewBox on real values instead.
+
+The formatter consolidation was correct in substance but was wired up with
+`formatFourDecimals as round4` and `as trim`, leaving one function known by three
+names — a reader who greps `round4` lands on an aliased import of something else.
+Worse for comprehension than the three one-line duplicates it replaced. Now one name.
+
+Verified with a full-domain sweep (r 0.5–1.5, θ ±360°, four β values, real labels from
+`buildCoordinateReadout`): y stays within [12, 314] of a [0, 320] viewBox with no
+clamp present.
+
+**Bug Fix Context:**
+While renaming, a `sed` with `\b` silently no-opped on BSD sed, leaving `formatDegrees`
+and `formatRadiansDecimal` calling a `trim` that no longer existed — 22 test failures.
+Both call sites corrected. The same pattern had also risked rewriting `raw.trim()`, the
+String method; it was left intact.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:20] Commit Summary
+
+**Change Type:** Chore
+**Scope:** .claude/skills (developer tooling)
+
+**Summary:**
+Added `.claude/skills/diagram/SKILL.md`, a project-local skill that routes Mermaid
+diagrams to Mission Control's interactive viewer via `POST $MC_API_URL/api/diagram`
+instead of dumping raw Mermaid into the terminal. Documents the API contract, the
+required env vars (`MC_API_URL`, `MC_API_TOKEN`, `MC_TASK_ID`, `MC_THEME`), theming
+rules, and a graceful fallback to inline Mermaid when the env vars are absent.
+
+**Rationale:**
+Agent tooling belongs in the repo so every contributor's session behaves the same way
+rather than depending on per-machine global skill installs. The theme rules are the
+substantive part: Mission Control re-themes diagrams from its own design tokens, so
+any `%%{init}%%` block or hardcoded `classDef` fill in the source fights the viewer and
+renders dark-on-dark. The skill states that as a hard rule rather than leaving each
+session to rediscover it.
+
+**References:**
+- .claude/skills/diagram/SKILL.md
+
+## [2026-07-27 20:26] Commit Summary
+
+**Change Type:** Chore
+**Scope:** Dependencies (branch sync)
+
+**Summary:**
+Merged `origin/main` into `feature/unit-circle-coordinates` to pick up the Dependabot
+security group bump (PR #17), which advances `sharp` to 0.35.3 and its `@img/libvips-*`
+platform binaries to 1.3.2. `package-lock.json` was the only file the merge touched and
+it resolved without conflict.
+
+**Rationale:**
+The branch was 2 commits behind its PR base while PR #22 was open, so the PR was being
+reviewed against a lockfile that no longer matched `main`. Merging (not rebasing) keeps
+the 20 already-pushed commits and their review history intact — rebasing would have
+rewritten published SHAs on an open PR. `sharp` is a build-time dependency for Astro's
+image pipeline rather than a runtime import, so the unit suite alone could not prove the
+bump safe; `npm ci` plus a full `astro build` were run as well.
+
+**Verification:**
+269/269 unit tests pass (24 files); `npm run build` completes with all 7 static routes
+generated; `npm ci` produced no lockfile drift.
+
+**References:**
+- Upstream: GH-17 (dependabot npm_and_yarn group)
+- Branch PR: GH-22

@@ -25,7 +25,9 @@ import {
   formatRadiansDecimal,
   parseAngleInput,
 } from '@/scripts/explorer/angle-parse';
+import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
+import { round4 } from '@/scripts/explorer/format';
 import {
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,
@@ -34,9 +36,6 @@ import {
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
-
-/** Round for display without exposing float noise. */
-const round4 = (n: number): string => String(Number(n.toFixed(4)));
 
 /**
  * The five-way identity plus arc length, as KaTeX source.
@@ -164,14 +163,38 @@ export default function AngleExplorer(): React.JSX.Element {
     [theta],
   );
 
+  // Coordinates depend on θ and r only — β rotates the view, so the point it
+  // moves is still the point θ describes, exactly as arc length already treats it.
+  const coords = useMemo(() => buildCoordinateReadout(theta, r), [theta, r]);
+  const coordHtml = useMemo(
+    () => ({
+      triple: katex.renderToString(coords.tripleLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+      x: katex.renderToString(coords.xLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+      y: katex.renderToString(coords.yLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+    }),
+    [coords.tripleLatex, coords.xLatex, coords.yLatex],
+  );
+
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
   // so a slider drag announces once on settle rather than on every frame.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(readout.spoken), 250);
+    const id = setTimeout(() => setAnnounced(`${readout.spoken} ${coords.spoken}`), 250);
     return () => clearTimeout(id);
-  }, [readout.spoken]);
+  }, [readout.spoken, coords.spoken]);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
@@ -277,6 +300,7 @@ export default function AngleExplorer(): React.JSX.Element {
     const exactRadiansText = integer ? formatPiText(piMultiple(whole)) : '—';
     const turnText = integer ? formatFractionText(turnFraction(whole)) : '—';
     const arcValue = round4(arcLength(snapshotR, degreesToRadians(snapshotTheta)));
+    const snapshotCoords = buildCoordinateReadout(snapshotTheta, snapshotR);
 
     return {
       model: {
@@ -308,6 +332,7 @@ export default function AngleExplorer(): React.JSX.Element {
               { label: 'Radius', value: String(snapshotR) },
               { label: 'Position β', value: `${snapshotBeta}°` },
               { label: 'Arc length s = r|θ|', value: arcValue },
+              { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
           },
         ],
@@ -318,13 +343,24 @@ export default function AngleExplorer(): React.JSX.Element {
             ['Degrees', `${formatDegrees(snapshotTheta)}°`],
             ['Fraction of a turn', turnText],
             ['Exact radians', exactRadiansText],
+            ['x = r·cos θ', snapshotCoords.xText],
+            ['y = r·sin θ', snapshotCoords.yText],
             ['Decimal radians', formatRadiansDecimal(snapshotTheta)],
             ['Arc length', arcValue],
           ],
         },
       },
       renderGraph: (target) => {
-        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg({ theta: snapshotTheta, r: snapshotR, beta: snapshotBeta, colors: lightColors, tickText: '#334155' })}</svg>`;
+        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
+          {
+            theta: snapshotTheta,
+            r: snapshotR,
+            beta: snapshotBeta,
+            colors: lightColors,
+            tickText: '#334155',
+            coordinateLabel: snapshotCoords.labelText,
+          },
+        )}</svg>`;
       },
     };
   };
@@ -418,11 +454,21 @@ export default function AngleExplorer(): React.JSX.Element {
             builder the export snapshot draws through — so the live figure and
             the exported PNG/PDF can never drift apart. */}
         <svg
+          data-testid="angle-figure"
           viewBox={`0 0 ${VIEW} ${VIEW}`}
           className="h-auto w-full"
           role="img"
           aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}.`}
-          dangerouslySetInnerHTML={{ __html: buildAngleDiagramSvg({ theta, r, beta, colors, tickText }) }}
+          dangerouslySetInnerHTML={{
+            __html: buildAngleDiagramSvg({
+              theta,
+              r,
+              beta,
+              colors,
+              tickText,
+              coordinateLabel: coords.labelText,
+            }),
+          }}
         />
 
         <div
@@ -433,8 +479,25 @@ export default function AngleExplorer(): React.JSX.Element {
           <div dangerouslySetInnerHTML={{ __html: chainHtml }} />
           <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: arcHtml }} />
         </div>
+        <div
+          data-testid="angle-coordinates"
+          aria-hidden="true"
+          className="mt-3 space-y-2 rounded-lg border bg-card p-4 text-center"
+        >
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Coordinates
+          </p>
+          <div dangerouslySetInnerHTML={{ __html: coordHtml.triple }} />
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <div dangerouslySetInnerHTML={{ __html: coordHtml.x }} />
+            <div dangerouslySetInnerHTML={{ __html: coordHtml.y }} />
+          </div>
+        </div>
         <p className="sr-only" role="status" aria-live="polite">
           {announced}
+        </p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          The position slider β rotates the view; coordinates are measured from θ.
         </p>
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Concept adapted from{' '}

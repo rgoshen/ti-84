@@ -1,6 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const DIAGRAM = '[data-testid="angle-diagram"]';
+// The figure carries its own test id (`angle-figure`) rather than being found
+// by shape (a descendant or direct-child `svg` selector under DIAGRAM). The
+// coordinates block renders KaTeX radicals (e.g. the default 30° angle's
+// √3/2) as their own nested <svg> elements, so a descendant selector is
+// ambiguous, and a direct-child selector only works by accident — it
+// silently depends on the figure's `<svg>` never being wrapped by markup
+// that later lands inside the container. A dedicated test id can't be
+// captured that way. DIAGRAM itself is still legitimate for lookups that
+// really do target the container, e.g. the coordinate-label below.
+const FIGURE = '[data-testid="angle-figure"]';
 const READOUT = '[data-testid="angle-readout"]';
 
 // getByLabel('Degrees') is AMBIGUOUS — it also matches the SVG, whose aria-label
@@ -10,7 +20,7 @@ const rad = (page: Page) => page.getByRole('textbox', { name: 'Radians' });
 
 async function goto(page: Page): Promise<void> {
   await page.goto('/explorers/angles');
-  await expect(page.locator(`${DIAGRAM} svg`)).toBeVisible();
+  await expect(page.locator(FIGURE)).toBeVisible();
 }
 
 test('renders the default angle with its exact radian form', async ({ page }) => {
@@ -24,7 +34,7 @@ test('is reachable from the explorers catalog', async ({ page }) => {
   await page.goto('/explorers');
   await page.getByRole('link', { name: /Open the Angle Explorer/i }).click();
   await expect(page).toHaveURL(/\/explorers\/angles/);
-  await expect(page.locator(`${DIAGRAM} svg`)).toBeVisible();
+  await expect(page.locator(FIGURE)).toBeVisible();
 });
 
 test('converts pi/3 typed in radians to exactly 60 degrees', async ({ page }) => {
@@ -52,7 +62,7 @@ test('invalid input reports an error and leaves the diagram intact', async ({ pa
   await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
   // The last valid angle survives the typo.
   await expect(page.locator(READOUT)).toContainText('30');
-  await expect(page.locator(`${DIAGRAM} svg`)).toBeVisible();
+  await expect(page.locator(FIGURE)).toBeVisible();
 });
 
 test('the angle slider drives the readout and both fields', async ({ page }) => {
@@ -69,7 +79,7 @@ test('a full 360 degree sweep still draws an arc', async ({ page }) => {
   await goto(page);
   // Regression guard: a 360° arc built from a single SVG "A" command renders nothing.
   await deg(page).fill('360');
-  const drawn = await page.locator(`${DIAGRAM} svg path`).evaluateAll((nodes) =>
+  const drawn = await page.locator(`${FIGURE} path`).evaluateAll((nodes) =>
     nodes.some((n) => (n.getAttribute('d') ?? '').split('A').length > 2),
   );
   expect(drawn).toBe(true);
@@ -78,7 +88,7 @@ test('a full 360 degree sweep still draws an arc', async ({ page }) => {
 test('the position slider rotates the figure [G3]', async ({ page }) => {
   await goto(page);
   const arcOf = () =>
-    page.locator(`${DIAGRAM} svg path`).first().getAttribute('d');
+    page.locator(`${FIGURE} path`).first().getAttribute('d');
   const before = await arcOf();
 
   const position = page.getByRole('slider', { name: 'position' });
@@ -140,4 +150,56 @@ test('the controls column does not reflow when an error appears [G14]', async ({
   await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
   // Equal heights are what keep the click from being stolen mid-press.
   expect((await column.boundingBox())!.height).toBe(clean);
+});
+
+const COORDS = '[data-testid="angle-coordinates"]';
+
+test('shows the exact unit-circle point at the default angle', async ({ page }) => {
+  await goto(page);
+  const coords = page.locator(COORDS);
+  // KaTeX draws \sqrt as a vector path (SVG or native MathML rendering), never
+  // as a literal "√" text node — toContainText('√3') can never match here,
+  // verified directly against katex.renderToString for both 'html' and
+  // 'htmlAndMathml' output. `.sqrt` is KaTeX's own stable CSS marker for "a
+  // radical is rendered here", which is what "exact, not decimal" means.
+  await expect(coords.locator('.sqrt').first()).toBeVisible();
+  await expect(coords).toContainText('0.866');
+});
+
+test('labels the terminal point on the diagram itself', async ({ page }) => {
+  await goto(page);
+  await expect(
+    page.locator(`${DIAGRAM} [data-role="coordinate-label"]`),
+  ).toContainText('√3/2');
+});
+
+test('switches to decimals and shows the r scaling when the radius moves', async ({
+  page,
+}) => {
+  await goto(page);
+  // Radix puts role="slider" on the THUMB, while the id and aria-label sit on the
+  // root — so getByRole('slider', {name: 'radius'}) does not resolve. Target the
+  // thumb inside the identified root instead.
+  const slider = page.locator('#slider-radius [role="slider"]');
+  await slider.focus();
+  // The radius slider steps 0.1, so two presses take the 1.0 default to 1.2.
+  await slider.press('ArrowRight');
+  await slider.press('ArrowRight');
+
+  const coords = page.locator(COORDS);
+  await expect(coords).toContainText('1.2');
+  await expect(coords).toContainText('1.0392');
+});
+
+test('falls back to a named cosine for an angle off the chart', async ({ page }) => {
+  await goto(page);
+  await deg(page).fill('37');
+  const coords = page.locator(COORDS);
+  await expect(coords).toContainText('0.7986');
+  await expect(coords).toContainText('cos');
+  // `not.toContainText('√')` would be vacuously true here — see the note above:
+  // KaTeX never emits a literal "√" text node even when it DOES render a
+  // radical, so that assertion could never catch a regression. Checking for
+  // the absence of KaTeX's own radical marker is the real "no radical" proof.
+  await expect(coords.locator('.sqrt')).toHaveCount(0);
 });

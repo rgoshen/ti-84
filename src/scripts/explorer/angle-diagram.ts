@@ -36,6 +36,84 @@ export interface AngleDiagramOptions {
   unit?: number;
   /** Radius of the small angle-measure arc, in units. Defaults to 0.3. */
   measureR?: number;
+  /**
+   * Pre-formatted coordinate text for the terminal point, e.g. `(√3/2, 1/2)`.
+   * Supplied by `angle-coordinates.ts` — this builder deliberately knows nothing
+   * about exact maths. Omitted or empty draws no label.
+   */
+  coordinateLabel?: string;
+}
+
+/**
+ * Horizontal space a coordinate label occupies, in viewBox units.
+ *
+ * A pure string builder has no font metrics, so this estimates from character
+ * count at the label's font-size 10 — deliberately a little generous, so the
+ * failure mode is clamping the label back from the edge slightly sooner than
+ * strictly necessary rather than letting it clip. A single fixed width cannot
+ * work here: it is either too wide for a short label like `(1, 0)` (forcing a
+ * needless clamp at the default view) or too narrow for a long one like
+ * `(-0.71, -0.71)`.
+ */
+export function labelWidth(text: string): number {
+  return text.length * 5.6;
+}
+/** Radial gap between the terminal dot and the label anchor, in px. */
+const LABEL_GAP = 14;
+/** Keep-out margin at the viewBox edges, in px. */
+const LABEL_MARGIN = 4;
+/** Vertical clearance applied when the anchor clamps onto its own dot, in px. */
+const LABEL_NUDGE = 12;
+
+/**
+ * The coordinate label, anchored beside the terminal dot and clamped so no
+ * combination of r and θ can push it out of the viewBox.
+ *
+ * Placement is outward from the dot with `text-anchor` fixed to its natural side
+ * (`start` when the dot is right of centre, `end` when left) — the text always
+ * grows away from the figure, so it can never run back across the origin. At
+ * large r the outward anchor would overflow the viewBox; rather than flip the
+ * anchor inward (which would grow the text toward the centre and drive it
+ * through the origin at mid radii near the horizontal), the anchor clamps in
+ * place at the edge. A clamp alone would then sit the label directly on top of
+ * its own terminal dot, so when the clamp engages the label also nudges
+ * vertically clear of the dot, away from the horizontal.
+ *
+ * `labelWidth(text)` estimates from character count rather than a fixed budget,
+ * so a short label like `(1, 0)` is not needlessly clamped at the default view.
+ *
+ * There is deliberately no vertical clamp: the anchor is `dotRadiusPx + GAP`
+ * from centre and the nudge only fires on the near-horizontal positions where
+ * the x-clamp engages, so `y` stays well inside the viewBox by construction.
+ * The domain sweep in the tests holds it to that.
+ */
+function coordinateLabelMarkup(
+  c: number,
+  dotRadiusPx: number,
+  endRad: number,
+  view: number,
+  text: string,
+  fill: string,
+): string {
+  const width = labelWidth(text);
+  const outward = polarToCartesian(c, c, dotRadiusPx + LABEL_GAP, endRad);
+  const rightSide = outward.x >= c;
+  const textAnchor = rightSide ? 'start' : 'end';
+
+  let anchorX = outward.x;
+  let anchorY = outward.y;
+
+  const limit = rightSide ? view - LABEL_MARGIN - width : LABEL_MARGIN + width;
+  const clamped = rightSide ? anchorX > limit : anchorX < limit;
+  anchorX = rightSide ? Math.min(anchorX, limit) : Math.max(anchorX, limit);
+
+  if (clamped) anchorY += Math.sin(endRad) >= 0 ? -LABEL_NUDGE : LABEL_NUDGE;
+
+  return (
+    `<text data-role="coordinate-label" x="${anchorX}" y="${anchorY}" fill="${fill}" ` +
+    `font-size="10" font-weight="600" text-anchor="${textAnchor}" ` +
+    `dominant-baseline="middle">${text}</text>`
+  );
 }
 
 /**
@@ -89,6 +167,14 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const initialDot = polarToCartesian(c, c, r * unit, betaRad);
   const terminalDot = polarToCartesian(c, c, r * unit, endRad);
 
+  // tickText, not the terminal-side red: #e24b4a clears only 3.93:1 against
+  // white, below the 4.5:1 floor for text. Weight and size carry the emphasis
+  // instead.
+  const labelMarkup =
+    opts.coordinateLabel !== undefined && opts.coordinateLabel !== ''
+      ? coordinateLabelMarkup(c, r * unit, endRad, view, opts.coordinateLabel, tickText)
+      : '';
+
   return (
     // Reference axes and the dashed unit circle.
     `<line x1="${c - 1.35 * unit}" y1="${c}" x2="${c + 1.35 * unit}" y2="${c}" stroke="${colors.axis}" stroke-width="1" />` +
@@ -106,6 +192,7 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     `<line x1="${c}" y1="${c}" x2="${initialTip.x}" y2="${initialTip.y}" stroke="${colors.floor}" stroke-width="2" />` +
     `<line x1="${c}" y1="${c}" x2="${terminalTip.x}" y2="${terminalTip.y}" stroke="${colors.wall}" stroke-width="2" />` +
     `<circle cx="${initialDot.x}" cy="${initialDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
-    `<circle cx="${terminalDot.x}" cy="${terminalDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    `<circle cx="${terminalDot.x}" cy="${terminalDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
+    labelMarkup
   );
 }
