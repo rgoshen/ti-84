@@ -2824,3 +2824,28 @@ keeps it reachable by the node test runner, since the project has no jsdom and t
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 18:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram coordinate label
+
+**Summary:**
+`buildAngleDiagramSvg` accepts an optional pre-formatted `coordinateLabel` and draws it
+beside the terminal dot, with placement clamped so no combination of r and θ can push
+it out of the viewBox. At large radii the anchor flips inward and the alignment swaps
+rather than clipping the edge.
+
+**Rationale:**
+The label text is passed in already formatted so this builder keeps knowing nothing
+about exact maths — it stays a pure geometry-to-markup function. Because it is the
+single source of truth for both the live figure and the export artifact, the label
+reaches the exported PNG/PDF with no additional work.
+
+Overflow is tested against a reserved width constant rather than measured text, since a
+pure string builder has no font metrics. The label uses `tickText` rather than the
+terminal-side red, which clears only 3.93:1 against white — below the 4.5:1 floor for
+text; weight and size carry the emphasis instead.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates

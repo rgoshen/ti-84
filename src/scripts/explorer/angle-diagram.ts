@@ -36,6 +36,77 @@ export interface AngleDiagramOptions {
   unit?: number;
   /** Radius of the small angle-measure arc, in units. Defaults to 0.3. */
   measureR?: number;
+  /**
+   * Pre-formatted coordinate text for the terminal point, e.g. `(√3/2, 1/2)`.
+   * Supplied by `angle-coordinates.ts` — this builder deliberately knows nothing
+   * about exact maths. Omitted or empty draws no label.
+   */
+  coordinateLabel?: string;
+}
+
+/**
+ * Horizontal space the coordinate label occupies, in viewBox units. This builder
+ * is a pure string function with no font metrics, so overflow is tested against a
+ * reserved constant rather than measured text. Sized for the widest pair the
+ * feature produces — `(-0.71, -0.71)` at font-size 10 — with margin.
+ *
+ * Exported so the placement test asserts against this value rather than a copy
+ * of it; a test with its own duplicate constant silently stops testing the real
+ * one the moment they diverge.
+ */
+export const LABEL_WIDTH = 96;
+/** Radial gap between the terminal dot and the label anchor, in px. */
+const LABEL_GAP = 14;
+/** Keep-out margin at the viewBox edges, in px. */
+const LABEL_MARGIN = 4;
+
+/**
+ * The coordinate label, anchored beside the terminal dot and clamped so no
+ * combination of r and θ can push it out of the viewBox.
+ *
+ * Placement is outward from the dot with the text growing away from the figure.
+ * At large r that would clip the edge, so it flips to the inward side and swaps
+ * the alignment. The inward flip cannot collide with the angle-measure arc: it
+ * only triggers at radii where the inward anchor is still far outside that arc's
+ * 0.3-unit radius.
+ *
+ * LABEL_WIDTH is deliberately conservative — wider than the text actually is —
+ * so the failure mode is flipping inward slightly sooner than strictly necessary
+ * rather than clipping. An early flip is still perfectly readable; a clipped
+ * label is not.
+ */
+function coordinateLabelMarkup(
+  c: number,
+  dotRadiusPx: number,
+  endRad: number,
+  view: number,
+  text: string,
+  fill: string,
+): string {
+  const outward = polarToCartesian(c, c, dotRadiusPx + LABEL_GAP, endRad);
+  const rightSide = outward.x >= c;
+
+  let anchorX = outward.x;
+  let anchorY = outward.y;
+  let textAnchor = rightSide ? 'start' : 'end';
+
+  const overflows = rightSide
+    ? anchorX + LABEL_WIDTH > view - LABEL_MARGIN
+    : anchorX - LABEL_WIDTH < LABEL_MARGIN;
+
+  if (overflows) {
+    const inward = polarToCartesian(c, c, Math.max(dotRadiusPx - LABEL_GAP, 0), endRad);
+    anchorX = inward.x;
+    anchorY = inward.y;
+    textAnchor = rightSide ? 'end' : 'start';
+  }
+
+  const y = Math.min(Math.max(anchorY, 12), view - 6);
+  return (
+    `<text data-role="coordinate-label" x="${anchorX}" y="${y}" fill="${fill}" ` +
+    `font-size="10" font-weight="600" text-anchor="${textAnchor}" ` +
+    `dominant-baseline="middle">${text}</text>`
+  );
 }
 
 /**
@@ -89,6 +160,14 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const initialDot = polarToCartesian(c, c, r * unit, betaRad);
   const terminalDot = polarToCartesian(c, c, r * unit, endRad);
 
+  // tickText, not the terminal-side red: #e24b4a clears only 3.93:1 against
+  // white, below the 4.5:1 floor for text. Weight and size carry the emphasis
+  // instead.
+  const labelMarkup =
+    opts.coordinateLabel !== undefined && opts.coordinateLabel !== ''
+      ? coordinateLabelMarkup(c, r * unit, endRad, view, opts.coordinateLabel, tickText)
+      : '';
+
   return (
     // Reference axes and the dashed unit circle.
     `<line x1="${c - 1.35 * unit}" y1="${c}" x2="${c + 1.35 * unit}" y2="${c}" stroke="${colors.axis}" stroke-width="1" />` +
@@ -106,6 +185,7 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     `<line x1="${c}" y1="${c}" x2="${initialTip.x}" y2="${initialTip.y}" stroke="${colors.floor}" stroke-width="2" />` +
     `<line x1="${c}" y1="${c}" x2="${terminalTip.x}" y2="${terminalTip.y}" stroke="${colors.wall}" stroke-width="2" />` +
     `<circle cx="${initialDot.x}" cy="${initialDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
-    `<circle cx="${terminalDot.x}" cy="${terminalDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    `<circle cx="${terminalDot.x}" cy="${terminalDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
+    labelMarkup
   );
 }
