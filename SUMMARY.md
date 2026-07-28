@@ -2870,3 +2870,37 @@ same facts as prose.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — coordinate label placement
+
+**Summary:**
+Replaced the fixed `LABEL_WIDTH = 96` constant in `angle-diagram.ts` with an exported
+`labelWidth(text)` function that estimates width from character count
+(`text.length * 5.6`). `coordinateLabelMarkup` now computes the reserved width from the
+actual label text instead of a single worst-case constant.
+
+**Rationale:**
+Code review traced the real geometry and found `LABEL_WIDTH = 96` — sized for the
+longest label the feature produces, `(-0.71, -0.71)` — was wide enough to trigger the
+inward-flip branch at the *default* view (r = 1, θ = 30°, label `(√3/2, 1/2)`, and even
+the short `(1, 0)` at θ = 0), not only at the large radii the original design intended.
+The label ended up sitting inside the circle, crossing the swept sector, at the most
+common state a student would see. A single fixed width cannot serve every label: it is
+either too wide for a short one (forcing a needless flip at the default view, the bug
+here) or too narrow for the longest one (risking a clip). Sizing the reserved width to
+the actual text removes that tradeoff. Per the user's explicit ruling, this supersedes
+the original brief's instruction not to tune `LABEL_WIDTH` down — that instruction
+assumed a fixed constant was the only lever available; the fix instead makes the width
+correct for every label rather than picking a different single number.
+
+Added a regression test — `keeps the label outside the dot at the default view, where
+it fits` — pinning that `(√3/2, 1/2)` at r = 1, θ = 30° stays outward (`anchor:
+'start'`, `x > 236.2`) so this cannot silently regress back to the over-wide-constant
+behavior.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Task 3 review finding: `LABEL_WIDTH` fixed-constant overflow at default view

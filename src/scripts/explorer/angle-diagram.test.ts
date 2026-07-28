@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { buildAngleDiagramSvg, LABEL_WIDTH } from './angle-diagram';
+import { buildAngleDiagramSvg, labelWidth } from './angle-diagram';
 import { explorerColors } from '@/scripts/graphing/theme';
 
 const colors = explorerColors(false);
@@ -66,7 +66,7 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
 
   it('keeps the label inside the viewBox across the whole r × θ domain', () => {
     const view = 320;
-    const width = LABEL_WIDTH;
+    const width = labelWidth('(-0.71, -0.71)');
     for (let r = 0.5; r <= 1.5001; r += 0.1) {
       for (let theta = -360; theta <= 360; theta += 15) {
         const svg = buildAngleDiagramSvg({
@@ -99,6 +99,20 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
     const label = readLabel(svg)!;
     expect(label.anchor).toBe('end');
     expect(label.x).toBeLessThan(292);
+  });
+
+  it('keeps the label outside the dot at the default view, where it fits', () => {
+    // r = 1, θ = 30°: the outward anchor is x = 248.3 and "(√3/2, 1/2)" needs
+    // ~62px, so 310.3 < 316 — no flip. A fixed reserved width wide enough for
+    // the longest label would wrongly push this one inside the circle.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 30,
+      coordinateLabel: '(√3/2, 1/2)',
+    });
+    const label = readLabel(svg)!;
+    expect(label.anchor).toBe('start');
+    expect(label.x).toBeGreaterThan(236.2); // outside the terminal dot
   });
 
   it('places the label at β + θ, so it travels with the dot it belongs to', () => {

@@ -45,16 +45,18 @@ export interface AngleDiagramOptions {
 }
 
 /**
- * Horizontal space the coordinate label occupies, in viewBox units. This builder
- * is a pure string function with no font metrics, so overflow is tested against a
- * reserved constant rather than measured text. Sized for the widest pair the
- * feature produces — `(-0.71, -0.71)` at font-size 10 — with margin.
+ * Horizontal space a coordinate label occupies, in viewBox units.
  *
- * Exported so the placement test asserts against this value rather than a copy
- * of it; a test with its own duplicate constant silently stops testing the real
- * one the moment they diverge.
+ * A pure string builder has no font metrics, so this estimates from character
+ * count at the label's font-size 10 — deliberately a little generous, so the
+ * failure mode is flipping inward slightly sooner than strictly necessary
+ * rather than clipping. A single fixed width cannot work here: it is either
+ * too wide for a short label like `(1, 0)` (forcing a needless flip at the
+ * default view) or too narrow for a long one like `(-0.71, -0.71)`.
  */
-export const LABEL_WIDTH = 96;
+export function labelWidth(text: string): number {
+  return text.length * 5.6;
+}
 /** Radial gap between the terminal dot and the label anchor, in px. */
 const LABEL_GAP = 14;
 /** Keep-out margin at the viewBox edges, in px. */
@@ -70,10 +72,9 @@ const LABEL_MARGIN = 4;
  * only triggers at radii where the inward anchor is still far outside that arc's
  * 0.3-unit radius.
  *
- * LABEL_WIDTH is deliberately conservative — wider than the text actually is —
- * so the failure mode is flipping inward slightly sooner than strictly necessary
- * rather than clipping. An early flip is still perfectly readable; a clipped
- * label is not.
+ * `labelWidth(text)` estimates from character count rather than a fixed budget,
+ * so a short label like `(1, 0)` is not needlessly pushed inward by a reserved
+ * width sized for the longest label the feature produces.
  */
 function coordinateLabelMarkup(
   c: number,
@@ -83,6 +84,7 @@ function coordinateLabelMarkup(
   text: string,
   fill: string,
 ): string {
+  const width = labelWidth(text);
   const outward = polarToCartesian(c, c, dotRadiusPx + LABEL_GAP, endRad);
   const rightSide = outward.x >= c;
 
@@ -91,8 +93,8 @@ function coordinateLabelMarkup(
   let textAnchor = rightSide ? 'start' : 'end';
 
   const overflows = rightSide
-    ? anchorX + LABEL_WIDTH > view - LABEL_MARGIN
-    : anchorX - LABEL_WIDTH < LABEL_MARGIN;
+    ? anchorX + width > view - LABEL_MARGIN
+    : anchorX - width < LABEL_MARGIN;
 
   if (overflows) {
     const inward = polarToCartesian(c, c, Math.max(dotRadiusPx - LABEL_GAP, 0), endRad);
