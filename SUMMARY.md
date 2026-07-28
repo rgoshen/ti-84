@@ -3114,3 +3114,34 @@ markup shape entirely.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:35] Commit Summary
+
+**Change Type:** Test
+**Scope:** Angle Explorer — coordinate label vertical clamp
+
+**Summary:**
+Added a test to `angle-diagram.test.ts` that calls `buildAngleDiagramSvg`
+with `view=60, unit=20` (both smaller than the live diagram's 320/88
+defaults) at `r=1, θ=90°`, where the pre-clamp anchor is computed at
+y=-16 — well outside `[12, view - 6]` — and asserts the emitted label `y`
+comes out clamped to exactly `12`. Updated `coordinateLabelMarkup`'s
+docstring and the clamp line itself to say plainly that the clamp guards
+non-default `view`/`unit` callers and is dead at the live figure's own
+settings, rather than leaving that unstated.
+
+**Rationale:**
+Swept the app's full reachable domain (r 0.5–1.5 step 0.1, θ −360–360 step
+1, default view/unit) and found the pre-clamp `y` never leaves [14.0,
+306.0] against the [12, 314] clamp — zero engagements at the values the
+live figure actually uses. But `view` and `unit` are public options on
+`buildAngleDiagramSvg` that pre-date this feature, so the clamp is not dead
+by construction: computed in Node against the exact
+`coordinateLabelMarkup` arithmetic that a small view/unit (60/20) drives
+the anchor to y=-16, confirming the clamp does real work there. Chose to
+make it live and covered rather than delete it, since a caller passing a
+smaller view/unit is a real, supported use of the public API, not a
+hypothetical.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
