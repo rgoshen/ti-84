@@ -104,6 +104,13 @@ function spokenEquation(exact: ExactValue | null, value: number, r: number): str
   const decimal = round4(value);
   if (exact === null) return `about ${decimal}`;
   const prefix = r === 1 ? '' : `${round4(r)} times `;
+  // "0, 0" and "1, 1" are noise here just as "0 = 0" and "1 = 1" are in
+  // equation() — the live region is the only channel a screen-reader user has,
+  // since both KaTeX boxes are aria-hidden, so the whole-coordinate stutter
+  // isn't compensated by the visual form the way it is for a sighted reader.
+  // With no r prefix, a whole coordinate whose exact and decimal text match is
+  // spoken once.
+  if (prefix === '' && formatExactText(exact) === decimal) return decimal;
   const relation = isRational(exact) ? '' : 'about ';
   return `${prefix}${formatExactSpoken(exact)}, ${relation}${decimal}`;
 }

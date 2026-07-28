@@ -131,4 +131,19 @@ describe('buildCoordinateReadout — spoken', () => {
       'The point is x equals about 0.7986, and y equals about 0.6018.',
     );
   });
+
+  it('states a whole coordinate once instead of stuttering "0, 0" or "1, 1"', () => {
+    // Both KaTeX boxes are aria-hidden, so the live region is the only channel a
+    // screen-reader user has for this — unlike equation(), there is no visual
+    // form compensating for the repeat.
+    expect(buildCoordinateReadout(90, 1).spoken).toBe(
+      'The point is x equals 0, and y equals 1.',
+    );
+    expect(buildCoordinateReadout(270, 1).spoken).toBe(
+      'The point is x equals 0, and y equals -1.',
+    );
+    expect(buildCoordinateReadout(0, 1).spoken).toBe(
+      'The point is x equals 1, and y equals 0.',
+    );
+  });
 });
