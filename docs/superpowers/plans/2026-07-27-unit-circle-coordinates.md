@@ -604,23 +604,30 @@ const fixed2 = (n: number): string => {
 /** True when the value is rational, so its decimal form is exact and takes `=`. */
 const isRational = (v: ExactValue): boolean => v.radicand === 1;
 
+interface EquationParts {
+  /** The exact coordinate, or null for a non-chart angle. */
+  exact: ExactValue | null;
+  /** The numeric coordinate, already scaled by r. */
+  value: number;
+  r: number;
+  /** Trig function name, in both alphabets: `\cos` / `cos`. */
+  fnLatex: string;
+  fnText: string;
+  /** θ as it is written elsewhere on screen, e.g. `37`. */
+  degreeLabel: string;
+  alphabet: 'latex' | 'text';
+}
+
 /**
  * One coordinate's worked equation, in whichever output alphabet the caller
- * needs. `exact` is null for non-chart angles, where the equation names the
- * trig function instead of a radical.
+ * needs. When `exact` is null the equation names the trig function instead of a
+ * radical, because no exact form exists for that angle.
  *
- * `scaled` carries the `r ×` prefix, dropped entirely at r = 1 where a literal
- * `1 ×` is noise. The relation is `=` only when the decimal is exact.
+ * The `r ×` prefix is dropped entirely at r = 1, where a literal `1 ×` is noise.
+ * The relation is `=` only when the decimal is exact.
  */
-function equation(
-  exact: ExactValue | null,
-  value: number,
-  r: number,
-  fnLatex: string,
-  fnText: string,
-  degreeLabel: string,
-  alphabet: 'latex' | 'text',
-): string {
+function equation(parts: EquationParts): string {
+  const { exact, value, r, fnLatex, fnText, degreeLabel, alphabet } = parts;
   const latex = alphabet === 'latex';
   const times = latex ? ' \\times ' : ' × ';
   const approx = latex ? ' \\approx ' : ' ≈ ';
@@ -663,10 +670,13 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
   const exact = exactCoordinates(theta);
   const degreeLabel = formatDegrees(theta);
 
-  const xLatex = `x = r\\cos\\theta = ${equation(exact?.x ?? null, x, r, '\\cos', 'cos', degreeLabel, 'latex')}`;
-  const yLatex = `y = r\\sin\\theta = ${equation(exact?.y ?? null, y, r, '\\sin', 'sin', degreeLabel, 'latex')}`;
-  const xText = equation(exact?.x ?? null, x, r, '\\cos', 'cos', degreeLabel, 'text');
-  const yText = equation(exact?.y ?? null, y, r, '\\sin', 'sin', degreeLabel, 'text');
+  const cos = { exact: exact?.x ?? null, value: x, r, fnLatex: '\\cos', fnText: 'cos', degreeLabel };
+  const sin = { exact: exact?.y ?? null, value: y, r, fnLatex: '\\sin', fnText: 'sin', degreeLabel };
+
+  const xLatex = `x = r\\cos\\theta = ${equation({ ...cos, alphabet: 'latex' })}`;
+  const yLatex = `y = r\\sin\\theta = ${equation({ ...sin, alphabet: 'latex' })}`;
+  const xText = equation({ ...cos, alphabet: 'text' });
+  const yText = equation({ ...sin, alphabet: 'text' });
 
   // The label and the triple line share one rule: the exact pair appears only on
   // the unit circle, where it IS the chart's fact. Off it, the scaled radical is
@@ -798,8 +808,7 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
 
   it('keeps the label inside the viewBox across the whole r × θ domain', () => {
     const view = 320;
-    // LABEL_WIDTH in the implementation; the label occupies this much horizontally.
-    const width = 96;
+    const width = LABEL_WIDTH;
     for (let r = 0.5; r <= 1.5001; r += 0.1) {
       for (let theta = -360; theta <= 360; theta += 15) {
         const svg = buildAngleDiagramSvg({
@@ -878,8 +887,12 @@ Add above `buildAngleDiagramSvg`:
  * is a pure string function with no font metrics, so overflow is tested against a
  * reserved constant rather than measured text. Sized for the widest pair the
  * feature produces — `(-0.71, -0.71)` at font-size 10 — with margin.
+ *
+ * Exported so the placement test asserts against this value rather than a copy
+ * of it; a test with its own duplicate constant silently stops testing the real
+ * one the moment they diverge.
  */
-const LABEL_WIDTH = 96;
+export const LABEL_WIDTH = 96;
 /** Radial gap between the terminal dot and the label anchor, in px. */
 const LABEL_GAP = 14;
 /** Keep-out margin at the viewBox edges, in px. */
@@ -1373,4 +1386,8 @@ Open a PR against `main` describing the feature, the four design decisions from 
 
 **Do not attempt to unit-test `AngleExplorer.tsx` directly.** It uses `useState`, `useEffect`, and `document`, and the project has no jsdom. `renderToStaticMarkup` works for stateless components like `FunctionDetailsPanels` but not this one. Task 4's verification is deliberately type-check plus browser plus Playwright.
 
-**The `LABEL_WIDTH = 96` constant appears in both the implementation and Task 3's test.** If you change one, change the other — the test's overflow assertion is meaningless otherwise.
+**`LABEL_WIDTH` is exported from `angle-diagram.ts` and imported by its test** — the test must not re-declare its own copy. Task 3's test file therefore needs `LABEL_WIDTH` added to its existing import from `./angle-diagram`:
+
+```ts
+import { buildAngleDiagramSvg, LABEL_WIDTH } from './angle-diagram';
+```
