@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { buildAngleDiagramSvg, labelWidth } from './angle-diagram';
+import { buildCoordinateReadout } from './angle-coordinates';
 import { explorerColors } from '@/scripts/graphing/theme';
 
 const colors = explorerColors(false);
@@ -65,15 +66,22 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
   });
 
   it('keeps the label inside the viewBox across the whole r × θ domain', () => {
+    // Drives the label from the real producer (angle-coordinates.ts) rather than
+    // a hardcoded string, so this test is pinned to whatever the widest label the
+    // feature actually produces is — not to a length nothing else enforces. This
+    // seam is test-only: angle-diagram.ts itself stays ignorant of the maths
+    // modules.
     const view = 320;
-    const width = labelWidth('(-0.71, -0.71)');
     for (let r = 0.5; r <= 1.5001; r += 0.1) {
       for (let theta = -360; theta <= 360; theta += 15) {
+        const roundedR = Number(r.toFixed(1));
+        const labelText = buildCoordinateReadout(theta, roundedR).labelText;
+        const width = labelWidth(labelText);
         const svg = buildAngleDiagramSvg({
           ...base,
-          r: Number(r.toFixed(1)),
+          r: roundedR,
           theta,
-          coordinateLabel: '(-0.71, -0.71)',
+          coordinateLabel: labelText,
         });
         const label = readLabel(svg);
         expect(label, `no label at r=${r} θ=${theta}`).not.toBeNull();
@@ -87,9 +95,10 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
     }
   });
 
-  it('flips the anchor inward rather than clipping at the widest radius', () => {
+  it('clamps the anchor rather than flipping inward at the widest radius', () => {
     // r = 1.5, θ = 0: the dot sits at x = 292 of 320. Outward placement would run
-    // the label off the right edge, so it must flip to the inward side.
+    // the label off the right edge, so it must clamp back rather than flip inward
+    // across the dot.
     const svg = buildAngleDiagramSvg({
       ...base,
       r: 1.5,
@@ -97,8 +106,34 @@ describe('buildAngleDiagramSvg — coordinate label', () => {
       coordinateLabel: '(1.50, 0.00)',
     });
     const label = readLabel(svg)!;
-    expect(label.anchor).toBe('end');
-    expect(label.x).toBeLessThan(292);
+    const width = labelWidth('(1.50, 0.00)');
+    expect(label.anchor).toBe('start');
+    expect(label.x).toBe(320 - 4 - width);
+  });
+
+  it('never runs the label across the origin or over its own terminal dot', () => {
+    const view = 320;
+    const unit = 88;
+    const c = view / 2;
+    for (let step = 5; step <= 15; step += 1) {
+      const r = step / 10;
+      for (let theta = -360; theta <= 360; theta += 1) {
+        const text = '(-0.80, 0.00)'; // a wide, representative label
+        const svg = buildAngleDiagramSvg({ ...base, r, theta, coordinateLabel: text });
+        const label = readLabel(svg)!;
+        const width = labelWidth(text);
+        const left = label.anchor === 'start' ? label.x : label.x - width;
+        const right = label.anchor === 'start' ? label.x + width : label.x;
+        expect(left < c && right > c, `crosses the origin at r=${r} θ=${theta}`).toBe(false);
+
+        const rad = (theta * Math.PI) / 180;
+        const dotX = c + r * unit * Math.cos(rad);
+        const dotY = c - r * unit * Math.sin(rad);
+        const overlapsDot =
+          dotX >= left - 2 && dotX <= right + 2 && Math.abs(dotY - label.y) < 9;
+        expect(overlapsDot, `sits on its own dot at r=${r} θ=${theta}`).toBe(false);
+      }
+    }
   });
 
   it('keeps the label outside the dot at the default view, where it fits', () => {

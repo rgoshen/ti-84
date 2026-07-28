@@ -61,20 +61,25 @@ export function labelWidth(text: string): number {
 const LABEL_GAP = 14;
 /** Keep-out margin at the viewBox edges, in px. */
 const LABEL_MARGIN = 4;
+/** Vertical clearance applied when the anchor clamps onto its own dot, in px. */
+const LABEL_NUDGE = 12;
 
 /**
  * The coordinate label, anchored beside the terminal dot and clamped so no
  * combination of r and θ can push it out of the viewBox.
  *
- * Placement is outward from the dot with the text growing away from the figure.
- * At large r that would clip the edge, so it flips to the inward side and swaps
- * the alignment. The inward flip cannot collide with the angle-measure arc: it
- * only triggers at radii where the inward anchor is still far outside that arc's
- * 0.3-unit radius.
+ * Placement is outward from the dot with `text-anchor` fixed to its natural side
+ * (`start` when the dot is right of centre, `end` when left) — the text always
+ * grows away from the figure, so it can never run back across the origin. At
+ * large r the outward anchor would overflow the viewBox; rather than flip the
+ * anchor inward (which would grow the text toward the centre and drive it
+ * through the origin at mid radii near the horizontal), the anchor clamps in
+ * place at the edge. A clamp alone would then sit the label directly on top of
+ * its own terminal dot, so when the clamp engages the label also nudges
+ * vertically clear of the dot, away from the horizontal.
  *
  * `labelWidth(text)` estimates from character count rather than a fixed budget,
- * so a short label like `(1, 0)` is not needlessly pushed inward by a reserved
- * width sized for the longest label the feature produces.
+ * so a short label like `(1, 0)` is not needlessly clamped at the default view.
  */
 function coordinateLabelMarkup(
   c: number,
@@ -87,21 +92,16 @@ function coordinateLabelMarkup(
   const width = labelWidth(text);
   const outward = polarToCartesian(c, c, dotRadiusPx + LABEL_GAP, endRad);
   const rightSide = outward.x >= c;
+  const textAnchor = rightSide ? 'start' : 'end';
 
   let anchorX = outward.x;
   let anchorY = outward.y;
-  let textAnchor = rightSide ? 'start' : 'end';
 
-  const overflows = rightSide
-    ? anchorX + width > view - LABEL_MARGIN
-    : anchorX - width < LABEL_MARGIN;
+  const limit = rightSide ? view - LABEL_MARGIN - width : LABEL_MARGIN + width;
+  const clamped = rightSide ? anchorX > limit : anchorX < limit;
+  anchorX = rightSide ? Math.min(anchorX, limit) : Math.max(anchorX, limit);
 
-  if (overflows) {
-    const inward = polarToCartesian(c, c, Math.max(dotRadiusPx - LABEL_GAP, 0), endRad);
-    anchorX = inward.x;
-    anchorY = inward.y;
-    textAnchor = rightSide ? 'end' : 'start';
-  }
+  if (clamped) anchorY += Math.sin(endRad) >= 0 ? -LABEL_NUDGE : LABEL_NUDGE;
 
   const y = Math.min(Math.max(anchorY, 12), view - 6);
   return (
