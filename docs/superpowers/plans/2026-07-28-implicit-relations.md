@@ -677,6 +677,23 @@ git commit -m "feat(graphing): stand down single-valued features for relations"
 - Consumes: everything above
 - Produces: nothing
 
+- [ ] **Step 0: Delete the obsolete Phase 1 rejection test**
+
+`tests/e2e/graphing.spec.ts` contains a test written in Phase 1, when the Graphing Calculator refused relations. This phase deliberately reverses that, so the test now fails and must be DELETED — not repaired. Find and remove this entire test:
+
+```ts
+test('rejects a relation with guidance to enter it as two functions', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2 + y^2 = 25');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.getByText(/two y values/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+});
+```
+
+Its replacement is the `'a relation gets no markers, no details panel and no table column'` test added in Step 1, which asserts the new behavior. The equivalent rejection assertion still lives on the explorers and is covered by Step 2.
+
 - [ ] **Step 1: Write the graphing e2e tests**
 
 Append to `tests/e2e/graphing.spec.ts`:
