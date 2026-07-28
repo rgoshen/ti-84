@@ -37,7 +37,8 @@ export function splitEquation(raw: string): SplitResult {
 
 export type SolveResult =
   | { ok: true; expr: string }
-  | { ok: false; reason: 'NOT_LINEAR_IN_Y' | 'NO_Y_PRESENT' | 'INVALID' };
+  | { ok: false; reason: 'NOT_LINEAR_IN_Y' | 'INVALID' }
+  | { ok: false; reason: 'NO_Y_PRESENT'; degenerate: boolean };
 
 // Sample x values for the linearity probe. Spread across negative, fractional, and
 // positive values so functions with restricted domains still get several usable
@@ -131,7 +132,25 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
         break;
       }
     }
-    if (aSamples > 0 && aAllZero) return { ok: false, reason: 'NO_Y_PRESENT' };
+    if (aSamples > 0 && aAllZero) {
+      // A is identically zero, so there is no y. If B is identically zero too the whole
+      // equation reduces to `0 = 0` — true at every point, so there is no curve at all.
+      // Otherwise B(x) = 0 describes a vertical line, which Phase 2 renders implicitly.
+      // Sampled, like the A guard above: a contrived B vanishing at all eight samples
+      // would be misread, which is accepted on the same grounds.
+      let bSamples = 0;
+      let bAllZero = true;
+      for (const x of SAMPLE_XS) {
+        const b = at(B, x);
+        if (b === null) continue;
+        bSamples += 1;
+        if (Math.abs(b) >= ZERO_TOL) {
+          bAllZero = false;
+          break;
+        }
+      }
+      return { ok: false, reason: 'NO_Y_PRESENT', degenerate: bSamples > 0 && bAllZero };
+    }
 
     return { ok: true, expr: simplify(`-(${B}) / (${A})`).toString() };
   } catch {

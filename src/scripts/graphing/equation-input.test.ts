@@ -71,14 +71,26 @@ describe('solveLinearY', () => {
     expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NOT_LINEAR_IN_Y' });
   });
 
-  // Without the A === 0 guard this divides by zero and emits the literal string
-  // "Infinity * (4 - 2*x)".
+  // `2x + 3 = 7` and `x = 3` describe the vertical line x = 2 and x = 3. There is no y,
+  // but there IS a curve — Phase 2 draws them implicitly.
   it.each([
     ['2*x + 3', '7'],
     ['x', '3'],
-    ['0', '0'],
-  ])('rejects %s = %s because no y is present', (lhs, rhs) => {
-    expect(solveLinearY(lhs, rhs)).toEqual({ ok: false, reason: 'NO_Y_PRESENT' });
+  ])('reports %s = %s as having no y but not degenerate', (lhs, rhs) => {
+    expect(solveLinearY(lhs, rhs)).toEqual({
+      ok: false,
+      reason: 'NO_Y_PRESENT',
+      degenerate: false,
+    });
+  });
+
+  // `0 = 0` is true at every point, so there is nothing to draw at all.
+  it('reports 0 = 0 as degenerate', () => {
+    expect(solveLinearY('0', '0')).toEqual({
+      ok: false,
+      reason: 'NO_Y_PRESENT',
+      degenerate: true,
+    });
   });
 
   it('reports invalid input rather than throwing', () => {
