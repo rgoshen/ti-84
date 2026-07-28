@@ -2822,6 +2822,18 @@ decimal is exact. Putting it in a pure module rather than inside `AngleExplorer.
 keeps it reachable by the node test runner, since the project has no jsdom and tests
 `.ts` only. The component is left with nothing to do but render.
 
+**Bug Fix Context:**
+The plan's supplied code for `radianLatex` gated the triple line's radian column on
+`isIntegerDegrees(theta)`. That gate is too broad: it renders 37° as `\frac{37\pi}{180}`,
+a fabricated exact radian for an angle with no exact form, directly contradicting the
+plan's own 37° test (`37^\circ \quad 0.6458\text{ rad} \quad ...`). The implementer
+corrected the gate to `exact !== null`, the same non-null check the coordinate pair and
+the SVG label already use, so all three chart-style facts appear or fall back together.
+Consequence: 15° now shows a decimal radian rather than `π/12`, because 15° is not one
+of the chart's 16 angles — `exact` is null there — and the design treats the
+degrees/radians/pair triple as a single fact that exists only at those 16 angles, not as
+independently-derivable quantities.
+
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 
@@ -2969,3 +2981,51 @@ before reporting the task complete, not by CI or a reviewer.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — final whole-branch review fixes
+
+**Summary:**
+Fixed four findings from the final whole-branch code review before merge.
+`coordinateLabelMarkup` in `angle-diagram.ts` no longer flips the label anchor
+inward when the outward placement would overflow the viewBox — it clamps the
+anchor at the edge and, only when the clamp engages, nudges it 12px vertically
+clear of the terminal dot. `spokenEquation` in `angle-coordinates.ts` now
+collapses a whole coordinate (`x equals 0, 0`) to a single spoken value the same
+way `equation()` already does for the visual channel. The diagram's viewBox sweep
+test now drives its label text from `buildCoordinateReadout(...).labelText`
+instead of a hardcoded string, so it is pinned to the real widest label rather
+than to a length nothing else enforces. The `[2026-07-27 18:20]` entry above gained
+a Bug Fix Context section recording the `radianLatex` gate correction.
+
+**Rationale:**
+The inward flip grew the label text toward the centre of the figure, so at mid
+radii near the horizontal the label ran across the origin and ended up on the far
+side of its own dot — confirmed against the real geometry and reproduced by a
+domain-sweep test (added to `angle-diagram.test.ts`) before the fix, then shown
+green after. A clamp alone would still leave the label sitting on top of its own
+dot at the boundary, hence the nudge. The spoken-channel fix matters because both
+KaTeX boxes in the readout are `aria-hidden`, so the live region is the only
+channel a screen-reader user has for the coordinate values — the stutter isn't
+compensated by a visual form the way it is for `equation()`. The test-seam fix
+closes a gap where the sweep test's hardcoded label length happened to match the
+current maximum by coincidence, so a real label that grew past it would have
+clipped without any test catching it.
+
+**Bug Fix Context:**
+Root cause: `coordinateLabelMarkup` treated "flip the anchor and swap
+`text-anchor`" as the overflow remedy, which is correct at the direction the text
+grows but wrong about where the anchor point itself lands — swapping the anchor
+without also reasoning about the origin let the anchor land on the near side of
+centre while the text still grew across it. Fix: keep `text-anchor` fixed to the
+dot's natural side always (so text only ever grows away from the figure), and
+replace the flip with an `x` clamp at the viewBox edge plus a conditional
+vertical nudge. Verified across the full reachable domain (`r` 0.5–1.5 step 0.1,
+`θ` −360–360 step 1): 0 origin crossings, 0 dot overlaps, 0 out-of-bounds anchors,
+versus 783 origin crossings under the old code.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Report: .superpowers/sdd/2026-07-27-unit-circle-coordinates/final-fix-report.md
