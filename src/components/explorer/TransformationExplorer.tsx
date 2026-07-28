@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { evaluate } from 'mathjs';
 
 import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { parseEquationInput } from '@/scripts/graphing/equation-input';
 import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
@@ -49,8 +49,6 @@ const DETAIL_ROWS: Array<{ key: keyof FunctionDetails; label: string }> = [
   { key: 'verticalAsymptote', label: 'Vertical asymptote' },
   { key: 'horizontalAsymptote', label: 'Horizontal asymptote' },
 ];
-
-const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
 
@@ -152,12 +150,12 @@ export default function TransformationExplorer(): React.JSX.Element {
   };
 
   const plotCustom = (): void => {
-    const e = normalizeExpr(exprInput);
-    if (!e) { setError('Enter a function first.'); return; }
-    try { evaluate(e, { x: 1 }); } catch (err) {
-      setError(`Invalid function: ${(err as Error).message}`); return;
+    const parsed = parseEquationInput(exprInput);
+    if (!parsed.ok) {
+      setError(parsed.reason === 'EMPTY' ? 'Enter a function first.' : parsed.message);
+      return;
     }
-    setBaseExpr(e);
+    setBaseExpr(parsed.expr);
     setParentId(null);
     setParentLabel('your function');
     setCoeffs(IDENTITY);
