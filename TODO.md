@@ -781,3 +781,48 @@ Verified against the built site by measuring rendered bounding boxes across a θ
 
 **References:**
 - Screenshot: Angle Explorer at 30°, reported 2026-07-27
+
+## [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+
+**Objective:**
+Accept any equation linear in `y` on all three equation inputs — Graphing Calculator,
+Function Explorer, Transformation Explorer — rearranging it into `y = f(x)` and showing
+both forms. Closes the Phase 1 half of GH-26. Today all three carry a duplicated regex
+that strips a leading `y =`, so `2y = x + 4` is rejected outright even though the
+rearrangement is exactly the Algebra I lesson the tool exists to teach.
+
+**Approach:**
+New pure module `src/scripts/graphing/equation-input.ts` exporting
+`parseEquationInput(raw): EquationParse`, a discriminated union. Any equation linear in
+`y` is `A(x)·y + B(x) = 0`, so `B = simplify(F, {y:0})`, `A = F(y=1) − B`, and the solved
+form is `simplify(-(B)/(A))` — mathjs substitutes `y` symbolically while leaving `x`
+free, so the result is a string and every downstream consumer is untouched. Linearity is
+verified by checking `F(y=2) ≡ 2A + B` at sample x values; `A ≡ 0` means no `y` is
+present. `EquationItem` gains an additive `input?: string` used only for labels. The
+three duplicated `normalizeExpr` copies are deleted — `y = sin(x)` is subsumed by the
+general solver.
+
+**Tests:**
+Unit tests over the pure module in the node env: the full verified case table
+(`2y = x+4`, `3y + 2x = 6`, `x*y = 1` → `1/x`, `y^2 = x` rejected, `2x + 3 = 7`
+rejected), backward compatibility for `sin(x)` / `y = sin(x)` / `Y = sin(x)`, and
+rejection of `y >= x` and `y = x = 3`. Full existing suite must pass unmodified — `expr`
+keeps its shape by design, so any failure signals the additive-field guarantee broke.
+One Playwright spec for the two-line label, asserting on text not `svg` descendants.
+
+**Risks & Tradeoffs:**
+- Uppercase `Y` is the most likely silent regression: today's regex is case-insensitive
+  but mathjs treats `Y` and `y` as distinct symbols. Explicit normalization plus a
+  pinning test.
+- Linearity is sampled at four x values, not proven symbolically. An equation undefined
+  at all four is misclassified as nonlinear — a false negative that rejects valid input
+  rather than plotting something wrong, which is the safe direction to fail.
+- `simplify` output is correct but occasionally clumsy (`(y-1)/2 = x` → `2 * (x + 1/2)`).
+  Accepted rather than writing an expression-tree pretty-printer, which this codebase
+  deliberately avoids elsewhere.
+- Three components change at once; the shared module carries all logic and the existing
+  suite covers each surface.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md

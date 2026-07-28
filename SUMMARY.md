@@ -3348,3 +3348,46 @@ not the Angle Explorer.
 
 **References:**
 - TODO.md: [2026-07-27] Fix: whole-radian tick label collides with the coordinate readout
+
+## [2026-07-28 09:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/specs, TODO.md
+
+**Summary:**
+Design spec for GH-26 Phase 1: accept any equation linear in `y` on all three equation
+inputs, rearrange it to `y = f(x)`, and show the entered form alongside the solved form.
+No code changed yet — this commit is the approved design and its TODO plan only.
+
+**Rationale:**
+GH-26 asks for `x^2 + y^2 = 25`, which is a relation, not a function — it fails the
+vertical line test, and every API in the codebase that maps an x to a single
+`number | null` (`evalAt`, and through it the value table, hover readout, point overlay,
+and details panel) is structurally incapable of representing it. Splitting the issue in
+two lets the rearrangeable case — which is both the more common classroom need and the
+one where every existing feature keeps working untouched — ship without waiting on the
+implicit renderer.
+
+The solve mechanism was chosen after verifying it empirically against mathjs 15.2.0
+rather than reasoning about it, which surfaced two defects that would otherwise have
+reached implementation: `2x + 3 = 7` divides by zero and emits the literal string
+`Infinity * (4 - 2*x)` without an `A ≡ 0` guard, and `mathjs.parse()` throws outright on
+`=`, so the entered-equation label cannot reuse the existing `exprToKatex` and must
+`toTex()` each side of the split separately.
+
+Alternatives considered: replacing `expr` with a richer parsed type (churns ~8 call
+sites for no user-visible gain); numerically root-finding `y` per sample (discards the
+expression string that KaTeX labels, `analyzeFunction`, and export all depend on, so it
+breaks the features it was meant to preserve); and inverting wrapped forms like
+`e^y = x` (needs a hand-maintained inverse table with domain guards for cases Phase 2's
+implicit renderer already draws).
+
+Scope was widened by one file beyond the issue: `normalizeExpr` is duplicated verbatim
+in `GraphingCalculator.tsx:72`, `FunctionExplorer.tsx:77`, and
+`TransformationExplorer.tsx:53`. Since the general solver subsumes that regex entirely,
+all three are deleted rather than two fixed and one left behind.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
