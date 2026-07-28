@@ -70,6 +70,19 @@ describe('ExportArtifact', () => {
     expect(html).not.toMatch(/<(button|input|select|nav)\b/);
   });
 
+  // A graph of relations alone has no single y per x, so there is nothing to tabulate.
+  // Rendering the section anyway produced a lone x column with no y beside it.
+  it('omits the value table section entirely when there is no table', () => {
+    const withoutTable: ExportArtifactModel = { ...MODEL, table: undefined };
+    const html = renderToStaticMarkup(
+      React.createElement(ExportArtifact, { model: withoutTable }),
+    );
+
+    expect(html).toContain('data-testid="export-artifact"');
+    expect(html).not.toContain('Selected values');
+    expect(html).not.toContain('<table');
+  });
+
   it('renders an accessible disabled Export trigger with eligibility guidance', () => {
     const html = renderToStaticMarkup(
       React.createElement(GraphResultExport, {
