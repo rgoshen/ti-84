@@ -77,13 +77,17 @@ const buildFunctionDetails = (
   expression: string,
   window: Window2D,
   color: string,
+  /** The equation as entered, when it was rearranged into `expression`. */
+  entered?: string | null,
 ): FunctionDetailsPanelEntry[] => {
   if (!expression.trim()) return [];
 
   return [
     {
       id: 'function-explorer-function',
-      title: `Function details · f(x) = ${formatExportEquation(expression)}`,
+      title: `Function details · ${
+        entered ? formatExportEquation(entered) : `f(x) = ${formatExportEquation(expression)}`
+      }`,
       color,
       facts: functionAnalysisFacts(analyzeFunction(expression, window)),
     },
@@ -171,8 +175,8 @@ export default function FunctionExplorer(): React.JSX.Element {
     [hasFunction, expr, tableXs, dark],
   );
   const liveFunctionDetails = useMemo(
-    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve),
-    [expr, displayWindow, dark],
+    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve, entered),
+    [expr, displayWindow, dark, entered],
   );
 
   const sweepButtons = useMemo(() => {
@@ -459,6 +463,7 @@ export default function FunctionExplorer(): React.JSX.Element {
 
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotExpr = expr;
+    const snapshotEntered = entered;
     const snapshotWindow = { ...displayWindow };
     const snapshotX = x;
     const snapshotAsymptotes = asymptotes.map((asymptote) => ({ ...asymptote }));
@@ -473,6 +478,7 @@ export default function FunctionExplorer(): React.JSX.Element {
       snapshotExpr,
       snapshotWindow,
       lightColors.curve,
+      snapshotEntered,
     );
 
     const asymptoteFacts = snapshotAsymptotes.length
@@ -504,7 +510,9 @@ export default function FunctionExplorer(): React.JSX.Element {
         window: snapshotWindow,
         legend: [
           {
-            label: `f(x) = ${formatExportEquation(snapshotExpr)}`,
+            label: snapshotEntered
+              ? formatExportEquation(snapshotEntered)
+              : `f(x) = ${formatExportEquation(snapshotExpr)}`,
             color: lightColors.curve,
             detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
           },
