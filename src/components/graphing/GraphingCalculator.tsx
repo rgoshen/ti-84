@@ -13,6 +13,7 @@ import {
   type PointShape,
 } from '@/scripts/graphing/plot';
 import { parseEquationInput } from '@/scripts/graphing/equation-input';
+import { equationToTex } from '@/scripts/graphing/equation-tex';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,7 +64,7 @@ function buildEquationDetails(
 ): FunctionDetailsPanelEntry[] {
   return equations.map((equation) => ({
     id: equation.id,
-    title: `Function details · y = ${formatExportEquation(equation.expr)}`,
+    title: `Function details · ${equation.input ?? `y = ${formatExportEquation(equation.expr)}`}`,
     color: equation.color,
     facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
   }));
@@ -101,13 +102,62 @@ function exprToKatex(expr: string): string | null {
   }
 }
 
-/** Pretty equation label: KaTeX when it parses, plain "y = expr" otherwise. */
-function EquationLabel({ expr, className }: { expr: string; className?: string }): React.JSX.Element {
-  const html = exprToKatex(expr);
-  if (html) {
-    return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+/** KaTeX HTML for already-TeX input, or null if KaTeX refuses it. */
+function texToHtml(tex: string | null): string | null {
+  if (tex === null) return null;
+  try {
+    return katex.renderToString(tex, {
+      throwOnError: false,
+      displayMode: false,
+      output: 'html',
+    });
+  } catch {
+    return null;
   }
-  return <span className={className}>{`y = ${expr}`}</span>;
+}
+
+/**
+ * Pretty equation label.
+ *
+ * When `input` is present the equation was rearranged, so both forms are shown: the
+ * equation as entered, then the solved `y = f(x)` beneath it. Seeing the rearrangement
+ * is the point — for `3y + 2x = 6` it is the lesson itself.
+ */
+function EquationLabel({
+  expr,
+  input,
+  className,
+}: {
+  expr: string;
+  input?: string;
+  className?: string;
+}): React.JSX.Element {
+  const solvedHtml = exprToKatex(expr);
+  const solved = solvedHtml ? (
+    <span dangerouslySetInnerHTML={{ __html: solvedHtml }} />
+  ) : (
+    <span>{`y = ${expr}`}</span>
+  );
+
+  if (!input) {
+    return <span className={className}>{solved}</span>;
+  }
+
+  const enteredHtml = texToHtml(equationToTex(input));
+  return (
+    <span className={className}>
+      <span className="block" data-testid="eq-entered-form" title={input}>
+        {enteredHtml ? <span dangerouslySetInnerHTML={{ __html: enteredHtml }} /> : input}
+      </span>
+      <span
+        className="block text-muted-foreground"
+        data-testid="eq-solved-form"
+        title={`y = ${expr}`}
+      >
+        {solved}
+      </span>
+    </span>
+  );
 }
 
 // Conservative estimates of the rendered tooltip dimensions used to clamp it
@@ -310,7 +360,7 @@ export default function GraphingCalculator(): React.JSX.Element {
         exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
         window: snapshotWindow,
         legend: snapshotEquations.map((equation) => ({
-          label: `y = ${formatExportEquation(equation.expr)}`,
+          label: equation.input ?? `y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
           detail: equation.showPoints
             ? `Points shown (${equation.pointShape})`
@@ -417,7 +467,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                           onChange={(e) => updateEquation(eq.id, { color: e.target.value })}
                         />
                       </label>
-                      <EquationLabel expr={eq.expr} className="truncate text-xs" />
+                      <EquationLabel expr={eq.expr} input={eq.input} className="text-xs" />
                     </div>
                     <Button
                       type="button"
