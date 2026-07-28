@@ -781,3 +781,95 @@ Verified against the built site by measuring rendered bounding boxes across a θ
 
 **References:**
 - Screenshot: Angle Explorer at 30°, reported 2026-07-27
+
+## [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+
+**Objective:**
+Accept any equation linear in `y` on all three equation inputs — Graphing Calculator,
+Function Explorer, Transformation Explorer — rearranging it into `y = f(x)` and showing
+both forms. Closes the Phase 1 half of GH-26. Today all three carry a duplicated regex
+that strips a leading `y =`, so `2y = x + 4` is rejected outright even though the
+rearrangement is exactly the Algebra I lesson the tool exists to teach.
+
+**Approach:**
+New pure module `src/scripts/graphing/equation-input.ts` exporting
+`parseEquationInput(raw): EquationParse`, a discriminated union. Any equation linear in
+`y` is `A(x)·y + B(x) = 0`, so `B = simplify(F, {y:0})`, `A = F(y=1) − B`, and the solved
+form is `simplify(-(B)/(A))` — mathjs substitutes `y` symbolically while leaving `x`
+free, so the result is a string and every downstream consumer is untouched. Linearity is
+verified by checking `F(y=2) ≡ 2A + B` at sample x values; `A ≡ 0` means no `y` is
+present. `EquationItem` gains an additive `input?: string` used only for labels. The
+three duplicated `normalizeExpr` copies are deleted — `y = sin(x)` is subsumed by the
+general solver.
+
+**Tests:**
+Unit tests over the pure module in the node env: the full verified case table
+(`2y = x+4`, `3y + 2x = 6`, `x*y = 1` → `1/x`, `y^2 = x` rejected, `2x + 3 = 7`
+rejected), backward compatibility for `sin(x)` / `y = sin(x)` / `Y = sin(x)`, and
+rejection of `y >= x` and `y = x = 3`. Full existing suite must pass unmodified — `expr`
+keeps its shape by design, so any failure signals the additive-field guarantee broke.
+One Playwright spec for the two-line label, asserting on text not `svg` descendants.
+
+**Risks & Tradeoffs:**
+- Uppercase `Y` is the most likely silent regression: today's regex is case-insensitive
+  but mathjs treats `Y` and `y` as distinct symbols. Explicit normalization plus a
+  pinning test.
+- Linearity is sampled at four x values, not proven symbolically. An equation undefined
+  at all four is misclassified as nonlinear — a false negative that rejects valid input
+  rather than plotting something wrong, which is the safe direction to fail.
+- `simplify` output is correct but occasionally clumsy (`(y-1)/2 = x` → `2 * (x + 1/2)`).
+  Accepted rather than writing an expression-tree pretty-printer, which this codebase
+  deliberately avoids elsewhere.
+- Three components change at once; the shared module carries all logic and the existing
+  suite covers each surface.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1
+
+**Objective:**
+Correct every deferred finding from the Phase 1 review loop rather than filing them.
+Seven items were parked as "SHIP with follow-up"; standing policy is to fix debt when
+it is encountered, while the context that found it is still loaded.
+
+**Approach:**
+- **Accessibility (WCAG 2.1 AA).** KaTeX ran with `output: 'html'`, which marks its
+  visual spans `aria-hidden` and emits no MathML — every rendered equation on the site
+  was silent to screen readers. Consolidated all 8 `renderToString` call sites into one
+  pure `src/scripts/katex-html.ts` using `htmlAndMathml`. Fixes the a11y defect and the
+  DRY violation in a single move, and being DOM-free it is unit-testable in the node env.
+- **Reason accuracy.** `solveLinearY` checked `usable < MIN_USABLE_SAMPLES` before
+  `!linear`, so an equation that is provably non-linear but defined at only one sample
+  (`sqrt(x-4.05)*y^2 = x`) was reported INVALID. A mismatch at any defined sample is
+  positive proof, so `!linear` is now checked first.
+- **Double evaluation.** `A(x)` was evaluated twice per sample. Cached from the first
+  pass; semantics unchanged because every sample's value is recorded, skipped or not.
+- **Exhaustiveness.** `equationToTex` used if/if/return-null; now a `switch` with a
+  `never` default, so a new `SplitResult` variant is a compile error, not a silent null.
+- **Function Explorer export.** Its on-screen card showed both entered and solved forms
+  while its exported legend and details title showed only the solved form. Threaded
+  `entered` through, matching the Graphing Calculator: entered form in the legend and
+  details title, solved form retained in the table header (that column holds f(x)).
+- **LINEARITY_TOL.** Investigated and deliberately NOT changed — documented instead.
+
+**Tests:**
+New `katex-html.test.ts` (5 tests) asserting a MathML track is emitted and the visual
+track stays `aria-hidden`. Two new `solveLinearY` cases pinning NOT_LINEAR_IN_Y vs
+INVALID. Full suite 334/334, integration 4/4, e2e 83/83.
+
+**Risks & Tradeoffs:**
+- The MathML change was the only real risk, since it alters KaTeX's DOM and the export
+  path rasterises the DOM to PNG. Verified by same-platform A/B: exported PNGs are
+  BYTE-IDENTICAL with and without MathML, so visual baselines cannot shift. This is
+  stronger evidence than a Docker run, being platform-independent.
+- `LINEARITY_TOL` stays absolute. A relative tolerance would not fix the reported case
+  (`1e-10*y^2 + y = x` differs from linear by ~2e-10 against values of order 1, i.e. a
+  relative error ~1e-10, below any epsilon that still tolerates float noise). Catching
+  it needs ~1e-12 absolute, which invites false rejections. The limit is documented in
+  the code rather than traded for a worse failure mode.
+
+**References:**
+- Issue: GH-26 (PR #27)
+- Ledger: .superpowers/sdd/2026-07-28-full-equation-input/progress.md

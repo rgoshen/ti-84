@@ -3348,3 +3348,268 @@ not the Angle Explorer.
 
 **References:**
 - TODO.md: [2026-07-27] Fix: whole-radian tick label collides with the coordinate readout
+
+## [2026-07-28 09:11] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/specs, TODO.md
+
+**Summary:**
+Design spec for GH-26 Phase 1: accept any equation linear in `y` on all three equation
+inputs, rearrange it to `y = f(x)`, and show the entered form alongside the solved form.
+No code changed yet — this commit is the approved design and its TODO plan only.
+
+**Rationale:**
+GH-26 asks for `x^2 + y^2 = 25`, which is a relation, not a function — it fails the
+vertical line test, and every API in the codebase that maps an x to a single
+`number | null` (`evalAt`, and through it the value table, hover readout, point overlay,
+and details panel) is structurally incapable of representing it. Splitting the issue in
+two lets the rearrangeable case — which is both the more common classroom need and the
+one where every existing feature keeps working untouched — ship without waiting on the
+implicit renderer.
+
+The solve mechanism was chosen after verifying it empirically against mathjs 15.2.0
+rather than reasoning about it, which surfaced two defects that would otherwise have
+reached implementation: `2x + 3 = 7` divides by zero and emits the literal string
+`Infinity * (4 - 2*x)` without an `A ≡ 0` guard, and `mathjs.parse()` throws outright on
+`=`, so the entered-equation label cannot reuse the existing `exprToKatex` and must
+`toTex()` each side of the split separately.
+
+Alternatives considered: replacing `expr` with a richer parsed type (churns ~8 call
+sites for no user-visible gain); numerically root-finding `y` per sample (discards the
+expression string that KaTeX labels, `analyzeFunction`, and export all depend on, so it
+breaks the features it was meant to preserve); and inverting wrapped forms like
+`e^y = x` (needs a hand-maintained inverse table with domain guards for cases Phase 2's
+implicit renderer already draws).
+
+Scope was widened by one file beyond the issue: `normalizeExpr` is duplicated verbatim
+in `GraphingCalculator.tsx:72`, `FunctionExplorer.tsx:77`, and
+`TransformationExplorer.tsx:53`. Since the general solver subsumes that regex entirely,
+all three are deleted rather than two fixed and one left behind.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 09:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/plans
+
+**Summary:**
+Nine-task TDD implementation plan for GH-26 Phase 1, derived from the approved design
+spec. Tasks 1–4 build two pure modules (`equation-input.ts`, `equation-tex.ts`) with
+full unit coverage; tasks 5–8 wire the three components and delete the duplicated
+`normalizeExpr` regex; task 9 adds e2e coverage and runs full verification. No code
+changed yet.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could meaningfully reject one unit while
+approving its neighbor, and where each deliverable carries its own test cycle. The
+splitter, the solver, and the public API are separated because each has distinct
+failure modes worth gating independently — the splitter's is comparison operators
+(`'y >= x'.split('=')` has length 2), the solver's is the A-identically-zero
+divide-by-zero, and the API's is message wording.
+
+Both new modules are pure `.ts` under `src/scripts/` rather than helpers inside the
+components. This is forced, not stylistic: vitest runs in the node environment with no
+jsdom and collects only `.ts`, so branching logic left in a `.tsx` component cannot be
+unit-tested at all in this repo.
+
+The self-review pass corrected one factual error before the plan was committed: it had
+claimed `evaluate` remained in use in `FunctionExplorer.tsx` for readouts, but `:411`
+is its only call site — the import is fully orphaned once `plot()` is rewritten, as it
+also is in `TransformationExplorer.tsx:157`. `GraphingCalculator.tsx` keeps `parse` for
+`exprToKatex` and narrows its import instead. Left uncorrected, this would have left
+dead imports in two files, against the no-dead-code rule.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+- Plan: docs/superpowers/plans/2026-07-28-full-equation-input.md
+
+## [2026-07-28 10:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** src/scripts/graphing, src/components
+
+**Summary:**
+All three equation-input surfaces (Graphing Calculator, Function Explorer,
+Transformation Explorer) now accept any equation linear in `y`, rearrange it to
+`y = f(x)` via the pure `equation-input.ts`/`equation-tex.ts` modules, and render the
+entered form alongside the solved form when a rearrangement actually happened. Each
+component's duplicated `normalizeExpr` regex is deleted in favor of the shared parser.
+`tests/e2e/graphing.spec.ts` gains three end-to-end tests — the rearrange-and-label
+path, the no-rearrangement path, and the relation-rejection path — closing out the
+nine-task plan for GH-26 Phase 1. Full verification: `astro check` (0 errors, 0
+warnings, 4 hints), `vitest run` (321/321), `test:integration` (4/4), and
+`playwright test` (every functional spec passes; the 3 `export-visual.spec.ts` PNG
+mismatches are the documented macOS-vs-Linux font-rasterization difference and are
+unrelated to this change — not regenerated). Coverage on the two new modules:
+`equation-input.ts` 94.74% statements / 93.33% branches, `equation-tex.ts` 100% / 100%.
+
+**Rationale:**
+Linear-in-y was chosen as the cut line not because anything excluded can never be
+plotted, but because it decides which equations get the value table, hover readout,
+point overlay, and function-details panel today — every one of those depends on
+`evalAt`'s single-valued `x -> number | null` contract, which a relation like
+`x^2 + y^2 = 25` cannot satisfy. Equations rejected here still render later through the
+implicit path deferred to Phase 2 (`fnType: 'implicit'`), where that surface's design
+gets revisited on its own terms. Splitting on function-vs-relation, rather than
+plottable-vs-not, keeps every existing downstream feature working unmodified for the
+linear-in-y case while being explicit that relations need their own value-table and
+details-panel design later, not a silent extension of this one.
+
+The public API adds `input?: string` to `EquationParse`/`EquationItem` rather than
+replacing `expr: string` with a richer parsed type (e.g. `{ lhs, rhs, solved }`). An
+additive optional field costs one extra line at each component's label rendering call
+site; a richer type would force `exprToKatex`, `analyzeFunction`, export, and every
+existing `expr`-typed test fixture across all three components — roughly 8 call sites —
+to either destructure the new shape or fall back to a `.expr` accessor, churn with no
+user-visible benefit since `expr` is still always the plain `y = f(x)` string every
+consumer already expects.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/scripts/graphing/equation-input.ts
+
+**Summary:**
+`parseEquationInput` now short-circuits when the left side is a bare `y`: it validates
+the right side and returns it verbatim instead of routing it through `solveLinearY`.
+An empty right side (`y =`) is reported as `EMPTY` rather than slipping through as a
+plottable expression. Added regression tests for shifted-domain functions and for the
+no-rewrite guarantee, plus a comment recording the ordering invariant that protects the
+A-identically-zero loop.
+
+**Rationale:**
+The general solver probes at a fixed `SAMPLE_XS` sweep, so any `y = <expr>` whose domain
+starts above the largest sample got zero usable samples and was rejected as INVALID.
+Widening the sample range only moves the hole; short-circuiting removes it, because a
+bare `y` has nothing to solve for in the first place. It also stops `simplify` from
+reordering the student's own terms and skips three `simplify` calls on the most common
+input.
+
+**Bug Fix Context:**
+Root cause: every `y = <expr>` input was sampled for linearity even though the solve was
+a no-op. `y = sqrt(x-5)`, `y = log(x-5)`, `y = asin(x-3)`, and `y = 1/sqrt(x-9)` are
+undefined at all eight sample x values, so `usable < MIN_USABLE_SAMPLES` returned
+INVALID — a regression against the `^y\s*=\s*` regex this module replaced, which never
+sampled anything. The short-circuit restores the old path exactly.
+
+Second root cause on the same path: `evaluate('')` returns `undefined` instead of
+throwing, so `y =` would have passed `validate()` as an empty but "valid" expression.
+The explicit empty guard restores the old "Enter an equation first." message.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:16] Commit Summary
+
+**Change Type:** Feature
+**Scope:** src/components/explorer/FunctionExplorer.tsx + spec
+
+**Summary:**
+The Function Explorer now keeps `parsed.input` in state and renders the entered equation
+above the solved `f(x) = <expr>` line in the Function card, matching the Graphing
+Calculator's muted secondary line. The stored input is reset on every plot, so a plain
+function never inherits the previous equation's entered form. Amended the spec's
+Architecture section to state that only the Function Explorer shows both forms.
+
+**Rationale:**
+Requirement 5 ("both forms are shown when a rearrangement occurs") was implemented on
+the Graphing Calculator only. The Transformation Explorer is deliberately excluded: its
+label tracks the composed `a·f(b(x−h))+k`, so a fixed entered-form line would contradict
+the curve the moment a slider moves. Plain text is used rather than KaTeX because this
+surface has no existing KaTeX rendering to match and the spec's label-rendering section
+scopes the TeX path to the Graphing Calculator.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:17] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/components/graphing/GraphingCalculator.tsx
+
+**Summary:**
+`EquationLabel` clips each rendered LINE (`block truncate`) and gives its wrapper
+`min-w-0`, so a long expression stays inside its row instead of running past the Remove
+button, while the two-line form still shows both lines. `equation.input` now goes
+through `formatExportEquation` in the details title and the export legend, and the
+colour swatch's `aria-label` names the entered form when there is one.
+
+**Rationale:**
+`truncate` was previously on the call site, where it clipped the two-line label to one
+line; removing it left nothing to contain `.katex`'s `white-space: nowrap`. Moving the
+clip to the inner lines fixes the overflow without collapsing the second line.
+`min-w-0` is required as well: a flex item's default `min-width: auto` refuses to shrink
+below its content, so the inner clipping would never engage without it. Routing `input`
+through `formatExportEquation` stops the entered form from showing literal `x^2` beside
+a solved form rendered as `x²`, and the aria-label now matches the details title it sits
+next to.
+
+**Bug Fix Context:**
+Root cause: the label's containing row (`flex min-w-0`) can shrink, but the label span
+inside it could not, so it overflowed the row rather than being clipped by it.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 12:16] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/scripts/katex-html.ts, src/scripts/graphing, src/components
+
+**Summary:**
+Cleared all seven technical-debt items parked during the GH-26 Phase 1 review loop.
+Centralised KaTeX rendering into one pure module and switched it to `htmlAndMathml`;
+reordered the linearity and usable-sample checks so a provably non-linear equation
+reports NOT_LINEAR_IN_Y rather than INVALID; cached the per-sample `A(x)` evaluation;
+made `equationToTex` exhaustive over `SplitResult`; threaded the entered form into the
+Function Explorer's export. 334/334 unit, 4/4 integration, 83/83 e2e.
+
+**Rationale:**
+The accessibility item was the most consequential and was NOT introduced by this branch
+— it predates it and affected every rendered equation on the site. KaTeX's
+`output: 'html'` builds its visual layout from `aria-hidden` spans and emits no MathML,
+so the graphing labels, angle readouts, and coordinate triples were all silent to screen
+readers, against the WCAG 2.1 AA bar this project holds itself to. Because eight call
+sites across two components each repeated the same options object, fixing the a11y
+defect and the DRY violation were the same edit: one `src/scripts/katex-html.ts`. Putting
+it under `src/scripts` was not stylistic — `katex.renderToString` needs no DOM, so it is
+unit-testable in the node environment, which a `.tsx` helper could not be.
+
+The reason-ordering fix rests on an asymmetry worth stating: a mismatch at any single
+defined sample is *positive proof* of non-linearity, whereas confirming linearity needs
+several samples. Checking the sample count first therefore discarded evidence the probe
+had already gathered.
+
+`LINEARITY_TOL` was deliberately left absolute after investigation. A relative tolerance
+does not fix the reported case — `1e-10*y^2 + y = x` deviates from linear by ~2e-10
+against values of order 1, a relative error near 1e-10, below any epsilon that still
+tolerates ordinary float noise. Catching it would mean tightening to ~1e-12 absolute and
+inviting false rejections of valid input. The limit is now documented in the code; a
+comment that explains why a plausible fix is wrong is worth more than the fix.
+
+**Verification:**
+The MathML change was the only item carrying real risk, since the export path rasterises
+the live DOM to PNG and could have shifted the Linux-only visual baselines. Verified by
+same-platform A/B — rendered the three export PNGs with and without the change on the
+same machine and byte-compared them: IDENTICAL. KaTeX's stylesheet clips the MathML
+track, so nothing reaches the raster. This is stronger evidence than a Docker run, since
+it isolates the variable rather than changing platform and font stack at once.
+
+**References:**
+- Issue: GH-26 (PR #27)
+- TODO.md: [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1

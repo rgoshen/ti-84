@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { evaluate, parse } from 'mathjs';
-import katex from 'katex';
+import { parse } from 'mathjs';
+import { renderMathHtml } from '@/scripts/katex-html';
 
 import { evalAt, integerXs, type Window2D } from '@/scripts/graphing/math';
 import { analyzeFunction, functionAnalysisFacts } from '@/scripts/graphing/analysis';
@@ -12,6 +12,8 @@ import {
   type PlotEquation,
   type PointShape,
 } from '@/scripts/graphing/plot';
+import { parseEquationInput } from '@/scripts/graphing/equation-input';
+import { equationToTex } from '@/scripts/graphing/equation-tex';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import FunctionDetailsPanels, {
   type FunctionDetailsPanelEntry,
@@ -52,6 +55,8 @@ const SHAPES: PointShape[] = ['circle', 'square', 'triangle'];
 /** A plotted equation plus a stable id for React keys and list mutations. */
 interface EquationItem extends PlotEquation {
   id: string;
+  /** The equation as entered, present only when it was rearranged into `expr`. */
+  input?: string;
 }
 
 function buildEquationDetails(
@@ -60,18 +65,17 @@ function buildEquationDetails(
 ): FunctionDetailsPanelEntry[] {
   return equations.map((equation) => ({
     id: equation.id,
-    title: `Function details · y = ${formatExportEquation(equation.expr)}`,
+    title: `Function details · ${
+      equation.input
+        ? formatExportEquation(equation.input)
+        : `y = ${formatExportEquation(equation.expr)}`
+    }`,
     color: equation.color,
     facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
   }));
 }
 
 type WindowFields = Record<keyof Window2D, string>;
-
-/** Strip a leading "y =" so "y = sin(x)" and "sin(x)" both plot. */
-function normalizeExpr(raw: string): string {
-  return raw.trim().replace(/^y\s*=\s*/i, '');
-}
 
 function round6(n: number): number {
   return Math.round(n * 1e6) / 1e6;
@@ -92,24 +96,72 @@ function windowToFields(w: Window2D): WindowFields {
  */
 function exprToKatex(expr: string): string | null {
   try {
-    const tex = parse(expr).toTex({ implicit: 'hide' });
-    return katex.renderToString(`y = ${tex}`, {
-      throwOnError: false,
-      displayMode: false,
-      output: 'html',
-    });
+    return renderMathHtml(`y = ${parse(expr).toTex({ implicit: 'hide' })}`);
   } catch {
-    return null;
+    return null; // mathjs could not parse the expression
   }
 }
 
-/** Pretty equation label: KaTeX when it parses, plain "y = expr" otherwise. */
-function EquationLabel({ expr, className }: { expr: string; className?: string }): React.JSX.Element {
-  const html = exprToKatex(expr);
-  if (html) {
-    return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+/** KaTeX HTML for already-TeX input, or null if there was no TeX to render. */
+function texToHtml(tex: string | null): string | null {
+  return tex === null ? null : renderMathHtml(tex);
+}
+
+/**
+ * Pretty equation label.
+ *
+ * When `input` is present the equation was rearranged, so both forms are shown: the
+ * equation as entered, then the solved `y = f(x)` beneath it. Seeing the rearrangement
+ * is the point — for `3y + 2x = 6` it is the lesson itself.
+ */
+function EquationLabel({
+  expr,
+  input,
+  className,
+}: {
+  expr: string;
+  input?: string;
+  className?: string;
+}): React.JSX.Element {
+  const solvedHtml = exprToKatex(expr);
+  const solved = solvedHtml ? (
+    <span dangerouslySetInnerHTML={{ __html: solvedHtml }} />
+  ) : (
+    <span>{`y = ${expr}`}</span>
+  );
+
+  // `.katex` sets `white-space: nowrap`, so a long expression cannot wrap and would run
+  // past the Remove button. Each LINE clips itself instead; the wrapper is deliberately
+  // left un-clipped so the two-line form still shows both lines. `min-w-0` overrides the
+  // `min-width: auto` a flex item gets by default, without which the wrapper refuses to
+  // shrink and the inner clipping never engages. The `title` carries the full text.
+  const wrapper = cn('min-w-0', className);
+
+  if (!input) {
+    return (
+      <span className={wrapper}>
+        <span className="block truncate" title={`y = ${expr}`}>
+          {solved}
+        </span>
+      </span>
+    );
   }
-  return <span className={className}>{`y = ${expr}`}</span>;
+
+  const enteredHtml = texToHtml(equationToTex(input));
+  return (
+    <span className={wrapper}>
+      <span className="block truncate" data-testid="eq-entered-form" title={input}>
+        {enteredHtml ? <span dangerouslySetInnerHTML={{ __html: enteredHtml }} /> : input}
+      </span>
+      <span
+        className="block truncate text-muted-foreground"
+        data-testid="eq-solved-form"
+        title={`y = ${expr}`}
+      >
+        {solved}
+      </span>
+    </span>
+  );
 }
 
 // Conservative estimates of the rendered tooltip dimensions used to clamp it
@@ -243,22 +295,16 @@ export default function GraphingCalculator(): React.JSX.Element {
   }, [equations, appliedWindow, dark]);
 
   const addEquation = (): void => {
-    const expr = normalizeExpr(exprInput);
-    if (!expr) {
-      setError('Enter an equation first.');
-      return;
-    }
-    // Validate that the expression parses/evaluates, mirroring graphing.html.
-    try {
-      evaluate(expr, { x: 1 });
-    } catch (e) {
-      setError(`Invalid expression: ${(e as Error).message}`);
+    const parsed = parseEquationInput(exprInput);
+    if (!parsed.ok) {
+      setError(parsed.message);
       return;
     }
     const color = PALETTE[equations.length % PALETTE.length];
     const item: EquationItem = {
       id: `eq-${nextId.current++}`,
-      expr,
+      expr: parsed.expr,
+      input: parsed.input,
       color,
       showPoints: false,
       pointShape: 'circle',
@@ -318,7 +364,9 @@ export default function GraphingCalculator(): React.JSX.Element {
         exportedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date()),
         window: snapshotWindow,
         legend: snapshotEquations.map((equation) => ({
-          label: `y = ${formatExportEquation(equation.expr)}`,
+          label: equation.input
+            ? formatExportEquation(equation.input)
+            : `y = ${formatExportEquation(equation.expr)}`,
           color: equation.color,
           detail: equation.showPoints
             ? `Points shown (${equation.pointShape})`
@@ -419,13 +467,13 @@ export default function GraphingCalculator(): React.JSX.Element {
                         />
                         <input
                           type="color"
-                          aria-label={`Color for y = ${eq.expr}`}
+                          aria-label={`Color for ${eq.input ?? `y = ${eq.expr}`}`}
                           value={eq.color}
                           className="absolute inset-0 cursor-pointer opacity-0"
                           onChange={(e) => updateEquation(eq.id, { color: e.target.value })}
                         />
                       </label>
-                      <EquationLabel expr={eq.expr} className="truncate text-xs" />
+                      <EquationLabel expr={eq.expr} input={eq.input} className="text-xs" />
                     </div>
                     <Button
                       type="button"

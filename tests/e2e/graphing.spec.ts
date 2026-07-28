@@ -469,3 +469,35 @@ test('tooltip coordinate text uses the foreground colour, not the curve colour',
   // Colour is a non-text accent: the text must not be the curve colour.
   expect(colours.text).not.toBe(colours.swatch);
 });
+
+test('rearranges an equation and shows both the entered and solved forms', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('3y + 2x = 6');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+  // Assert on the plain-text title attributes, not KaTeX's internal markup.
+  await expect(page.getByTestId('eq-entered-form')).toHaveAttribute('title', '3y + 2x = 6');
+  await expect(page.getByTestId('eq-solved-form')).toHaveAttribute(
+    'title',
+    'y = (6 - 2 * x) / 3',
+  );
+});
+
+test('shows only one form when no rearranging was needed', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('y = sin(x)');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.locator('[data-testid="plot"] svg')).toBeVisible();
+  await expect(page.getByTestId('eq-entered-form')).toHaveCount(0);
+});
+
+test('rejects a relation with guidance to enter it as two functions', async ({ page }) => {
+  await page.goto('/graphing');
+  await page.locator('#eq-input').fill('x^2 + y^2 = 25');
+  await page.getByRole('button', { name: 'Plot' }).click();
+
+  await expect(page.getByText(/two y values/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+});

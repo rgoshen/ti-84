@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { evaluate } from 'mathjs';
 
 import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { parseEquationInput } from '@/scripts/graphing/equation-input';
 import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
@@ -73,20 +73,21 @@ const windowToFields = (w: Window2D): WindowFields => ({
   yMax: String(round6(w.yMax)),
 });
 
-/** Strip a leading "y =" so "y = 1/x" and "1/x" both work. */
-const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
-
 const buildFunctionDetails = (
   expression: string,
   window: Window2D,
   color: string,
+  /** The equation as entered, when it was rearranged into `expression`. */
+  entered?: string | null,
 ): FunctionDetailsPanelEntry[] => {
   if (!expression.trim()) return [];
 
   return [
     {
       id: 'function-explorer-function',
-      title: `Function details · f(x) = ${formatExportEquation(expression)}`,
+      title: `Function details · ${
+        entered ? formatExportEquation(entered) : `f(x) = ${formatExportEquation(expression)}`
+      }`,
       color,
       facts: functionAnalysisFacts(analyzeFunction(expression, window)),
     },
@@ -118,6 +119,9 @@ const describeEndBehaviorForExport = (end: EndBehavior): string => {
 export default function FunctionExplorer(): React.JSX.Element {
   // No default function — the explorer starts empty until the user plots one.
   const [expr, setExpr] = useState('');
+  // The equation as typed, kept only when `expr` is a rearrangement of it (`3y + 2x = 6`).
+  // Null for everything else, so a plain function never shows a stale "entered" line.
+  const [entered, setEntered] = useState<string | null>(null);
   const [exprInput, setExprInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [appliedWindow, setAppliedWindow] = useState<Window2D>(DEFAULT_WINDOW);
@@ -171,8 +175,8 @@ export default function FunctionExplorer(): React.JSX.Element {
     [hasFunction, expr, tableXs, dark],
   );
   const liveFunctionDetails = useMemo(
-    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve),
-    [expr, displayWindow, dark],
+    () => buildFunctionDetails(expr, displayWindow, explorerColors(dark).curve, entered),
+    [expr, displayWindow, dark, entered],
   );
 
   const sweepButtons = useMemo(() => {
@@ -402,20 +406,18 @@ export default function FunctionExplorer(): React.JSX.Element {
   }, [readout.headline, readout.note]);
 
   const plot = (): void => {
-    const e = normalizeExpr(exprInput);
-    if (!e) {
-      setError('Enter a function first.');
-      return;
-    }
-    try {
-      evaluate(e, { x: 1 });
-    } catch (err) {
-      setError(`Invalid function: ${(err as Error).message}`);
+    const parsed = parseEquationInput(exprInput);
+    if (!parsed.ok) {
+      // Keep this surface's existing wording for the empty case.
+      setError(parsed.reason === 'EMPTY' ? 'Enter a function first.' : parsed.message);
       return;
     }
     stopSweep();
     setError(null);
-    setExpr(e);
+    setExpr(parsed.expr);
+    // `?? null` matters: plotting a plain function after a rearranged one must clear the
+    // entered form, or the label would describe the previous equation.
+    setEntered(parsed.input ?? null);
   };
 
   const applyWindow = (): void => {
@@ -461,6 +463,7 @@ export default function FunctionExplorer(): React.JSX.Element {
 
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotExpr = expr;
+    const snapshotEntered = entered;
     const snapshotWindow = { ...displayWindow };
     const snapshotX = x;
     const snapshotAsymptotes = asymptotes.map((asymptote) => ({ ...asymptote }));
@@ -475,6 +478,7 @@ export default function FunctionExplorer(): React.JSX.Element {
       snapshotExpr,
       snapshotWindow,
       lightColors.curve,
+      snapshotEntered,
     );
 
     const asymptoteFacts = snapshotAsymptotes.length
@@ -506,7 +510,9 @@ export default function FunctionExplorer(): React.JSX.Element {
         window: snapshotWindow,
         legend: [
           {
-            label: `f(x) = ${formatExportEquation(snapshotExpr)}`,
+            label: snapshotEntered
+              ? formatExportEquation(snapshotEntered)
+              : `f(x) = ${formatExportEquation(snapshotExpr)}`,
             color: lightColors.curve,
             detail: showPoints ? `Points shown (${pointShape})` : 'Points hidden',
           },
@@ -592,6 +598,23 @@ export default function FunctionExplorer(): React.JSX.Element {
               Plot
             </Button>
           </div>
+          {/*
+            Both forms, so a student who typed `3y + 2x = 6` still sees their own equation
+            next to the f(x) the explorer actually plots — the rearrangement is the lesson.
+            The solved line is muted only when it is the secondary of the two, matching the
+            Graphing Calculator's label.
+          */}
+          {hasFunction ? (
+            <div className="text-xs">
+              {entered ? <p data-testid="fx-entered-form">{entered}</p> : null}
+              <p
+                className={entered ? 'text-muted-foreground' : undefined}
+                data-testid="fx-solved-form"
+              >
+                f(x) = {expr}
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <p role="alert" className="text-xs text-destructive">
               {error}
