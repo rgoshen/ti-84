@@ -302,6 +302,7 @@ export default function AngleExplorer(): React.JSX.Element {
     const exactRadiansText = integer ? formatPiText(piMultiple(whole)) : '—';
     const turnText = integer ? formatFractionText(turnFraction(whole)) : '—';
     const arcValue = round4(arcLength(snapshotR, degreesToRadians(snapshotTheta)));
+    const snapshotCoords = buildCoordinateReadout(snapshotTheta, snapshotR);
 
     return {
       model: {
@@ -333,6 +334,7 @@ export default function AngleExplorer(): React.JSX.Element {
               { label: 'Radius', value: String(snapshotR) },
               { label: 'Position β', value: `${snapshotBeta}°` },
               { label: 'Arc length s = r|θ|', value: arcValue },
+              { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
           },
         ],
@@ -343,13 +345,24 @@ export default function AngleExplorer(): React.JSX.Element {
             ['Degrees', `${formatDegrees(snapshotTheta)}°`],
             ['Fraction of a turn', turnText],
             ['Exact radians', exactRadiansText],
+            ['x = r·cos θ', snapshotCoords.xText],
+            ['y = r·sin θ', snapshotCoords.yText],
             ['Decimal radians', formatRadiansDecimal(snapshotTheta)],
             ['Arc length', arcValue],
           ],
         },
       },
       renderGraph: (target) => {
-        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg({ theta: snapshotTheta, r: snapshotR, beta: snapshotBeta, colors: lightColors, tickText: '#334155' })}</svg>`;
+        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
+          {
+            theta: snapshotTheta,
+            r: snapshotR,
+            beta: snapshotBeta,
+            colors: lightColors,
+            tickText: '#334155',
+            coordinateLabel: snapshotCoords.labelText,
+          },
+        )}</svg>`;
       },
     };
   };

@@ -2904,3 +2904,47 @@ behavior.
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Task 3 review finding: `LABEL_WIDTH` fixed-constant overflow at default view
+
+## [2026-07-27 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export and end-to-end coverage
+
+**Summary:**
+The export artifact gains a `Point (x, y)` fact, `x = r·cos θ` and `y = r·sin θ` table
+rows (7 of the 9-row cap), and the coordinate label in its diagram. Added Playwright
+coverage for the exact point at the default angle, the on-diagram label, the switch to
+decimals and `r ×` scaling when the radius moves, the named-cosine fallback off the
+chart, and the new export rows. README updated.
+
+Also fixed two pre-existing e2e test defects surfaced while running the suite for the
+first time since Task 4 landed (Task 4's own verification was browser-MCP only, not
+`npm run test:e2e`): the shared `goto()` helper in both `angle.spec.ts` and
+`angle-export.spec.ts` asserted `${DIAGRAM} svg` was visible, but the coordinates block
+Task 4 added renders KaTeX radicals (e.g. the default 30° angle's √3/2) as their own
+nested `<svg>` elements, making that locator match three elements and fail every single
+test in both files with a strict-mode violation. Scoped it to the direct-child diagram
+svg (`${DIAGRAM} > svg`) instead. Separately, the brief's own new test asserted
+`toContainText('√3')` against that same KaTeX-rendered block; KaTeX draws `\sqrt{}` as a
+vector path (confirmed against `katex.renderToString` for both `html` and
+`htmlAndMathml` output — neither embeds a literal "√" character), so no text-content
+assertion can ever match it. Replaced it with a check against KaTeX's own `.sqrt` CSS
+marker, which verifies the same "exact radical, not decimal" intent without depending on
+an unrenderable string.
+
+**Rationale:**
+Keeps the exported sheet a faithful record of the screen. No PNG baseline regeneration
+was needed: `export-visual.spec.ts` covers only graphing-calculator, function-explorer,
+and transformation-explorer — there is no angle-explorer baseline. Confirmed its three
+failures on this machine are pre-existing and unrelated to this change (identical pixel
+diff counts with these three files stashed back to their pre-Task-5 state) — the known
+macOS-vs-Linux visual-baseline mismatch, not a regression.
+
+**Bug Fix Context:**
+Root cause of both e2e defects: the coordinates block's KaTeX rendering was never
+exercised through the real Playwright suite before now. The locator fix is scoped to
+test code only (no component change); the assertion fix trades a string search that
+cannot succeed against vector-rendered math for a structural check of the same intent.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
