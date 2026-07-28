@@ -3210,3 +3210,30 @@ session to rediscover it.
 
 **References:**
 - .claude/skills/diagram/SKILL.md
+
+## [2026-07-27 20:26] Commit Summary
+
+**Change Type:** Chore
+**Scope:** Dependencies (branch sync)
+
+**Summary:**
+Merged `origin/main` into `feature/unit-circle-coordinates` to pick up the Dependabot
+security group bump (PR #17), which advances `sharp` to 0.35.3 and its `@img/libvips-*`
+platform binaries to 1.3.2. `package-lock.json` was the only file the merge touched and
+it resolved without conflict.
+
+**Rationale:**
+The branch was 2 commits behind its PR base while PR #22 was open, so the PR was being
+reviewed against a lockfile that no longer matched `main`. Merging (not rebasing) keeps
+the 20 already-pushed commits and their review history intact — rebasing would have
+rewritten published SHAs on an open PR. `sharp` is a build-time dependency for Astro's
+image pipeline rather than a runtime import, so the unit suite alone could not prove the
+bump safe; `npm ci` plus a full `astro build` were run as well.
+
+**Verification:**
+269/269 unit tests pass (24 files); `npm run build` completes with all 7 static routes
+generated; `npm ci` produced no lockfile drift.
+
+**References:**
+- Upstream: GH-17 (dependabot npm_and_yarn group)
+- Branch PR: GH-22
