@@ -3429,3 +3429,49 @@ dead imports in two files, against the no-dead-code rule.
 - TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
 - Plan: docs/superpowers/plans/2026-07-28-full-equation-input.md
+
+## [2026-07-28 10:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** src/scripts/graphing, src/components
+
+**Summary:**
+All three equation-input surfaces (Graphing Calculator, Function Explorer,
+Transformation Explorer) now accept any equation linear in `y`, rearrange it to
+`y = f(x)` via the pure `equation-input.ts`/`equation-tex.ts` modules, and render the
+entered form alongside the solved form when a rearrangement actually happened. Each
+component's duplicated `normalizeExpr` regex is deleted in favor of the shared parser.
+`tests/e2e/graphing.spec.ts` gains three end-to-end tests — the rearrange-and-label
+path, the no-rearrangement path, and the relation-rejection path — closing out the
+nine-task plan for GH-26 Phase 1. Full verification: `astro check` (0 errors, 0
+warnings, 4 hints), `vitest run` (321/321), `test:integration` (4/4), and
+`playwright test` (every functional spec passes; the 3 `export-visual.spec.ts` PNG
+mismatches are the documented macOS-vs-Linux font-rasterization difference and are
+unrelated to this change — not regenerated). Coverage on the two new modules:
+`equation-input.ts` 94.74% statements / 93.33% branches, `equation-tex.ts` 100% / 100%.
+
+**Rationale:**
+Linear-in-y was chosen as the cut line not because anything excluded can never be
+plotted, but because it decides which equations get the value table, hover readout,
+point overlay, and function-details panel today — every one of those depends on
+`evalAt`'s single-valued `x -> number | null` contract, which a relation like
+`x^2 + y^2 = 25` cannot satisfy. Equations rejected here still render later through the
+implicit path deferred to Phase 2 (`fnType: 'implicit'`), where that surface's design
+gets revisited on its own terms. Splitting on function-vs-relation, rather than
+plottable-vs-not, keeps every existing downstream feature working unmodified for the
+linear-in-y case while being explicit that relations need their own value-table and
+details-panel design later, not a silent extension of this one.
+
+The public API adds `input?: string` to `EquationParse`/`EquationItem` rather than
+replacing `expr: string` with a richer parsed type (e.g. `{ lhs, rhs, solved }`). An
+additive optional field costs one extra line at each component's label rendering call
+site; a richer type would force `exprToKatex`, `analyzeFunction`, export, and every
+existing `expr`-typed test fixture across all three components — roughly 8 call sites —
+to either destructure the new shape or fall back to a `.expr` accessor, churn with no
+user-visible benefit since `expr` is still always the plain `y = f(x)` string every
+consumer already expects.
+
+**References:**
+- Issue: GH-26
+- TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
