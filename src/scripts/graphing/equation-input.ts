@@ -137,8 +137,8 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
       // A is identically zero, so there is no y. If B is identically zero too the whole
       // equation reduces to `0 = 0` — true at every point, so there is no curve at all.
       // Otherwise B(x) = 0 describes a vertical line, which Phase 2 renders implicitly.
-      // Sampled, like the A guard above: a contrived B vanishing at all eight samples
-      // would be misread, which is accepted on the same grounds.
+      // Sampled, like the A guard above: a contrived B vanishing at every sample would
+      // be misread, which is accepted on the same grounds.
       let bSamples = 0;
       let bAllZero = true;
       for (const x of SAMPLE_XS) {
@@ -183,7 +183,7 @@ const MESSAGES: Record<ParseFailure, string> = {
  * only way to use these explorers' analysis panels on a circle.
  */
 export const RELATION_NOT_SUPPORTED_MESSAGE =
-  'That’s a relation, not a function — some x values have two y values. ' +
+  'That’s a relation, not a function — it doesn’t give exactly one y for each x. ' +
   'Graph it on the Graphing Calculator, or enter it here as two functions: ' +
   'y = sqrt(25-x^2) and y = -sqrt(25-x^2).';
 
@@ -270,8 +270,7 @@ export function parseEquationInput(raw: string): EquationParse {
   const invalid = validate(solved.expr, 'function');
   if (invalid) return invalid;
 
-  const rearranged = split.lhs !== 'y';
-  return rearranged
-    ? { ok: true, kind: 'function', expr: solved.expr, input: `${split.lhs} = ${split.rhs}` }
-    : { ok: true, kind: 'function', expr: solved.expr };
+  // `split.lhs` cannot be a bare `y` here — that case returned from the short-circuit
+  // above — so this is always a rearrangement and `input` is always set.
+  return { ok: true, kind: 'function', expr: solved.expr, input: `${split.lhs} = ${split.rhs}` };
 }

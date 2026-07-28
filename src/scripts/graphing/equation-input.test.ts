@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { splitEquation, solveLinearY, parseEquationInput } from './equation-input';
+import {
+  splitEquation,
+  solveLinearY,
+  parseEquationInput,
+  RELATION_NOT_SUPPORTED_MESSAGE,
+} from './equation-input';
 
 describe('splitEquation', () => {
   it('reports empty input', () => {
@@ -260,18 +265,24 @@ describe('parseEquationInput', () => {
     expect(parseEquationInput(raw)).toMatchObject({ ok: true, kind: 'function', expr });
   });
 
-  // A relation's expression contains y. Binding only x — as the function path does —
-  // would make mathjs throw and reject every relation as INVALID.
-  it('validates a relation with both x and y bound', () => {
-    expect(parseEquationInput('x^2 + y^2 = 25')).toMatchObject({ ok: true });
-  });
-
   // A solver INVALID must keep its own reason. Routing it to DEGENERATE would tell a
   // student their typo is an equation that is true everywhere.
-  it.each([['@@@ = 3'], ['x @ = 3'], ['z^2 + y^2 = 25']])(
-    'reports %s as invalid rather than degenerate',
-    (raw) => {
-      expect(parseEquationInput(raw)).toMatchObject({ ok: false, reason: 'INVALID' });
-    },
-  );
+  it.each([
+    ['@@@ = 3'],
+    ['x @ = 3'],
+    ['z^2 + y^2 = 25'],
+    ['( = 3'],
+    ['sqrt(x-4.05)*y = x'],
+  ])('reports %s as invalid rather than degenerate', (raw) => {
+    expect(parseEquationInput(raw)).toMatchObject({ ok: false, reason: 'INVALID' });
+  });
+});
+
+describe('RELATION_NOT_SUPPORTED_MESSAGE', () => {
+  // The message must be accurate for BOTH shapes of relation: a circle (two y at some x)
+  // and a vertical line (no y at most x, infinitely many at one).
+  it('explains relations in terms that cover vertical lines too', () => {
+    expect(RELATION_NOT_SUPPORTED_MESSAGE).toContain('exactly one y for each x');
+    expect(RELATION_NOT_SUPPORTED_MESSAGE).toContain('Graphing Calculator');
+  });
 });
