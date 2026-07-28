@@ -63,16 +63,20 @@ function buildEquationDetails(
   equations: EquationItem[],
   window: Window2D,
 ): FunctionDetailsPanelEntry[] {
-  return equations.map((equation) => ({
-    id: equation.id,
-    title: `Function details · ${
-      equation.input
-        ? formatExportEquation(equation.input)
-        : `y = ${formatExportEquation(equation.expr)}`
-    }`,
-    color: equation.color,
-    facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
-  }));
+  return equations
+    // A relation has no single-valued domain, range, intercepts, or asymptotes to
+    // report — analyzeFunction assumes one y per x throughout.
+    .filter((equation) => equation.kind === 'function')
+    .map((equation) => ({
+      id: equation.id,
+      title: `Function details · ${
+        equation.input
+          ? formatExportEquation(equation.input)
+          : `y = ${formatExportEquation(equation.expr)}`
+      }`,
+      color: equation.color,
+      facts: functionAnalysisFacts(analyzeFunction(equation.expr, window)),
+    }));
 }
 
 type WindowFields = Record<keyof Window2D, string>;
@@ -304,6 +308,7 @@ export default function GraphingCalculator(): React.JSX.Element {
     const item: EquationItem = {
       id: `eq-${nextId.current++}`,
       expr: parsed.expr,
+      kind: parsed.kind,
       input: parsed.input,
       color,
       showPoints: false,
@@ -345,7 +350,10 @@ export default function GraphingCalculator(): React.JSX.Element {
   };
 
   const tableXs = integerXs(displayWindow);
-  const showTable = equations.length > 0 && tableXs.length > 0;
+  // The value table has one column per equation, which only makes sense when each x maps
+  // to a single y. Relations are omitted rather than shown as a column of blanks.
+  const tableEquations = equations.filter((eq) => eq.kind === 'function');
+  const showTable = tableEquations.length > 0 && tableXs.length > 0;
   const liveFunctionDetails = useMemo(
     () => buildEquationDetails(equations, displayWindow),
     [equations, displayWindow],
@@ -354,6 +362,7 @@ export default function GraphingCalculator(): React.JSX.Element {
   const createExportSnapshot = (): ExportSnapshot => {
     const snapshotWindow = { ...displayWindow };
     const snapshotEquations = equations.map((equation) => ({ ...equation }));
+    const snapshotTableEquations = snapshotEquations.filter((eq) => eq.kind === 'function');
     const snapshotXs = selectRepresentativeRows(tableXs);
     const snapshotDetails = buildEquationDetails(snapshotEquations, snapshotWindow);
 
@@ -375,10 +384,10 @@ export default function GraphingCalculator(): React.JSX.Element {
         sections: snapshotDetails,
         table: {
           title: 'Selected values',
-          headers: ['x', ...snapshotEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
+          headers: ['x', ...snapshotTableEquations.map((equation) => `y = ${formatExportEquation(equation.expr)}`)],
           rows: snapshotXs.map((x) => [
             String(x),
-            ...snapshotEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
+            ...snapshotTableEquations.map((equation) => formatExportValue(evalAt(equation.expr, x))),
           ]),
         },
       },
@@ -486,6 +495,12 @@ export default function GraphingCalculator(): React.JSX.Element {
                     </Button>
                   </div>
 
+                  {eq.kind === 'relation' ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      A relation — two y values at some x, so the table and details don’t
+                      apply.
+                    </p>
+                  ) : (
                   <div className="mt-2 flex items-center gap-3 text-xs">
                     <label className="inline-flex cursor-pointer items-center gap-1.5">
                       <Checkbox
@@ -517,6 +532,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                       </Select>
                     </label>
                   </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -588,7 +604,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                     <th className="whitespace-nowrap border-b px-2 py-1.5 text-left font-medium">
                       x
                     </th>
-                    {equations.map((eq) => (
+                    {tableEquations.map((eq) => (
                       <th
                         key={eq.id}
                         className="whitespace-nowrap border-b px-2 py-1.5 text-left font-medium"
@@ -603,7 +619,7 @@ export default function GraphingCalculator(): React.JSX.Element {
                   {tableXs.map((x, idx) => (
                     <tr key={x} className={idx % 2 ? 'bg-muted/40' : ''}>
                       <td className="whitespace-nowrap border-b px-2 py-1 font-mono">{x}</td>
-                      {equations.map((eq) => {
+                      {tableEquations.map((eq) => {
                         const y = evalAt(eq.expr, x);
                         return (
                           <td
