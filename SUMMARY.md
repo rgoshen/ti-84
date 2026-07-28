@@ -3282,3 +3282,22 @@ HTML returns `no-cache`, the actual emitted bundle
 **References:**
 - TODO.md: [2026-07-27] Fix: HTML cache headers in the nginx image
 - RFC 9111 §4.2.2 (heuristic freshness)
+
+## [2026-07-27 21:07] Commit Summary
+
+**Change Type:** CI
+**Scope:** .github/workflows
+
+**Summary:**
+Added an "Integration tests (nginx config)" step to the reusable verify workflow,
+running `npm run test:integration` after the unit tests.
+
+**Rationale:**
+A test that only runs locally does not prevent a regression. The step sits outside
+`npm test` so the unit loop stays hermetic and daemon-free, and runs before the build
+because it exercises `nginx.conf` rather than the compiled site — failing early costs
+less than failing after a build and a browser install. Docker is preinstalled on
+`ubuntu-latest`, so no extra setup action is needed.
+
+**References:**
+- TODO.md: [2026-07-27] Fix: HTML cache headers in the nginx image
