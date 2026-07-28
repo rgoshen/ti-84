@@ -3655,3 +3655,39 @@ reaching the renderer. The spec now specifies binding both variables.
 - Issue: GH-26 (Phase 2)
 - TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
 - Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+
+## [2026-07-28 14:00] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/plans
+
+**Summary:**
+Six-task TDD implementation plan for GH-26 Phase 2, derived from the approved spec.
+Tasks 1–2 extend the pure parser (degenerate-vs-vertical-line detection, then the `kind`
+discriminator and routing); Tasks 3–5 wire the three components; Task 6 adds e2e coverage
+and runs full verification. No code changed yet.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could reject one unit while approving its
+neighbour. Splitting the degenerate bit (Task 1) from the routing (Task 2) is the
+non-obvious one: they touch the same function, but Task 1's question is numerical — is
+`B` identically zero across the samples — while Task 2's is a routing policy. They fail
+in different ways and deserve separate gates.
+
+Task 4 deliberately ends with `astro check` still reporting errors, because adding `kind`
+to `PlotEquation` makes the Graphing Calculator's object literal incomplete until Task 5.
+The step says so explicitly and tells the implementer to confirm the ONLY errors are that
+missing property — an expected-red checkpoint is safer than a plan that looks broken.
+
+Self-review replaced the one placeholder-shaped step: Task 5's checkbox-hiding originally
+said "move the existing markup here" with a comment stub. It now names the exact opening
+line (`<div className="mt-2 flex items-center gap-3 text-xs">`) and the exact closing
+anchor, so the implementer wraps real code rather than reconstructing it. The e2e
+selectors were also checked against the existing specs rather than assumed — `#fx-input`
+and the `Plot` button name both match.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+- Plan: docs/superpowers/plans/2026-07-28-implicit-relations.md
