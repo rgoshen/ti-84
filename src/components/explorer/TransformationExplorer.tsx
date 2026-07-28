@@ -2,7 +2,10 @@ import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
-import { parseEquationInput } from '@/scripts/graphing/equation-input';
+import {
+  parseEquationInput,
+  RELATION_NOT_SUPPORTED_MESSAGE,
+} from '@/scripts/graphing/equation-input';
 import { explorerColors } from '@/scripts/graphing/theme';
 import { renderTransform, type TransformHandle } from '@/scripts/explorer/transform-render';
 import { composeExpr, describeTransform, EPS, type Coeffs } from '@/scripts/explorer/transform';
@@ -153,6 +156,11 @@ export default function TransformationExplorer(): React.JSX.Element {
     const parsed = parseEquationInput(exprInput);
     if (!parsed.ok) {
       setError(parsed.reason === 'EMPTY' ? 'Enter a function first.' : parsed.message);
+      return;
+    }
+    // A transformed relation has no meaningful a·f(b(x−h))+k composition.
+    if (parsed.kind === 'relation') {
+      setError(RELATION_NOT_SUPPORTED_MESSAGE);
       return;
     }
     setBaseExpr(parsed.expr);
