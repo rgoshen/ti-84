@@ -659,3 +659,51 @@ cases; arc paths at >180° and exactly ±360°. E2E: slider drives readout, `pi/
 A full ±360° arc cannot be drawn with one SVG `A` command and must be split. Exact
 π forms must be suppressed for non-integer degrees or the readout prints absurd
 fractions. mathjs `evaluate` on raw input is a known injection surface.
+
+## [2026-07-27] Feature: Unit Circle Coordinates
+
+**Objective:**
+Add the terminal point `(x, y)` to the Angle Explorer in the three-part form the
+standard unit-circle reference chart uses — degrees, radian measure, and exact
+coordinates (`30° — π/6 — (√3/2, 1/2)`) — so moving the angle or radius slider shows
+not just how far around the circle the sweep goes, but where it lands.
+
+**Approach:**
+- New pure module `src/scripts/explorer/unit-circle.ts` holding an `ExactValue` type
+  (`sign · √radicand / denominator`) that covers all five chart magnitudes:
+  `0, 1/2, √2/2, √3/2, 1`. Stores only the first quadrant (0/30/45/60/90) and derives
+  the other twelve angles by reference angle plus quadrant sign.
+- Latex / plain-text / spoken formatter trio, mirroring the one `angle.ts` already
+  establishes for π multiples, so the KaTeX readout, plain-text export, and
+  screen-reader live region each get their own output channel.
+- Coordinate label pinned beside the terminal dot in `angle-diagram.ts`, with clamped
+  placement that flips inward rather than clipping the viewBox. Because that builder is
+  shared, the label reaches the exported PNG/PDF for free.
+- Readout block in `AngleExplorer.tsx` with the chart-style triple line plus worked
+  equations written out concretely: `x = r·cos θ = 1.2 × √3/2 ≈ 1.0392`.
+- Export gains a `Point (x, y)` fact and two Representations table rows (7 of 9 max).
+
+**Tests:**
+- `unit-circle.test.ts`: all 16 angles cross-checked against `Math.cos`/`Math.sin`;
+  negative and past-360° normalisation; `null` for non-special and non-integer degrees;
+  every formatter across zero / unit / radical / negative; no `-0` in any output.
+- `angle-diagram.test.ts`: label present; anchor stays inside the viewBox across the
+  full `r × θ` extremes; inward flip and `text-anchor` swap at the overflow boundary;
+  exact pair at `r = 1` on a special angle, decimals otherwise.
+- Component: `1 ×` prefix dropped at `r = 1`; `cos 37°` rather than a radical for a
+  non-special angle; spoken string includes coordinates.
+- E2E: coordinates block updates on radius-slider movement; new rows present in the
+  exported artifact.
+
+**Risks & Tradeoffs:**
+Deriving twelve angles from five risks a sign error a literal table would not — mitigated
+by cross-checking every angle against `Math.cos`/`Math.sin`. The coordinate label can
+crowd a whole-radian tick label near the terminal side; accepted, since true collision
+avoidance needs text metrics a pure string builder does not have. Coordinates are
+measured from θ and ignore β, so with β ≠ 0 the label travels with the dot while
+reporting θ's values — intentional, because using `β + θ` would kill exact radicals for
+every non-zero β. Overflow detection uses a reserved width constant rather than measured
+text.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md

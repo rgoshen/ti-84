@@ -2700,3 +2700,43 @@ The visual-regression PNG baseline for this export (mirroring the other three to
 - TODO.md: [2026-07-23] Feature: Angle Explorer (degrees ↔ radians)
 - Issue: GH-14
 
+
+## [2026-07-27 17:45] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — Unit Circle Coordinates
+
+**Summary:**
+Added the approved design spec for Unit Circle Coordinates, which puts the terminal
+point `(x, y)` into the Angle Explorer in the reference chart's three-part form
+(degrees — radians — exact coordinates), plus the matching TODO.md feature plan. No
+code changed in this commit.
+
+**Rationale:**
+The explorer already teaches θ as one quantity in several costumes (degrees, turn
+fraction, exact π multiple, decimal radians) but stops short of where the terminal side
+lands — the fact that makes the unit circle worth memorising.
+
+Four design decisions were settled before writing anything:
+
+- Exact form when `r ≠ 1` shows `r × unit-circle value` (`1.2 × √3/2`) rather than a
+  fully reduced `(3√3)/5`. The reduced form is equally exact but hides that the unit
+  circle is the reference and `r` merely scales it — which is what the radius slider
+  exists to demonstrate.
+- Coordinates are measured from θ alone, ignoring the β position slider, consistent
+  with how arc length already treats β. Using `β + θ` would mean exact radicals vanish
+  the moment β moves, gutting the feature.
+- Exact coverage is the chart's 16 angles (multiples of 30° and 45°). Multiples of 15°
+  would add `(√6 ± √2)/4`, past what the reference chart teaches.
+- The new module derives twelve angles from a five-entry first-quadrant table via
+  reference angle plus quadrant sign, rather than listing sixteen literals, so the code
+  encodes the same rule the student is learning. Tests cross-check every angle against
+  `Math.cos`/`Math.sin` to catch the sign error this trades for.
+
+Confirmed no PNG baseline regeneration is needed: `export-visual.spec.ts` covers only
+graphing-calculator, function-explorer, and transformation-explorer — there is no
+angle-explorer baseline.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Spec: docs/superpowers/specs/2026-07-27-unit-circle-coordinates-design.md
