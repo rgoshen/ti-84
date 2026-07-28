@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { evaluate } from 'mathjs';
 
 import { evalAt, gridlineCrossings, integerXs, type Window2D } from '@/scripts/graphing/math';
+import { parseEquationInput } from '@/scripts/graphing/equation-input';
 import { explorerColors } from '@/scripts/graphing/theme';
 import { formatNumber } from '@/scripts/graphing/hover';
 import ValueTable, { type ValueColumn } from '@/components/ValueTable';
@@ -72,9 +72,6 @@ const windowToFields = (w: Window2D): WindowFields => ({
   yMin: String(round6(w.yMin)),
   yMax: String(round6(w.yMax)),
 });
-
-/** Strip a leading "y =" so "y = 1/x" and "1/x" both work. */
-const normalizeExpr = (raw: string): string => raw.trim().replace(/^y\s*=\s*/i, '');
 
 const buildFunctionDetails = (
   expression: string,
@@ -402,20 +399,15 @@ export default function FunctionExplorer(): React.JSX.Element {
   }, [readout.headline, readout.note]);
 
   const plot = (): void => {
-    const e = normalizeExpr(exprInput);
-    if (!e) {
-      setError('Enter a function first.');
-      return;
-    }
-    try {
-      evaluate(e, { x: 1 });
-    } catch (err) {
-      setError(`Invalid function: ${(err as Error).message}`);
+    const parsed = parseEquationInput(exprInput);
+    if (!parsed.ok) {
+      // Keep this surface's existing wording for the empty case.
+      setError(parsed.reason === 'EMPTY' ? 'Enter a function first.' : parsed.message);
       return;
     }
     stopSweep();
     setError(null);
-    setExpr(e);
+    setExpr(parsed.expr);
   };
 
   const applyWindow = (): void => {
