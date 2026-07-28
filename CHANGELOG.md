@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+## [0.6.2](https://github.com/rgoshen/ti-84/compare/v0.6.1...v0.6.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* **explorer:** hide a radian tick label the coordinate readout would cover ([6e4efd8](https://github.com/rgoshen/ti-84/commit/6e4efd80f5955ad061d3ed75ad9a2fb15dc1f9a2))
+
 ## [0.6.1](https://github.com/rgoshen/ti-84/compare/v0.6.0...v0.6.1) (2026-07-28)
 
 
