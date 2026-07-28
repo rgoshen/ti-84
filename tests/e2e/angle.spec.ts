@@ -191,5 +191,10 @@ test('falls back to a named cosine for an angle off the chart', async ({ page })
   await deg(page).fill('37');
   const coords = page.locator(COORDS);
   await expect(coords).toContainText('0.7986');
-  await expect(coords).not.toContainText('√');
+  await expect(coords).toContainText('cos');
+  // `not.toContainText('√')` would be vacuously true here — see the note above:
+  // KaTeX never emits a literal "√" text node even when it DOES render a
+  // radical, so that assertion could never catch a regression. Checking for
+  // the absence of KaTeX's own radical marker is the real "no radical" proof.
+  await expect(coords.locator('.sqrt')).toHaveCount(0);
 });

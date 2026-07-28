@@ -2948,3 +2948,24 @@ cannot succeed against vector-rendered math for a structural check of the same i
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:25] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — e2e test correctness
+
+**Summary:**
+Fresh-eyes self-review of the previous commit found `expect(coords).not.toContainText('√')`
+in the "falls back to a named cosine" test was vacuously true for the same reason the
+sibling test's positive check needed fixing: KaTeX never emits a literal "√" text node,
+so this could never fail even if the fallback regressed and an exact radical rendered
+instead. Replaced it with `expect(coords.locator('.sqrt')).toHaveCount(0)` — the real
+"no radical" proof — plus a positive `toContainText('cos')` check (`\cos` DOES render as
+literal text in KaTeX, confirmed directly, unlike `\sqrt`).
+
+**Rationale:**
+A test that cannot fail is not coverage. Caught during the self-review pass required
+before reporting the task complete, not by CI or a reviewer.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
