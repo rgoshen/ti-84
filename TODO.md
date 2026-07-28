@@ -676,9 +676,9 @@ not just how far around the circle the sweep goes, but where it lands.
 - Latex / plain-text / spoken formatter trio, mirroring the one `angle.ts` already
   establishes for π multiples, so the KaTeX readout, plain-text export, and
   screen-reader live region each get their own output channel.
-- Coordinate label pinned beside the terminal dot in `angle-diagram.ts`, with clamped
-  placement that flips inward rather than clipping the viewBox. Because that builder is
-  shared, the label reaches the exported PNG/PDF for free.
+- Coordinate label pinned beside the terminal dot in `angle-diagram.ts`, with placement
+  clamped to the edge rather than clipping the viewBox. Because that builder is shared,
+  the label reaches the exported PNG/PDF for free.
 - Readout block in `AngleExplorer.tsx` with the chart-style triple line plus worked
   equations written out concretely: `x = r·cos θ = 1.2 × √3/2 ≈ 1.0392`.
 - Export gains a `Point (x, y)` fact and two Representations table rows (7 of 9 max).
@@ -688,8 +688,9 @@ not just how far around the circle the sweep goes, but where it lands.
   negative and past-360° normalisation; `null` for non-special and non-integer degrees;
   every formatter across zero / unit / radical / negative; no `-0` in any output.
 - `angle-diagram.test.ts`: label present; anchor stays inside the viewBox across the
-  full `r × θ` extremes; inward flip and `text-anchor` swap at the overflow boundary;
-  exact pair at `r = 1` on a special angle, decimals otherwise.
+  full `r × θ` extremes; clamp engages with the anchor unchanged at the overflow
+  boundary; label never crosses the origin or overlaps its own terminal dot; exact pair
+  at `r = 1` on a special angle, decimals otherwise.
 - Component: `1 ×` prefix dropped at `r = 1`; `cos 37°` rather than a radical for a
   non-special angle; spoken string includes coordinates.
 - E2E: coordinates block updates on radius-slider movement; new rows present in the

@@ -49,10 +49,11 @@ export interface AngleDiagramOptions {
  *
  * A pure string builder has no font metrics, so this estimates from character
  * count at the label's font-size 10 — deliberately a little generous, so the
- * failure mode is flipping inward slightly sooner than strictly necessary
- * rather than clipping. A single fixed width cannot work here: it is either
- * too wide for a short label like `(1, 0)` (forcing a needless flip at the
- * default view) or too narrow for a long one like `(-0.71, -0.71)`.
+ * failure mode is clamping the label back from the edge slightly sooner than
+ * strictly necessary rather than letting it clip. A single fixed width cannot
+ * work here: it is either too wide for a short label like `(1, 0)` (forcing a
+ * needless clamp at the default view) or too narrow for a long one like
+ * `(-0.71, -0.71)`.
  */
 export function labelWidth(text: string): number {
   return text.length * 5.6;

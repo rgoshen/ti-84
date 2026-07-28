@@ -199,9 +199,10 @@ section states what must be covered:
    return `null`; each formatter covers zero, unit, radical, and negative cases;
    `−0` never appears in any output.
 2. **`angle-diagram.test.ts`** — the label is present in the markup; its anchor stays
-   inside the viewBox across the full `r × θ` extremes; the anchor flips inward and the
-   `text-anchor` swaps at the overflow boundary; the label shows the exact pair at
-   `r = 1` on a special angle and decimals otherwise.
+   inside the viewBox across the full `r × θ` extremes; the clamp engages at the
+   overflow boundary with the anchor unchanged; the label never crosses the origin and
+   never overlaps its own terminal dot; the label shows the exact pair at `r = 1` on a
+   special angle and decimals otherwise.
 3. **`angle-coordinates.test.ts`** — the `1 ×` prefix is dropped at `r = 1`; a
    non-special angle produces `cos 37°` rather than a radical; `=` is used for rational
    values and `≈` only where a radical forces rounding; a whole coordinate is stated

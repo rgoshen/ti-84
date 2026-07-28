@@ -3029,3 +3029,32 @@ versus 783 origin crossings under the old code.
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
 - Report: .superpowers/sdd/2026-07-27-unit-circle-coordinates/final-fix-report.md
+
+## [2026-07-27 20:30] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — coordinate label placement description
+
+**Summary:**
+Corrected four remaining passages that still described the retired inward-flip
+placement algorithm (removed in `358e261`) as though it were current. The
+`labelWidth` docstring in `angle-diagram.ts` now attributes an over-wide estimate
+to premature clamping rather than a needless flip. The design spec's Testing
+Strategy §2 now states what `angle-diagram.test.ts` actually asserts: the clamp
+engages at the overflow boundary with the anchor unchanged, and the label never
+crosses the origin or overlaps its own terminal dot. `TODO.md`'s Approach and
+Tests sections for the `[2026-07-27] Feature: Unit Circle Coordinates` entry
+received the matching correction. No code, tests, or behaviour changed.
+
+**Rationale:**
+`coordinateLabelMarkup`'s own docstring and the TODO.md Risks & Tradeoffs
+paragraph were already corrected in the `[2026-07-27 20:15]` fix commit above,
+but four other passages — written before that fix — kept describing the flip
+that the fix removed, leaving the documentation internally contradictory.
+Rewriting them to match the code that now exists, rather than editing them
+again later piecemeal, keeps the spec and TODO.md trustworthy as a reference for
+the algorithm's actual behaviour.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+- Commit: 358e261 (removed the inward flip)
