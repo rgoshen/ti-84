@@ -3613,3 +3613,45 @@ it isolates the variable rather than changing platform and font stack at once.
 **References:**
 - Issue: GH-26 (PR #27)
 - TODO.md: [2026-07-28] Fix: Clear the technical debt parked during GH-26 Phase 1
+
+## [2026-07-28 13:53] Commit Summary
+
+**Change Type:** Docs
+**Scope:** docs/superpowers/specs, TODO.md
+
+**Summary:**
+Design spec for GH-26 Phase 2: render implicit relations and vertical lines on the
+Graphing Calculator, with the one-x-one-y features standing down for those rows. No code
+changed yet.
+
+**Rationale:**
+Phase 1's post-mortem was that reasoning about a library, rather than exercising it, is
+where its two regressions came from. So function-plot's implicit support was verified in
+a real browser before a line of this spec was written: five relations rendered (4–25 ms),
+and a mixed plot of `sin(x)` + `x²+y²−25` + `0.5x` produced three correctly-coloured
+`g.graph` groups in datum order, confirmed by screenshot. That probe also established the
+implicit series leaves `g.canvas`, the `.origin` paths, the zoom rect and the live scales
+intact — which is why this is a one-line branch in the datum builder rather than a
+parallel rendering path, and why the design could be written with confidence instead of
+hedging.
+
+The probe also produced the fact that shaped the degradation design: an implicit path
+carries 2052 `M` commands where a polyline carries 1. It is a disjoint spray of segments,
+not a stroke — so marker snapping and path-length sampling are meaningless on it,
+independently of multi-valuedness.
+
+Chose a `kind` discriminator on the success branch over bolting an optional
+`implicitExpr` onto the failure branch. The latter would leave both explorers untouched,
+but it types a successful parse as a failure. The discriminator's apparent cost is its
+real benefit: every consumer of `expr` must narrow on `kind`, so the compiler enumerates
+the five degradation sites rather than relying on memory.
+
+Spec self-review caught a defect that would have blocked the feature entirely: Phase 1's
+`validate()` calls `evaluate(expr, { x: 1 })`, and a relation's expression contains an
+unbound `y`, so mathjs would throw and every relation would be rejected as INVALID before
+reaching the renderer. The spec now specifies binding both variables.
+
+**References:**
+- Issue: GH-26 (Phase 2)
+- TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
+- Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
