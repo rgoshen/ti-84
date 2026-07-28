@@ -25,6 +25,7 @@ import {
   formatRadiansDecimal,
   parseAngleInput,
 } from '@/scripts/explorer/angle-parse';
+import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
 import {
   EXPORT_GRAPH_HEIGHT,
@@ -164,14 +165,38 @@ export default function AngleExplorer(): React.JSX.Element {
     [theta],
   );
 
+  // Coordinates depend on θ and r only — β rotates the view, so the point it
+  // moves is still the point θ describes, exactly as arc length already treats it.
+  const coords = useMemo(() => buildCoordinateReadout(theta, r), [theta, r]);
+  const coordHtml = useMemo(
+    () => ({
+      triple: katex.renderToString(coords.tripleLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+      x: katex.renderToString(coords.xLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+      y: katex.renderToString(coords.yLatex, {
+        throwOnError: false,
+        displayMode: false,
+        output: 'html',
+      }),
+    }),
+    [coords.tripleLatex, coords.xLatex, coords.yLatex],
+  );
+
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
   // so a slider drag announces once on settle rather than on every frame.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(readout.spoken), 250);
+    const id = setTimeout(() => setAnnounced(`${readout.spoken} ${coords.spoken}`), 250);
     return () => clearTimeout(id);
-  }, [readout.spoken]);
+  }, [readout.spoken, coords.spoken]);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
@@ -422,7 +447,16 @@ export default function AngleExplorer(): React.JSX.Element {
           className="h-auto w-full"
           role="img"
           aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}.`}
-          dangerouslySetInnerHTML={{ __html: buildAngleDiagramSvg({ theta, r, beta, colors, tickText }) }}
+          dangerouslySetInnerHTML={{
+            __html: buildAngleDiagramSvg({
+              theta,
+              r,
+              beta,
+              colors,
+              tickText,
+              coordinateLabel: coords.labelText,
+            }),
+          }}
         />
 
         <div
@@ -433,8 +467,25 @@ export default function AngleExplorer(): React.JSX.Element {
           <div dangerouslySetInnerHTML={{ __html: chainHtml }} />
           <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: arcHtml }} />
         </div>
+        <div
+          data-testid="angle-coordinates"
+          aria-hidden="true"
+          className="mt-3 space-y-2 rounded-lg border bg-card p-4 text-center"
+        >
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Coordinates
+          </p>
+          <div dangerouslySetInnerHTML={{ __html: coordHtml.triple }} />
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <div dangerouslySetInnerHTML={{ __html: coordHtml.x }} />
+            <div dangerouslySetInnerHTML={{ __html: coordHtml.y }} />
+          </div>
+        </div>
         <p className="sr-only" role="status" aria-live="polite">
           {announced}
+        </p>
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          The position slider β rotates the view; coordinates are measured from θ.
         </p>
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Concept adapted from{' '}

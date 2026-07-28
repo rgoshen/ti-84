@@ -2849,3 +2849,24 @@ text; weight and size carry the emphasis instead.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 19:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinates block
+
+**Summary:**
+`AngleExplorer.tsx` renders the coordinates block below the existing conversion chain,
+passes the formatted label into the shared diagram builder, appends the spoken
+coordinate sentence to the live region, and notes that β rotates the view while
+coordinates are measured from θ.
+
+**Rationale:**
+The component only renders — every branch (prefix dropping, exact-versus-decimal,
+`=` versus `≈`) already lives in `angle-coordinates.ts` where the node test runner can
+reach it. The coordinates box is `aria-hidden` for the same reason the existing readout
+is: KaTeX markup is noise to a screen reader, and the debounced live region carries the
+same facts as prose.
+
+**References:**
+- TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
