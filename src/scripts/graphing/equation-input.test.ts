@@ -116,6 +116,28 @@ describe('parseEquationInput', () => {
     expect(parseEquationInput('Y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
   });
 
+  // A restricted domain that starts beyond the probe's sample range must not be
+  // mistaken for a failure. These all worked before this module replaced the y= regex.
+  it.each([
+    ['y = sqrt(x-5)', 'sqrt(x-5)'],
+    ['y = log(x-5)', 'log(x-5)'],
+    ['y = asin(x-3)', 'asin(x-3)'],
+    ['y = 1/sqrt(x-9)', '1/sqrt(x-9)'],
+  ])('passes %s through untouched', (raw, expected) => {
+    expect(parseEquationInput(raw)).toEqual({ ok: true, expr: expected });
+  });
+
+  // The student's own arrangement of terms must survive; simplify() would reorder it.
+  it('does not rewrite the expression on the y= path', () => {
+    expect(parseEquationInput('y = x^2-4x+3')).toEqual({ ok: true, expr: 'x^2-4x+3' });
+  });
+
+  // `evaluate('')` returns undefined rather than throwing, so the y= short-circuit
+  // needs its own empty guard to keep reporting this the way the old regex did.
+  it('reports an empty right hand side as empty input', () => {
+    expect(parseEquationInput('y = ')).toMatchObject({ ok: false, reason: 'EMPTY' });
+  });
+
   it('records the entered form when a real rearrangement happened', () => {
     expect(parseEquationInput('3y + 2x = 6')).toEqual({
       ok: true,

@@ -3475,3 +3475,39 @@ consumer already expects.
 - Issue: GH-26
 - TODO.md: [2026-07-28] Feature: Full Equation Input (Phase 1 — linear in y)
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:15] Commit Summary
+
+**Change Type:** Fix
+**Scope:** src/scripts/graphing/equation-input.ts
+
+**Summary:**
+`parseEquationInput` now short-circuits when the left side is a bare `y`: it validates
+the right side and returns it verbatim instead of routing it through `solveLinearY`.
+An empty right side (`y =`) is reported as `EMPTY` rather than slipping through as a
+plottable expression. Added regression tests for shifted-domain functions and for the
+no-rewrite guarantee, plus a comment recording the ordering invariant that protects the
+A-identically-zero loop.
+
+**Rationale:**
+The general solver probes at a fixed `SAMPLE_XS` sweep, so any `y = <expr>` whose domain
+starts above the largest sample got zero usable samples and was rejected as INVALID.
+Widening the sample range only moves the hole; short-circuiting removes it, because a
+bare `y` has nothing to solve for in the first place. It also stops `simplify` from
+reordering the student's own terms and skips three `simplify` calls on the most common
+input.
+
+**Bug Fix Context:**
+Root cause: every `y = <expr>` input was sampled for linearity even though the solve was
+a no-op. `y = sqrt(x-5)`, `y = log(x-5)`, `y = asin(x-3)`, and `y = 1/sqrt(x-9)` are
+undefined at all eight sample x values, so `usable < MIN_USABLE_SAMPLES` returned
+INVALID — a regression against the `^y\s*=\s*` regex this module replaced, which never
+sampled anything. The short-circuit restores the old path exactly.
+
+Second root cause on the same path: `evaluate('')` returns `undefined` instead of
+throwing, so `y =` would have passed `validate()` as an empty but "valid" expression.
+The explicit empty guard restores the old "Enter an equation first." message.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md

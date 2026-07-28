@@ -103,6 +103,11 @@ export function solveLinearY(lhs: string, rhs: string): SolveResult {
 
     // A identically zero means y never appears: `2x + 3 = 7` is the vertical line
     // x = 2, which is not a function of x.
+    //
+    // ORDERING INVARIANT: this loop has no MIN_USABLE_SAMPLES guard of its own. It is
+    // protected transitively by the `usable < MIN_USABLE_SAMPLES` early return above,
+    // which has already proved that at least two samples are defined. Do not move this
+    // loop ahead of that return, or a single lucky sample could declare "no y present".
     let aSamples = 0;
     let aAllZero = true;
     for (const x of SAMPLE_XS) {
@@ -180,15 +185,25 @@ export function parseEquationInput(raw: string): EquationParse {
     return validate(split.expr) ?? { ok: true, expr: split.expr };
   }
 
+  // A bare `y` on the left means there is nothing to solve: the right side already IS
+  // the expression. Short-circuiting here restores exactly what the `^y\s*=\s*` regex
+  // this module replaced used to do — no sampling, so a restricted domain (y = sqrt(x-5))
+  // can never be mistaken for a failure, and no simplify(), so the student's own
+  // arrangement of terms survives.
+  if (split.lhs === 'y') {
+    // `evaluate('')` returns undefined instead of throwing, so an empty right side would
+    // slip past validate() as a plottable expression. The regex path reported it as
+    // empty input; keep doing that.
+    if (!split.rhs) return fail('EMPTY');
+    return validate(split.rhs) ?? { ok: true, expr: split.rhs };
+  }
+
   const solved = solveLinearY(split.lhs, split.rhs);
   if (!solved.ok) return fail(solved.reason);
 
   const invalid = validate(solved.expr);
   if (invalid) return invalid;
 
-  // A bare `y` on the left is not a rearrangement — it is the form we already show.
-  const rearranged = split.lhs !== 'y';
-  return rearranged
-    ? { ok: true, expr: solved.expr, input: `${split.lhs} = ${split.rhs}` }
-    : { ok: true, expr: solved.expr };
+  // The bare-`y` case returned above, so anything reaching here genuinely was rearranged.
+  return { ok: true, expr: solved.expr, input: `${split.lhs} = ${split.rhs}` };
 }
