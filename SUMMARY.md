@@ -3187,3 +3187,26 @@ String method; it was left intact.
 
 **References:**
 - TODO.md: [2026-07-27] Feature: Unit Circle Coordinates
+
+## [2026-07-27 20:20] Commit Summary
+
+**Change Type:** Chore
+**Scope:** .claude/skills (developer tooling)
+
+**Summary:**
+Added `.claude/skills/diagram/SKILL.md`, a project-local skill that routes Mermaid
+diagrams to Mission Control's interactive viewer via `POST $MC_API_URL/api/diagram`
+instead of dumping raw Mermaid into the terminal. Documents the API contract, the
+required env vars (`MC_API_URL`, `MC_API_TOKEN`, `MC_TASK_ID`, `MC_THEME`), theming
+rules, and a graceful fallback to inline Mermaid when the env vars are absent.
+
+**Rationale:**
+Agent tooling belongs in the repo so every contributor's session behaves the same way
+rather than depending on per-machine global skill installs. The theme rules are the
+substantive part: Mission Control re-themes diagrams from its own design tokens, so
+any `%%{init}%%` block or hardcoded `classDef` fill in the source fights the viewer and
+renders dark-on-dark. The skill states that as a hard rule rather than leaving each
+session to rediscover it.
+
+**References:**
+- .claude/skills/diagram/SKILL.md
