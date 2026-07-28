@@ -101,8 +101,11 @@ evaluation.
 3. Split on a **bare** `=`, using a regex that excludes `>=`, `<=`, `==`, `!=`.
 4. Zero `=` → today's behavior verbatim: `{ ok: true, expr: trimmed }`, no `input`.
 5. Two or more bare `=` → `MULTIPLE_EQUALS`.
-6. Run the solve probe (below).
-7. Validate the emitted expression evaluates; otherwise `INVALID`.
+6. Bare-`y` short-circuit: when the left-hand side is exactly `y`, return the
+   right-hand side verbatim as `expr` after validating it evaluates, reporting an
+   empty right-hand side as `EMPTY` rather than falling through to the solve probe.
+7. Run the solve probe (below).
+8. Validate the emitted expression evaluates; otherwise `INVALID`.
 
 #### The solve probe
 
@@ -150,9 +153,22 @@ Confirmed against mathjs 15.2.0 before this spec was written:
 | `2x + 3 = 7` | `0` | NO_Y_PRESENT | — |
 | `x = 3` | `0` | NO_Y_PRESENT | — |
 
-The `y = sin(x)` row is the important one: the `y =` prefix case is **subsumed** by the
-general solver and produces an identical result, which is what allows the three
-duplicated regexes to be deleted rather than merely centralized.
+The `y = sin(x)` and `y = 5` rows show what the solve probe *would* compute for a
+bare-`y` left-hand side — but neither input actually reaches it. `parseEquationInput`
+special-cases `split.lhs === 'y'` and returns the right-hand side verbatim, without
+sampling and without `simplify()`. The three duplicated regexes are still deletable,
+but not because the general solver subsumes their case: this short-circuit
+**reimplements** what they did, once, in the shared module.
+
+That short-circuit is necessary, not merely an optimization. Routing `y = <expr>`
+through the solve probe rejects any expression whose domain excludes every sample
+point — `y = sqrt(x-5)` is undefined at all eight default samples, so a probe built to
+verify linearity has nothing defined to check and would misreport a perfectly valid
+input as a failure. And even where the probe does succeed, `simplify()` reorders and
+reformats the student's own terms: `y = x^2-4x+3` would come back as
+`x ^ 2 + 3 - 4 * x`, which is defensible algebra but not what the student wrote. The
+short-circuit sidesteps both failure modes by never handing the right-hand side to
+mathjs's solver machinery at all.
 
 ### Modified: `src/components/graphing/GraphingCalculator.tsx`
 

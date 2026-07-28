@@ -106,8 +106,9 @@ describe('parseEquationInput', () => {
     expect(parseEquationInput('sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
   });
 
-  // The `y =` prefix case is subsumed by the general solver, which is what lets the
-  // three duplicated normalizeExpr regexes be deleted.
+  // The `y =` prefix case short-circuits: it returns the right-hand side verbatim,
+  // without sampling or simplify(), which is what replaces the three duplicated
+  // normalizeExpr regexes.
   it('accepts a y-prefixed equation without marking it as rearranged', () => {
     expect(parseEquationInput('y = sin(x)')).toEqual({ ok: true, expr: 'sin(x)' });
   });
