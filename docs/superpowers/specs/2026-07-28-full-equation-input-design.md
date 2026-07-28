@@ -172,8 +172,11 @@ duplicated regexes to be deleted rather than merely centralized.
 - `plot()` (`FunctionExplorer.tsx:404`) and the equivalent handler in
   `TransformationExplorer.tsx:155` call `parseEquationInput` and surface `message`
   through their existing error state.
-- Both display the entered form alongside the solved form, consistent with the
-  Graphing Calculator.
+- The **Function Explorer** displays the entered form alongside the solved form,
+  consistent with the Graphing Calculator.
+- The **Transformation Explorer** displays only the composed function. Its label has to
+  track `a·f(b(x−h))+k`, which changes on every slider move, so a fixed entered-form line
+  would contradict the curve as soon as a slider is touched.
 
 ### Label rendering
 

@@ -115,6 +115,9 @@ const describeEndBehaviorForExport = (end: EndBehavior): string => {
 export default function FunctionExplorer(): React.JSX.Element {
   // No default function — the explorer starts empty until the user plots one.
   const [expr, setExpr] = useState('');
+  // The equation as typed, kept only when `expr` is a rearrangement of it (`3y + 2x = 6`).
+  // Null for everything else, so a plain function never shows a stale "entered" line.
+  const [entered, setEntered] = useState<string | null>(null);
   const [exprInput, setExprInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [appliedWindow, setAppliedWindow] = useState<Window2D>(DEFAULT_WINDOW);
@@ -408,6 +411,9 @@ export default function FunctionExplorer(): React.JSX.Element {
     stopSweep();
     setError(null);
     setExpr(parsed.expr);
+    // `?? null` matters: plotting a plain function after a rearranged one must clear the
+    // entered form, or the label would describe the previous equation.
+    setEntered(parsed.input ?? null);
   };
 
   const applyWindow = (): void => {
@@ -584,6 +590,23 @@ export default function FunctionExplorer(): React.JSX.Element {
               Plot
             </Button>
           </div>
+          {/*
+            Both forms, so a student who typed `3y + 2x = 6` still sees their own equation
+            next to the f(x) the explorer actually plots — the rearrangement is the lesson.
+            The solved line is muted only when it is the secondary of the two, matching the
+            Graphing Calculator's label.
+          */}
+          {hasFunction ? (
+            <div className="text-xs">
+              {entered ? <p data-testid="fx-entered-form">{entered}</p> : null}
+              <p
+                className={entered ? 'text-muted-foreground' : undefined}
+                data-testid="fx-solved-form"
+              >
+                f(x) = {expr}
+              </p>
+            </div>
+          ) : null}
           {error ? (
             <p role="alert" className="text-xs text-destructive">
               {error}

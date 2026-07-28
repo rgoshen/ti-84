@@ -283,3 +283,17 @@ test('the point shape picker changes the marker shape, like the graphing calcula
   await expect(page.locator('rect[data-testid="crossing-marker"]').first()).toBeVisible();
   await expect(page.locator('circle[data-testid="crossing-marker"]')).toHaveCount(0);
 });
+
+test('shows the entered equation beside the solved form, and clears it afterwards', async ({
+  page,
+}) => {
+  await gotoExplorer(page, '3y + 2x = 6');
+
+  await expect(page.getByTestId('fx-entered-form')).toHaveText('3y + 2x = 6');
+  await expect(page.getByTestId('fx-solved-form')).toHaveText('f(x) = (6 - 2 * x) / 3');
+
+  // Plotting a plain function must not leave the previous equation's entered form behind.
+  await plot(page, '1/x^2');
+  await expect(page.getByTestId('fx-entered-form')).toHaveCount(0);
+  await expect(page.getByTestId('fx-solved-form')).toHaveText('f(x) = 1/x^2');
+});

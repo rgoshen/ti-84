@@ -3511,3 +3511,27 @@ The explicit empty guard restores the old "Enter an equation first." message.
 **References:**
 - Issue: GH-26
 - Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
+
+## [2026-07-28 11:16] Commit Summary
+
+**Change Type:** Feature
+**Scope:** src/components/explorer/FunctionExplorer.tsx + spec
+
+**Summary:**
+The Function Explorer now keeps `parsed.input` in state and renders the entered equation
+above the solved `f(x) = <expr>` line in the Function card, matching the Graphing
+Calculator's muted secondary line. The stored input is reset on every plot, so a plain
+function never inherits the previous equation's entered form. Amended the spec's
+Architecture section to state that only the Function Explorer shows both forms.
+
+**Rationale:**
+Requirement 5 ("both forms are shown when a rearrangement occurs") was implemented on
+the Graphing Calculator only. The Transformation Explorer is deliberately excluded: its
+label tracks the composed `a·f(b(x−h))+k`, so a fixed entered-form line would contradict
+the curve the moment a slider moves. Plain text is used rather than KaTeX because this
+surface has no existing KaTeX rendering to match and the spec's label-rendering section
+scopes the TeX path to the Graphing Calculator.
+
+**References:**
+- Issue: GH-26
+- Spec: docs/superpowers/specs/2026-07-28-full-equation-input-design.md
