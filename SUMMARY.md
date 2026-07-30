@@ -3799,3 +3799,670 @@ phase.
 - Issue: GH-26 (Phase 2)
 - TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
 - Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+
+## [2026-07-29 19:15] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — design spec
+
+**Summary:**
+Added the approved design spec for the Angle Explorer wave projection, plus its TODO.md
+feature entry. A `Wave` radio group (`none` · `sin θ` · `cos θ`, default `none`) reveals a
+strip below the circle; the angle slider traces the selected wave from 0 to θ. The default
+angle moves from 30° to 0°. No code changes yet — spec and planning docs only.
+
+**Rationale:**
+Four design questions were settled against alternatives before writing anything. The wave
+plots `r·sin θ` rather than a fixed-amplitude `sin θ` because a ±1 wave would show 0.5 while
+the coordinate box two inches below read 0.75 at r = 1.5 — two numbers for one quantity, the
+same class of quiet false mathematics this project fixed in the relations work. The x-domain
+spans −2π…2π rather than the literal 0…2π because the angle slider reaches −360°, and a wave
+that blanks over a third of the slider's travel reads as a bug. Nothing self-plays: the
+slider is the drawing instrument, which keeps θ the single source of truth and removes the
+reduced-motion and WCAG 2.2.2 branches entirely. Stacked layout was chosen over a
+side-by-side unrolled figure to keep the circle at full size, accepting the loss of a
+horizontal tie-line and compensating with a highlighted reference-triangle leg whose length
+provably equals the wave's height for any β.
+
+Spec self-review caught four defects before commit: the export slot's aspect ratio would have
+letterboxed the strip to ~552 px inside a 960 px box had it reused the live viewBox; the
+sampling rule said "≤2° steps" without fixing direction or endpoint snapping; `WaveFn` had no
+stated home, leaving a possible `angle-diagram` → `angle-wave` coupling unexamined; and the
+radio group had no accessible group name, so its options would have announced without saying
+what they select.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+
+## [2026-07-29 19:40] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — implementation plan
+
+**Summary:**
+Added the ten-task TDD implementation plan for the Angle Explorer wave projection. Each task
+carries its own red-green-refactor cycle with real test and implementation code, an exact file
+list, and an Interfaces block naming the signatures neighbouring tasks depend on. No code
+changes yet — planning docs only.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could meaningfully reject one task while approving
+its neighbour. Three consequences worth recording:
+
+The two extractions (tasks 1-2) are split from the behaviour change they enable. `buildReadout`
+is untestable inside a `.tsx` under a node-only test runner, so it is moved verbatim and
+characterised with tests capturing the *current* verbose θ = 0 chain, and only then changed.
+That makes the fix a visible diff rather than something smuggled in with a refactor.
+
+The default-angle change (task 8) is isolated because it breaks seven existing e2e assertions,
+and the fix for each is a judgement call. The governing rule is written into the plan: do not
+weaken an assertion to accommodate the new default. Three tests whose real subject is the
+default move to 0°; four whose subject is exact-radical rendering now set 30° explicitly, so
+they keep testing radicals rather than being softened to the 0° point (1, 0).
+
+`radio-group.tsx` is folded into the wiring task rather than standing alone. It carries no
+logic, and nothing can test a `.tsx` component in isolation here, so a separate task would
+have been a commit with no test cycle to gate it.
+
+Plan self-review found one gap and closed it inline: task 8's changes to `angle-export.spec.ts`
+need a `deg` locator helper that file does not define, and without the strict-mode note from
+`angle.spec.ts`, `getByLabel('Degrees')` also matches the figure's `aria-label` and throws.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md
+
+## [2026-07-29 19:47] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — formatters
+
+**Summary:**
+Moved `formatFractionText` and `formatPiText` out of `AngleExplorer.tsx` and into
+`angle.ts`, alongside their LaTeX counterparts. Behaviour is unchanged — same bodies,
+same output — only their location and visibility (module-level `export` instead of a
+component-local function) changed. Three characterization tests were added, including
+one that pins the exact-π hyphen to ASCII (`-`) rather than a Unicode minus sign.
+
+**Rationale:**
+They were always general-purpose formatters that happened to live in a component. The
+upcoming wave-strip builder (`angle-wave.ts`) needs `formatPiText` for its tick labels,
+and a `.ts` module cannot import from a `.tsx` component. Moving them next to
+`formatFractionLatex`/`formatPiLatex`, which they mirror, also keeps the four sibling
+formatters together instead of splitting the pair across two files.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)
+
+## [2026-07-29 19:50] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — readout
+
+**Summary:**
+Extracted `buildReadout` out of `AngleExplorer.tsx` into a new module,
+`angle-readout.ts`, moved verbatim (same body, same doc comment, same
+`{ chain, arc, spoken }` shape — now named `AngleReadout`). Six characterization
+tests pin the current behaviour, including the verbose θ = 0° chain that task 2
+will change. Pruned `formatFractionLatex`, `formatFractionSpoken`, `formatPiSpoken`,
+and the `Fraction` type from the component's `angle.ts` import — none of them are
+referenced anywhere else in the file once `buildReadout` moves out. `arcLength` and
+`turnFraction` stay imported: both are also used directly in `createExportSnapshot`,
+independent of `buildReadout`.
+
+**Rationale:**
+vitest collects only `.ts` files in the node test environment, so `buildReadout`'s
+branching (exact forms for whole degrees, decimal fallback otherwise, singular/plural
+radian agreement) was unreachable by the test runner while it lived inside the `.tsx`
+component. Moving it first and characterizing it with tests — before task 2 changes
+its θ = 0° behaviour — means that fix will show up as a visible diff instead of being
+smuggled into a refactor commit.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)
+
+## [2026-07-29 20:05] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — readout
+
+**Summary:**
+`buildReadout(0, r)` no longer walks the full five-way identity chain. At
+θ = 0, degrees, turn fraction, π multiple, and radians are all the same
+symbol, so `"0° = 0 of a full turn = 0 × 2π = 0 ≈ 0 rad"` collapsed to
+`0^\circ = 0\text{ rad}`. The arc line now reads `= 0` instead of `≈ 0`,
+since r × 0 is exactly zero for any r. The spoken form drops "of a full
+turn" for the same reason. Guarded on `Math.round(theta) === 0` — matching
+the existing `isIntegerDegrees` convention — rather than `theta === 0`,
+since a typed value can land at `4e-17` instead of a literal zero. Four
+new tests cover the collapsed chain, arc, and spoken form, plus a
+regression guard confirming 1°, -30°, and 360° still show the full chain.
+
+**Rationale:**
+Task 1 characterized this verbose chain as-is so this behavior change
+would show up as its own diff, not be smuggled into the extraction
+commit. It matters now because task 8 moves the explorer's default angle
+to 0°, making this the first mathematics every visitor reads — a chain
+that's technically true but repeats "zero" four times teaches nothing.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 2)
+
+## [2026-07-29 20:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Theme palette
+
+**Summary:**
+Added the `wave` colour to the `ExplorerColors` interface and palette. Two new distinguishability
+tests confirm the wave colour differs from all existing overlay marks (curve, wall, floor, arrow,
+ghost, axis) and clears 1.5:1 contrast against the floor colour it runs alongside. Dark theme uses
+#5eead4 (teal-300), light theme uses #0f766e (teal-700). Both pass 3:1 non-text contrast
+against the plot background (WCAG 1.4.11). The existing 6-mark contrast loop now covers 7 keys
+(14 tests across both themes), plus the new 4-test distinguishability block = 18 total theme tests.
+
+**Rationale:**
+Six existing `ExplorerColors` entries are already used in the angle figure; the wave and its
+projection leg need a seventh. Isolated into the theme module so colour decisions are unit-testable
+and centralized. Contrast decisions are enforced by the test suite, not manual inspection. Teal
+was chosen as a cohesive hue across both themes, occupying an unused hue family distinct from
+the existing palette (violet=curve, red=wall, blue=floor, orange=arrow, slate=ghost/axis).
+
+**References:**
+- src/scripts/graphing/theme.ts (ExplorerColors interface, explorerColors dark/light palettes)
+- src/scripts/graphing/theme.test.ts (MARK_KEYS tuple, wave distinguishability tests)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 3)
+
+## [2026-07-29 20:25] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave scales
+
+**Summary:**
+Created `src/scripts/explorer/angle-wave.ts`, a pure geometry module (DOM-free)
+that defines the wave strip's coordinate system, π/4 tick generation, and value
+calculation. The module exports types `WaveFn` ('sin' | 'cos') and `WaveMode`
+('none' | WaveFn), constants `WAVE_WIDTH` (512) `WAVE_HEIGHT` (176) `AMP_MAX`
+(1.5), and four functions: `waveScales()` provides x/y scale closures that map
+radians to screen pixels (x: -2π…2π, y: ±1.5 fixed regardless of radius),
+`waveTickRadians()` generates seventeen ticks at every π/4 across the full range,
+`waveTickLabel(k)` formats each tick's π label by routing through
+`reduceFraction` + `formatPiText`, and `waveValue(fn, theta, r)` returns the
+terminal point's y (sin) or x (cos) coordinate scaled by radius. Twelve passing
+tests characterize tick generation, label formatting (including negative handling),
+value calculation (odd/even parity of sin/cos), and scale linearity with custom
+dimensions support.
+
+**Rationale:**
+The wave strip shows what sweeping the angle generates; it must never become a
+separate code path that could drift from the angle diagram itself. DOM-free
+construction (string/number math only, no `document` calls) ensures every scale
+decision unit-tests in vitest's node environment, the same contract
+`angle-diagram.ts` already follows. A fixed y-domain at ±AMP_MAX (not adaptive
+to r) keeps the radius slider's amplitude effect visible — a dynamic scale would
+cancel that out. Tick labels route through the same `formatPiText` that the
+Radians field uses, so the axis and companion display cannot express the same
+value differently. x-scale spans -2π…2π to match the angle slider's
+-360°…360° range. Tasks 5-10 extend this module with SVG builders, styling,
+and interactivity; they depend on these scale and value functions.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (types, constants, functions)
+- src/scripts/explorer/angle-wave.test.ts (twelve tests covering all exports)
+- src/scripts/explorer/angle.ts (degreesToRadians, formatPiText, reduceFraction)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 4)
+
+## [2026-07-29 20:32] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave path
+
+**Summary:**
+Added two functions to `src/scripts/explorer/angle-wave.ts`: `wavePath(fn, theta, r, scales)`
+traces the curve from 0 out to θ as an SVG path string with 2° sampling (360° yields 181 vertices),
+snapping the final vertex to θ exactly so the curve meets its marker; returns `''` below 1e-9
+threshold, the same gate `arcPath` applies. `waveSpoken(fn, theta, r)` provides screen-reader
+prose naming the function and swept range with a prose value display, carrying no LaTeX. Nine
+tests verify path generation (zero-length handling, endpoint exactness, directional growth,
+vertex count and sampling, radius scaling, NaN-free domains, viewBox containment) and prose
+generation (function naming, degree display, no LaTeX escape sequences).
+
+**Rationale:**
+The wave strip curves must be traced as the angle sweeps, with the path growing in whatever
+direction θ points — negative angles trace leftward, visualizing odd/even symmetry by dragging
+rather than assertion. Snapping the final vertex to θ exactly ensures the curve always meets the
+marker (which is positioned from θ itself). The 2° step size balances smoothness (reads as a
+curve at any scale) against performance (slider drags redraws instantly, no perceptible lag).
+The zero-length gate mirrors `arcPath` — a degenerate path is nothing, not an empty stroke.
+Screen-reader prose routes through a separate text channel (both KaTeX boxes are `aria-hidden`)
+with rounding to 4 decimal places, matching the Degrees field's precision. Tasks 6-10 consume
+these builders for DOM rendering, styling, and interactivity.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (wavePath, waveSpoken functions)
+- src/scripts/explorer/angle-wave.test.ts (nine new tests covering both functions)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 5)
+
+## [2026-07-29 20:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave markup
+
+**Summary:**
+Added `buildWaveSvg(opts: WaveDiagramOptions): string` to `src/scripts/explorer/angle-wave.ts`,
+assembling the complete wave strip's SVG inner markup. Includes: π/4 gridlines (full-height, one
+per tick) with staggered labels (π/2 multiples on primary baseline, odd π/4 on secondary to avoid
+collision), dashed ±1 reference lines (matching the polar figure's dashed unit circle), zero axis
+(horizontal and vertical lines), the traced curve (or empty if θ=0), a drop-line from marker to
+zero axis, and the marker dot (drawn unconditionally so cos reads as non-zero at θ=0). Returns
+inner markup only; the caller owns the outer `<svg>`, viewBox, and accessible name. Consumed by
+tasks 9-10. The previously-unused `ExplorerColors` import is now properly consumed via
+`WaveDiagramOptions`, clearing the TypeScript hint. Ten tests verify: tick count/labels, label
+staggering, dashed references, curve rendering and null-handling, marker drawing (with correct
+colors and position), drop-line presence, custom box sizing (960×190 export), and NaN-free output
+across the full domain.
+
+**Rationale:**
+One builder for both live strip and export snapshot (differing only in the box passed) ensures
+they cannot drift. Full-height gridlines with staggered labels eliminate ambiguity about label
+ownership. Unconditional marker draw at θ=0 (unlike the curve) preserves the sin/cos distinction
+that the marker encodes. DOM-free string building ensures all layout decisions unit-test in node
+without jsdom. The export path reuses the live defaults (512×176), scaled when the caller passes
+960×190. Ten new tests bring the angle-wave suite total from 21 to 31.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (buildWaveSvg, WaveDiagramOptions, MARKER_R, TICK_FONT_SIZE, LABEL_BASELINE, TICK_OVERSHOOT)
+- src/scripts/explorer/angle-wave.test.ts (ten new tests covering buildWaveSvg)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 6)
+
+## [2026-07-29 20:50] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram
+
+**Summary:**
+Added an optional `projection?: WaveFn` option to `AngleDiagramOptions` in
+`src/scripts/explorer/angle-diagram.ts`, and taught `buildAngleDiagramSvg` to emit a
+`data-role="projection-leg"` `<line>` when it is set: the vertical leg of the reference
+triangle for `sin`, the leg along the initial side for `cos`. The stacked layout (wave
+strip below the circle) shares no coordinate axis with the polar figure, so a horizontal
+tie-line connecting a point on the circle to the wave's plotted height is not
+geometrically possible. Highlighting the in-circle leg instead works because its length —
+r·|sin θ| or r·|cos θ| — is exactly the quantity the wave strip plots, drawn in the same
+`colors.wave` colour so the two figures visibly agree. The leg's foot is computed with
+`polarToCartesian` through `betaRad`, the same rotated-frame pattern every other element
+in the figure already follows, so its length stays invariant as β rotates the figure even
+though its on-screen endpoints move. The change is purely additive: `projection` defaults
+to `undefined`, in which case no leg markup is emitted and all pre-existing behaviour is
+unchanged.
+
+**Rationale:**
+A type-only import of `WaveFn` from `./angle-wave` avoids duplicating the `'sin' | 'cos'`
+union and confirms there is no import cycle (`angle-wave.ts` does not import
+`angle-diagram.ts`). Anchoring the `cos` leg at the origin and the `sin` leg at the
+terminal dot matches how each coordinate is actually read off the reference triangle.
+Drawing a zero-length line rather than omitting the element at sin 0° / cos 90° is
+deliberate — a missing element would read as "no projection selected" rather than "the
+value is zero." Eight new tests cover: the additive no-op baseline, leg length under the
+full r × θ domain for both `sin` and `cos`, length invariance under β rotation while
+endpoints move, anchor points for both leg kinds, the wave-coloured stroke, and the
+zero-length edge cases.
+
+**References:**
+- src/scripts/explorer/angle-diagram.ts (AngleDiagramOptions.projection, projectionMarkup)
+- src/scripts/explorer/angle-diagram.test.ts (eight new tests covering the projection leg)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 7)
+
+## [2026-07-29 21:05] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — default angle
+
+**Summary:**
+Changed `DEFAULTS.theta` in `src/components/explorer/AngleExplorer.tsx` from `30` to
+`0`, so the Angle Explorer (and the wave strip Task 9 adds to it) opens at the identity
+angle instead of a pre-swept one — the first drag of the slider is now the one that
+draws the wave from nothing. Updated the e2e suite to match: three tests in
+`tests/e2e/angle.spec.ts` whose real subject is the default value itself (the landing
+readout, and the `deg`/`rad` pair in each of the two reset tests, `[G8]` and `[G14]`)
+now assert `0` instead of `30`. Six tests across `angle.spec.ts` and
+`angle-export.spec.ts` whose real subject is exact-radical rendering or geometry that
+is degenerate at θ = 0 (the unit-circle-point radical test, the diagram's terminal-point
+label, the radius-scaling decimal-switch test, the position-slider rotation guard
+`[G3]`, and both export artifact tests) now set `30°` explicitly via a `deg` locator
+rather than inheriting it from the default — `angle-export.spec.ts` did not previously
+define a `deg` helper, so one was added with the same Playwright strict-mode note
+`angle.spec.ts` already carries. One further test, `invalid input reports an error and
+leaves the diagram intact`, asserts that the last valid angle survives a typo; it now
+sets an explicit `37°` before the invalid input, distinct from the radical-rendering
+tests' `30°`, so a regression that fell back to the wrong angle could not still show a
+shared digit and pass for the wrong reason. The ninth touched test, `the angle slider
+drives the readout and both fields`, pins its arrow-key arithmetic to `5°` (five 1° steps
+from the new 0° default), neither the `0°` nor the `30°` group.
+
+**Rationale:**
+The task brief anticipated seven broken assertions across the two spec files; running
+the suite after the one-line default change surfaced eleven. The four not named in the
+brief (`invalid input reports an error…`, `the angle slider drives the readout and both
+fields`, `the position slider rotates the figure [G3]`, and `switches to decimals and
+shows the r scaling when the radius moves`) break for the identical underlying reason —
+each hard-coded an expected value or relied on non-degenerate geometry derived from the
+old 30° default — so the same governing rule applied to the seven named tests (never
+weaken an assertion to accommodate the new default; pin an explicit non-default angle
+when the test's real subject needs one) was extended to these four rather than leaving
+them broken or loosening their checks. Notably, `[G3]` needed an explicit non-zero angle
+for a structural reason beyond exact-radical rendering: at θ = 0 the swept arc's SVG
+path is empty regardless of rotation (`arcPath` collapses when start === end), so the
+test's core assertion — that the arc's `d` attribute changes when the position slider
+rotates it — would otherwise compare `""` to `""` and fail unconditionally rather than
+prove anything about rotation.
+
+**Bug Fix Context (if applicable):**
+Not a bug fix — a deliberate default change with cascading, pre-anticipated test churn.
+
+**References:**
+- src/components/explorer/AngleExplorer.tsx (DEFAULTS.theta)
+- tests/e2e/angle.spec.ts (nine tests touched: three re-pinned to 0° — the renamed
+  default-angle test plus the `[G8]`/`[G14]` reset tests; four pinned to 30° explicitly —
+  `[G3]`, the terminal-point label test, the radius-scaling test, and the renamed
+  unit-circle-point test; one pinned to 37° — the invalid-input persistence test; one
+  pinned to 5° via arrow-key arithmetic — `the angle slider drives the readout and both
+  fields`)
+- tests/e2e/angle-export.spec.ts (deg helper added; two tests pin 30° explicitly)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 8)
+
+## [2026-07-29 21:39] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave selector
+
+**Summary:**
+Wired the sin/cos wave projection into `AngleExplorer.tsx`. Added
+`src/components/ui/radio-group.tsx` (shadcn-style scaffolding over
+`radix-ui`'s `RadioGroup`, modelled on `slider.tsx`'s structure and
+`checkbox.tsx`'s focus styling — no logic of its own). Added a `wave` state
+(`WaveMode`, default `'none'`) with its own radio group (`none` / `sin θ` /
+`cos θ`) inserted between the sliders and the Convert box; a `waveFn`
+derivation (`undefined` when `'none'`) feeds both the new wave strip — an
+SVG built by `buildWaveSvg` and its caption, inserted between the
+`angle-figure` SVG and the `angle-readout` box, reusing the existing
+`coordHtml.x`/`coordHtml.y` equations rather than formatting the value a
+second time — and the `projection` option on the existing
+`buildAngleDiagramSvg` call, which highlights the matching projection leg
+on the circle. The debounced live region now appends `waveSpoken(...)` so
+the wave reaches assistive tech. `reset()` returns `wave` to `'none'`.
+Appended the ten e2e tests specified for this task to
+`tests/e2e/angle.spec.ts` (default-none, show/hide on selection, keyboard
+operability, no-curve-at-zero then drawn on drag, curve growth with θ,
+leftward tracing for negative θ, cos-vs-sin marker ordering at θ = 0, radius
+changing amplitude, the projection leg appearing with the wave, and reset
+restoring `none`).
+
+**Rationale:**
+Strict TDD: the ten tests were appended first and confirmed red (`npx
+playwright test tests/e2e/angle.spec.ts -g "wave|projection leg"` failed —
+no radio named `none` existed yet) before any component wiring, then the
+component was wired and the same run turned green. One deliberate departure
+from the task brief's literal test text: the keyboard-operability test's two
+`page.keyboard.press('ArrowDown')` calls needed an explicit `{ delay: 50 }`.
+Root-caused rather than assumed: Radix's `RovingFocusGroup` defers the
+actual arrow-key focus move via `setTimeout(0)` and tracks "an arrow key was
+just pressed" with a flag that a same-item `keyup` listener clears; this
+repo's bundled Playwright Chromium (headless 149.0.7827.55) dispatches a
+zero-delay synthetic `keydown`+`keyup` pair fast enough that the `keyup`
+clears the flag before the deferred focus-and-select fires, so the arrow
+press moves focus but never checks the new radio — confirmed by dispatching
+the identical `page.keyboard.press('ArrowDown')` call by hand against both
+the dev and production builds in a differently-versioned Chromium (151),
+where it worked immediately, and by confirming the *unmodified* component
+selects correctly on arrow-down in that browser. A `{ delay: 50 }` — closer
+to how a human actually holds a key than an instantaneous synthetic press —
+gives the deferred callback time to win the race and passes deterministically
+(5/5 across repeated runs, single-worker and parallel, headed and headless).
+This is a test-robustness fix for a third-party timing race, not a change to
+product behaviour or to the component under test.
+
+**Bug Fix Context (if applicable):**
+Not a product bug. The flaky keyboard-select test above was root-caused to
+a Chromium-version-dependent race inside Radix UI's own roving-focus
+implementation, not to the `RadioGroup`/`RadioGroupItem` wiring, which
+matches the task brief's code exactly.
+
+**Browser verification (manual, real browser, not covered by any automated test):**
+- *Circle-to-strip visual link:* with `sin θ` selected and β = 0°, the
+  circle's teal projection leg (a vertical drop from the terminal point to
+  the x-axis) and the wave strip's teal curve + dashed drop-line use the
+  identical colour (`#5eead4` dark / `#0f766e` light, confirmed by reading
+  both elements' `stroke` attributes) and the same vertical-segment shape,
+  so the link reads clearly at the default β = 0° — the primary,
+  documented usage path (drag angle, watch the strip fill in). It reads
+  weaker when β is rotated away from 0: the circle's leg rotates with the
+  rigid body (by design — task 7 keeps its length r|sin θ| / r|cos θ| for
+  any β) while the wave strip stays flat, so the two shapes point in
+  different directions even though the colour match still holds. Noting
+  this as the accepted risk the brief called out, not redesigning it.
+- *Tick labels:* all 17 π/4 labels are legible and read as intentional
+  (not misaligned) at desktop width (512px-wide SVG) and at a 375px mobile
+  viewport (SVG renders at 327 CSS px wide; the two-row stagger keeps every
+  label clear of its neighbours even at that width).
+- *Dark/light contrast:* toggled via the header's theme button. The wave
+  teal (`#5eead4` dark, `#0f766e` light) stays visually distinct from the
+  initial-side ray's blue (`#60a5fa` dark, `#378add` light) in both themes;
+  confirmed both at β = 0° (where the initial ray sits under the x-axis)
+  and with β rotated off-axis so the blue ray is visible on its own.
+
+**References:**
+- src/components/ui/radio-group.tsx (new)
+- src/components/explorer/AngleExplorer.tsx (wave state, radio group,
+  wave strip, projection wiring, live-region extension, reset)
+- tests/e2e/angle.spec.ts (ten new tests; one `{ delay: 50 }` deviation from
+  the brief's literal text, explained above)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 9)
+
+## [2026-07-29 22:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export + docs
+
+**Summary:**
+Carried the wave into the Angle Explorer's PNG/PDF export and closed out the
+feature's docs. `createExportSnapshot` in `AngleExplorer.tsx` now captures
+`snapshotWave` (the `waveFn` derivation, `undefined` for `'none'`) and:
+appends a conditional legend entry naming which coordinate the wave plots
+(`sin θ — height is the y-coordinate` / `cos θ — height is the x-coordinate`);
+appends a conditional `Wave` section after `Circle` with `Function`, `Value`
+(via `waveValue`), and `Traced` (`0° to <θ>°`) facts; and replaces
+`renderGraph` to draw both figures when a wave is present — the circle at a
+reduced 360px height (leaving `EXPORT_GRAPH_HEIGHT` at 560 only when there is
+no wave) via `buildAngleDiagramSvg`'s existing `projection` option, plus the
+wave strip via `buildWaveSvg` at its own 960×190 viewBox rather than the live
+strip's 512×176 one. No new table row: the Representations table already
+carries `x = r·cos θ` and `y = r·sin θ`, so a fourth row would duplicate the
+wave's value. Updated `src/pages/explorers/angles.astro`'s intro paragraph to
+mention the `sin θ`/`cos θ` picker and the projection leg. Marked the
+`Angle Explorer Wave Projection` TODO.md entry `Done`.
+
+**Rationale:**
+An export that contradicts the screen is worse than none, so both figures
+travel together. The strip needs its own viewBox because the live 512×176
+box, if reused verbatim against a 960px-wide box, would have `preserveAspectRatio="xMidYMid
+meet"` fit to the taller dimension and render the wave roughly 552px wide,
+letterboxed inside the 960px artifact — a real, verified failure mode, not a
+hypothetical one, since the export template is a fixed 960px column.
+
+Strict TDD surfaced a real conflict in the task plan's own test text: the
+"omits the wave section when no wave is selected" guard, as originally
+specified, asserted the artifact text does NOT contain `y = r·sin θ` /
+`y = r·cos θ` — but the Representations table has carried rows labeled with
+those exact strings unconditionally since the Unit Circle Coordinates
+feature (2026-07-27), independent of any wave selection. That assertion can
+never pass, with or without this task's `createExportSnapshot` changes,
+because the collision is with pre-existing, in-scope-to-keep table rows, not
+with anything this task added. Root-caused (not guessed) via the initial red
+run: both new tests failed at Step 2, but the second failed on the wrong
+assertion for the wrong reason — the exact string was already present before
+any Wave-section code existed. Corrected the two assertions to check for
+`Wave` (the new section's title) and `Traced` (a fact label unique to that
+section) instead, preserving the guard's intent — the section renders only
+when a wave is selected — without the false collision. Confirmed both
+strings are absent from the artifact in the pre-Step-3 baseline. Everything
+else in the brief's test and implementation code was applied verbatim.
+
+**Tests:**
+Appended two Playwright e2e tests to `tests/e2e/angle-export.spec.ts` per
+plan: "carries the wave into the exported artifact" (selects `sin θ`, sets
+30°, downloads PNG, asserts `Wave`, `y = r·sin θ`, `0.5`, and at least two
+`<svg>` elements in the artifact) and "omits the wave section when no wave
+is selected" (downloads PNG at the `none` default, asserts absence of `Wave`
+and `Traced`, per the correction above). TDD evidence: at Step 2, "carries"
+failed on the `Wave` assertion (no such text existed yet) and "omits" passed
+immediately, confirming the guard's premise once corrected. After the
+`createExportSnapshot` changes, both passed; the full `angle-export.spec.ts`
+file (5 tests) passed; the full Playwright suite ran 100/103 passed, the
+only 3 failures being the pre-existing `export-visual.spec.ts` PNG-snapshot
+mismatches (macOS-generated run vs. Linux/Docker-only baselines), unrelated
+to this change and not regenerated, per this project's standing rule.
+Final verification suite: `npm test` 407/407 Vitest, `npx astro check` 0
+errors/0 warnings/0 hints across 101 files, `npx playwright test` 100/103 (3
+known pre-existing), `npm run build` succeeded (7 pages).
+
+**Bug Fix Context (if applicable):**
+Not a product bug — the correction above was to a test assertion in the
+implementation plan itself, discovered during the mandated red run and fixed
+before any implementation code was written, per Strict TDD.
+
+**Browser findings (carried forward from Task 9, not re-verified here):**
+Per the Task 9 SUMMARY entry above (manual, real-browser verification of the
+live component, which the export now shares its renderer with): the circle's
+teal projection leg and the wave strip's teal curve/drop-line use the
+identical colour and read as clearly linked at the default β = 0° — the
+documented primary usage path. The link reads weaker when β is rotated off
+0° (the leg rotates with the circle while the strip stays flat) — an
+accepted risk, not redesigned. All 17 π/4 tick labels are legible at desktop
+(512px live SVG) and 375px mobile widths. The wave teal stays visually
+distinct from the initial-side blue in both light and dark themes.
+
+**References:**
+- src/components/explorer/AngleExplorer.tsx (`createExportSnapshot`: legend,
+  sections, renderGraph)
+- tests/e2e/angle-export.spec.ts (two new tests; corrected assertions,
+  explained above)
+- src/pages/explorers/angles.astro (intro paragraph)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection (marked Done)
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 10, final)
+
+## [2026-07-30 07:12] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — final review cleanup
+
+**Summary:**
+Closed out the whole-branch code review of the ten-task Angle Explorer wave feature
+with eleven fixes, all landed in this branch per the project's standing "fix tech
+debt now, never defer it" rule. (1) `tests/e2e/angle-export.spec.ts`'s `'carries the
+wave into the exported artifact'` test asserted `toContain('y = r·sin θ')` and
+`toContain('0.5')` — both vacuous, since `'y = r·sin θ'` is an unconditional
+Representations-table row label and `'0.5'` also matches inside `'0.5236'` (the
+unconditional Decimal radians fact), so both assertions passed with or without a
+wave selected. Replaced them with `toContain('Traced')` and `toContain('0° to
+30°')`, verified by grep to be introduced only by the conditional Wave section — the
+sibling `'omits the wave section when no wave is selected'` guard test already
+checked the right strings and needed no change. (2) The Task 8 SUMMARY entry
+(2026-07-29 21:05) claimed the `'invalid input reports an error…'` test's expected
+literal "moved from `30` to `0`"; `git show f5b0052` shows it actually moved to
+`37`, kept deliberately distinct from the radical-rendering tests' `30°` — corrected
+the text, and re-derived the `tests/e2e/angle.spec.ts` touched-test enumeration from
+the real diff (nine tests: three re-pinned to 0°, four pinned to 30° explicitly, one
+pinned to 37°, one pinned to 5° via arrow-key arithmetic — the prior enumeration had
+double-counted the renamed unit-circle-point test while omitting `'the angle slider
+drives the readout and both fields'` entirely). (3) & (6) In
+`src/scripts/explorer/angle-diagram.ts`, added `stroke-linecap="round"` to the
+projection leg's `<line>` so a zero-length leg (sin 0° / cos 90°) renders as a small
+dot instead of literally nothing under the SVG default `"butt"` cap — the design
+intent was always for a zero value to render honestly, not disappear. While there,
+moved the `foot` endpoint computation inside the `opts.projection !== undefined`
+branch so it is no longer computed on every call to `buildAngleDiagramSvg`,
+including the many pre-existing call sites that never pass `projection`. (4)
+Corrected the design spec's Marks table entry for the π/4 ticks, which described
+"short lines... width 1" — stale from an earlier design iteration — to match what
+the approved plan actually specifies and `angle-wave.ts` ships: full-height
+gridlines spanning the plot area, `colors.axis`, width 0.75 for π/2 multiples and
+0.5 for the odd π/4 multiples. Documentation-only; no code changed for this item.
+(5) Added a comment in `src/scripts/graphing/theme.test.ts` next to the
+wave/floor contrast assertion, noting the light-theme margin is thin by design
+(~1.52 vs the 1.5 threshold, confirmed by direct computation) and that the leg's
+real safeguard against blending into the floor ray is its heavier stroke width (2.5
+vs 2.0), not raw colour contrast — so a future contributor doesn't "fix" a contrast
+dip by changing the stroke width instead of the colour. (7) The `'reset restores
+every control [G8]'` test's comment claimed to check "all four controls" but never
+asserted the wave selector; added `await expect(waveOption(page,
+'none')).toBeChecked()`, reusing the existing `waveOption` helper. (8) Renamed the
+misleadingly-named `'the highlighted projection leg appears with the wave and
+matches it'` test to `'…appears with the wave'` — its body only asserts
+`toHaveCount(1)`, never a length/geometry match; that invariant is correctly
+covered by unit tests in `angle-diagram.test.ts`. (9) `waveSpoken` in
+`src/scripts/explorer/angle-wave.ts` produced sentences like `"sin of theta is
+0.7071."` — a screen reader pronounces "sin" as the English word, not the trig
+function. Changed the spoken sentence to spell out "sine"/"cosine" (the wave-name
+prefix already did; only the trailing `${fn} of theta` reference did not), and
+updated the two exact-string assertions in `angle-wave.test.ts` to match. (10) The
+wave radio group's ids (`wave-group-label`, `wave-none`, `wave-sin`, `wave-cos`) in
+`AngleExplorer.tsx` were hard-coded and would collide across two mounted instances;
+added `useId()` and prefixed every id/`aria-labelledby`/`htmlFor` pairing with it,
+keeping the same structural relationships. (11) The exported artifact's graph `<svg>`
+elements (circle and, when present, wave strip) are inline by SVG default, which
+carries baseline leading below their own box — a controller-run browser measurement
+found the container's `scrollHeight` (562px) exceeding its fixed `clientHeight`
+(560px) by that same 2px. Added `style="display:block"` to both `<svg>` markup
+strings in `createExportSnapshot`'s `renderGraph`.
+
+**Rationale:**
+Every item was traced back to its own evidence before being changed: the vacuous
+assertions were confirmed vacuous by grepping the unconditional parts of
+`createExportSnapshot`'s output; the stale SUMMARY literal and enumeration were
+checked against `git show f5b0052` rather than trusted at face value; the contrast
+margin was independently recomputed rather than taken from the finding as given;
+and the spec-vs-plan-vs-implementation disagreement was resolved in the spec's
+favor only after confirming the plan and the shipped `buildWaveSvg` already agree
+with each other. No behavior-preserving assumption was taken on faith — each fix's
+"verify this doesn't break anything" instruction was followed with an actual test
+run, not a read-through.
+
+**Bug Fix Context (if applicable):**
+Not a single root-cause bug — a batch of eleven independent findings from a final
+whole-branch review (vacuous test assertions, a stale changelog entry, an SVG
+rendering edge case, a stale design doc, a documentation-hardening comment, a test
+coverage gap, a misleading test name, a screen-reader mispronunciation, hard-coded
+DOM ids, and a 2px layout overflow), each fixed at its source rather than deferred.
+
+**References:**
+- tests/e2e/angle-export.spec.ts (`'carries the wave into the exported artifact'`
+  assertions replaced)
+- SUMMARY.md (Task 8 entry, 2026-07-29 21:05: literal corrected 30→37, enumeration
+  re-derived from `git show f5b0052`)
+- src/scripts/explorer/angle-diagram.ts (`stroke-linecap="round"`; `foot` moved
+  inside the `projection` branch)
+- src/scripts/explorer/angle-diagram.test.ts (verified unaffected — the leg-reading
+  helper only captures numeric endpoint attributes via regex)
+- docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md (Marks table,
+  π/4 ticks entry)
+- src/scripts/graphing/theme.test.ts (contrast-margin comment)
+- tests/e2e/angle.spec.ts (`waveOption` assertion added to `'reset restores every
+  control [G8]'`; projection-leg test renamed)
+- src/scripts/explorer/angle-wave.ts (`waveSpoken` spells out sine/cosine)
+- src/scripts/explorer/angle-wave.test.ts (expected strings updated to match)
+- src/components/explorer/AngleExplorer.tsx (`useId()`-prefixed wave radio ids;
+  `display:block` on both exported `<svg>` strings)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection

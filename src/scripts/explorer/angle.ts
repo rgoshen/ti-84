@@ -109,6 +109,30 @@ export function formatFractionSpoken(f: Fraction): string {
 }
 
 /**
+ * Plain-text (non-KaTeX) exact fraction: `0`, `1`, `1/12`, `-1/4`. Mirrors
+ * {@link formatFractionLatex} without markup — the export artifact renders as
+ * plain HTML text and SVG labels are plain text, never through KaTeX.
+ */
+export function formatFractionText(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? '-' : '';
+  const mag = Math.abs(f.n);
+  return f.d === 1 ? `${sign}${mag}` : `${sign}${mag}/${f.d}`;
+}
+
+/**
+ * Plain-text exact π-multiple: `0`, `π`, `2π`, `π/6`, `-2π/3`. Mirrors
+ * {@link formatPiLatex} without markup, for the same reason.
+ */
+export function formatPiText(f: Fraction): string {
+  if (f.n === 0) return '0';
+  const sign = f.n < 0 ? '-' : '';
+  const mag = Math.abs(f.n);
+  const numerator = mag === 1 ? 'π' : `${mag}π`;
+  return f.d === 1 ? `${sign}${numerator}` : `${sign}${numerator}/${f.d}`;
+}
+
+/**
  * Arc length s = r·θ (θ in radians), as a magnitude — a length has no sign even
  * when the sweep is clockwise. On the unit circle this equals the radian measure;
  * that coincidence breaking as r moves is what the radius slider exists to show.

@@ -3,13 +3,14 @@ import { test, expect, type Page } from '@playwright/test';
 const DIAGRAM = '[data-testid="angle-diagram"]';
 // The figure carries its own test id (`angle-figure`) rather than being found
 // by shape (a descendant or direct-child `svg` selector under DIAGRAM). The
-// coordinates block renders KaTeX radicals (e.g. the default 30° angle's
-// √3/2) as their own nested <svg> elements, so a descendant selector is
-// ambiguous, and a direct-child selector only works by accident — it
-// silently depends on the figure's `<svg>` never being wrapped by markup
-// that later lands inside the container. A dedicated test id can't be
-// captured that way. DIAGRAM itself is still legitimate for lookups that
-// really do target the container, e.g. the coordinate-label below.
+// coordinates block renders KaTeX radicals (e.g. a chart angle's √3/2 — the
+// default is now 0°, whose point (1, 0) has no radical) as their own nested
+// <svg> elements, so a descendant selector is ambiguous, and a direct-child
+// selector only works by accident — it silently depends on the figure's
+// `<svg>` never being wrapped by markup that later lands inside the
+// container. A dedicated test id can't be captured that way. DIAGRAM itself
+// is still legitimate for lookups that really do target the container, e.g.
+// the coordinate-label below.
 const FIGURE = '[data-testid="angle-figure"]';
 const READOUT = '[data-testid="angle-readout"]';
 
@@ -23,11 +24,15 @@ async function goto(page: Page): Promise<void> {
   await expect(page.locator(FIGURE)).toBeVisible();
 }
 
-test('renders the default angle with its exact radian form', async ({ page }) => {
+test('renders the default angle, stating the zero identity once', async ({ page }) => {
   await goto(page);
   const readout = page.locator(READOUT);
-  await expect(readout).toContainText('30');
-  await expect(readout).toContainText('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
+  // The collapsed form. "0° = 0 of a full turn = 0 × 2π = 0 ≈ 0 rad" was true
+  // and useless, and at the 0° default it is the first thing a visitor reads.
+  await expect(readout).not.toContainText('full turn');
+  await expect(readout).toContainText('rad');
 });
 
 test('is reachable from the explorers catalog', async ({ page }) => {
@@ -58,10 +63,15 @@ test('degrees drive radians in the other direction', async ({ page }) => {
 
 test('invalid input reports an error and leaves the diagram intact', async ({ page }) => {
   await goto(page);
+  // A distinct valid angle first, independent of the default: if this stayed
+  // at 0 (or any digit shared with the default's other readouts), a regression
+  // that fell back to the wrong angle on invalid input could still leave a '0'
+  // somewhere in the readout and pass here for the wrong reason.
+  await deg(page).fill('37');
   await deg(page).fill('abc');
   await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
   // The last valid angle survives the typo.
-  await expect(page.locator(READOUT)).toContainText('30');
+  await expect(page.locator(READOUT)).toContainText('37');
   await expect(page.locator(FIGURE)).toBeVisible();
 });
 
@@ -70,9 +80,10 @@ test('the angle slider drives the readout and both fields', async ({ page }) => 
   const angle = page.getByRole('slider', { name: 'angle' });
   await angle.focus();
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await expect(deg(page)).toHaveValue('35');
-  await expect(rad(page)).toHaveValue('0.6109');
-  await expect(page.locator(READOUT)).toContainText('35');
+  // Five 1° steps from the 0° default land on 5°, not the old 30° + 5.
+  await expect(deg(page)).toHaveValue('5');
+  await expect(rad(page)).toHaveValue('0.0873');
+  await expect(page.locator(READOUT)).toContainText('5');
 });
 
 test('a full 360 degree sweep still draws an arc', async ({ page }) => {
@@ -87,6 +98,10 @@ test('a full 360 degree sweep still draws an arc', async ({ page }) => {
 
 test('the position slider rotates the figure [G3]', async ({ page }) => {
   await goto(page);
+  // Explicit, non-zero angle: at the 0° default the swept arc's path is empty
+  // (start === end regardless of β), so this test would fail every time rather
+  // than proving rotation — it needs a real sweep to have a shape that rotates.
+  await deg(page).fill('30');
   const arcOf = () =>
     page.locator(`${FIGURE} path`).first().getAttribute('d');
   const before = await arcOf();
@@ -118,10 +133,11 @@ test('reset restores every control [G8]', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset' }).click();
 
   // All four controls, not just the two fields.
-  await expect(deg(page)).toHaveValue('30');
-  await expect(rad(page)).toHaveValue('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
   await expect(radius).toHaveAttribute('aria-valuenow', '1');
   await expect(position).toHaveAttribute('aria-valuenow', '0');
+  await expect(waveOption(page, 'none')).toBeChecked();
 });
 
 test('reset still works while a validation error is showing [G14]', async ({ page }) => {
@@ -138,8 +154,8 @@ test('reset still works while a validation error is showing [G14]', async ({ pag
 
   await page.getByRole('button', { name: 'Reset' }).click();
 
-  await expect(deg(page)).toHaveValue('30');
-  await expect(rad(page)).toHaveValue('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
 });
 
 test('the controls column does not reflow when an error appears [G14]', async ({ page }) => {
@@ -154,8 +170,11 @@ test('the controls column does not reflow when an error appears [G14]', async ({
 
 const COORDS = '[data-testid="angle-coordinates"]';
 
-test('shows the exact unit-circle point at the default angle', async ({ page }) => {
+test('shows the exact unit-circle point at a chart angle', async ({ page }) => {
   await goto(page);
+  // Explicit, not inherited from the default: this test is about radical
+  // rendering, and weakening it to the 0° point (1, 0) would test nothing.
+  await deg(page).fill('30');
   const coords = page.locator(COORDS);
   // KaTeX draws \sqrt as a vector path (SVG or native MathML rendering), never
   // as a literal "√" text node — toContainText('√3') can never match here,
@@ -168,6 +187,7 @@ test('shows the exact unit-circle point at the default angle', async ({ page }) 
 
 test('labels the terminal point on the diagram itself', async ({ page }) => {
   await goto(page);
+  await deg(page).fill('30');
   await expect(
     page.locator(`${DIAGRAM} [data-role="coordinate-label"]`),
   ).toContainText('√3/2');
@@ -177,6 +197,10 @@ test('switches to decimals and shows the r scaling when the radius moves', async
   page,
 }) => {
   await goto(page);
+  // Explicit 30°: the "switch to decimals" this test names only makes sense
+  // starting from an angle that has an exact radical form to switch away
+  // from — the 0° default's (1, 0) was never exact/irrational to begin with.
+  await deg(page).fill('30');
   // Radix puts role="slider" on the THUMB, while the id and aria-label sit on the
   // root — so getByRole('slider', {name: 'radius'}) does not resolve. Target the
   // thumb inside the identified root instead.
@@ -246,4 +270,136 @@ test('restores the tick label once the sweep moves clear', async ({ page }) => {
   await expect(tickText(page)).toHaveCount(0);
   await deg(page).fill('90');
   await expect(tickText(page)).toHaveText('1 rad');
+});
+
+const WAVE = '[data-testid="angle-wave"]';
+const WAVE_FIGURE = '[data-testid="angle-wave-figure"]';
+
+// The strip carries its own test id for the reason FIGURE documents at the top of
+// this file: the caption renders KaTeX, whose radicals become nested <svg>
+// elements, so any descendant svg selector inside the container is ambiguous.
+const curve = (page: Page) => page.locator(`${WAVE_FIGURE} [data-role="wave-curve"]`);
+const waveOption = (page: Page, name: string) => page.getByRole('radio', { name });
+
+test('shows no wave strip by default — none is the obvious default', async ({ page }) => {
+  await goto(page);
+  await expect(page.locator(WAVE)).toHaveCount(0);
+  await expect(waveOption(page, 'none')).toBeChecked();
+});
+
+test('selecting sin reveals the strip, selecting none removes it', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+
+  await waveOption(page, 'none').check();
+  await expect(page.locator(WAVE)).toHaveCount(0);
+});
+
+test('the wave selector is reachable and operable by keyboard', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'none').focus();
+  // { delay: 50 } is load-bearing, not decorative. Radix's roving-focus group
+  // defers the arrow-key focus move to a setTimeout(0) and cancels its "arrow
+  // key just pressed" flag on keyup; a zero-delay synthetic keydown+keyup pair
+  // (this repo's bundled headless Chromium) can complete BOTH before that
+  // timeout fires, so the flag is already cleared and the new radio never gets
+  // auto-selected — focus moves, but nothing checks. A 50ms gap (closer to how
+  // a human actually holds a key than an instant synthetic press) gives the
+  // deferred callback time to win the race. Confirmed by hand: the identical
+  // press against a different Chromium build (151) selects correctly with no
+  // delay at all, so this is a test-timing fix, not evidence of a real bug.
+  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await expect(waveOption(page, 'sin θ')).toBeChecked();
+  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await expect(waveOption(page, 'cos θ')).toBeChecked();
+});
+
+test('draws no curve at the 0 degree default, then the slider draws it', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  // The whole lesson: pick sin, then drag. At θ = 0 there is nothing to trace.
+  await expect(curve(page)).toHaveCount(0);
+
+  await deg(page).fill('90');
+  await expect(curve(page)).toHaveCount(1);
+});
+
+test('the angle slider lengthens the traced curve', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('90');
+  const short = (await curve(page).getAttribute('d'))!.length;
+
+  await deg(page).fill('270');
+  const long = (await curve(page).getAttribute('d'))!.length;
+  expect(long).toBeGreaterThan(short);
+});
+
+test('traces leftward for a negative angle', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cos θ').check();
+  await deg(page).fill('-90');
+  const d = (await curve(page).getAttribute('d'))!;
+  const xs = [...d.matchAll(/[ML] ([-\d.e]+) /g)].map((m) => Number(m[1]));
+  expect(xs.at(-1)!).toBeLessThan(xs[0]!);
+});
+
+test('cos reads non-zero at 0 degrees where sin reads zero', async ({ page }) => {
+  await goto(page);
+  const markerY = async () =>
+    Number(
+      await page
+        .locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)
+        .getAttribute('cy'),
+    );
+
+  await waveOption(page, 'sin θ').check();
+  const sinY = await markerY();
+  await waveOption(page, 'cos θ').check();
+  const cosY = await markerY();
+  expect(cosY).toBeLessThan(sinY); // cos = 1 sits above sin = 0
+});
+
+test('the radius slider changes the wave amplitude', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('90');
+  const peak = async () =>
+    Number(
+      await page
+        .locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)
+        .getAttribute('cy'),
+    );
+  const atOne = await peak();
+
+  // Radix puts role="slider" on the THUMB while the id sits on the root.
+  const radius = page.locator('#slider-radius [role="slider"]');
+  await radius.focus();
+  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
+
+  // A taller amplitude is a SMALLER y in SVG coordinates.
+  expect(await peak()).toBeLessThan(atOne);
+});
+
+test('the highlighted projection leg appears with the wave', async ({ page }) => {
+  await goto(page);
+  const leg = page.locator(`${FIGURE} [data-role="projection-leg"]`);
+  await expect(leg).toHaveCount(0);
+
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('45');
+  await expect(leg).toHaveCount(1);
+});
+
+test('reset returns the wave selector to none', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cos θ').check();
+  await deg(page).fill('200');
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset' }).click();
+
+  await expect(waveOption(page, 'none')).toBeChecked();
+  await expect(page.locator(WAVE)).toHaveCount(0);
 });

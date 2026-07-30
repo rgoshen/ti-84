@@ -1,24 +1,23 @@
 import * as React from 'react'; // [G1] required for the React.JSX.Element return type
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { renderMathHtml } from '@/scripts/katex-html';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import { explorerColors } from '@/scripts/graphing/theme';
 import {
   arcLength,
   degreesToRadians,
-  formatFractionLatex,
-  formatFractionSpoken,
+  formatFractionText,
   formatPiLatex,
-  formatPiSpoken,
+  formatPiText,
   isIntegerDegrees,
   piMultiple,
   turnFraction,
-  type Fraction,
 } from '@/scripts/explorer/angle';
 import {
   formatDegrees,
@@ -27,7 +26,17 @@ import {
 } from '@/scripts/explorer/angle-parse';
 import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
+import { buildReadout } from '@/scripts/explorer/angle-readout';
 import { round4 } from '@/scripts/explorer/format';
+import {
+  buildWaveSvg,
+  waveSpoken,
+  waveValue,
+  WAVE_HEIGHT,
+  WAVE_WIDTH,
+  type WaveFn,
+  type WaveMode,
+} from '@/scripts/explorer/angle-wave';
 import {
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,
@@ -35,61 +44,7 @@ import {
 } from '@/scripts/export/model';
 
 /** Slider defaults, also the reset target. */
-const DEFAULTS = { theta: 30, r: 1, beta: 0 };
-
-/**
- * The five-way identity plus arc length, as KaTeX source.
- *
- * Exact π and turn forms are shown ONLY for whole degrees. `piMultiple` reduces
- * deg/180 with integer gcd, so a typed 1.047 rad (59.9885°) would otherwise render
- * as an absurd fraction. Non-integer angles fall back to decimals alone.
- */
-function buildReadout(theta: number, r: number): { chain: string; arc: string; spoken: string } {
-  const rad = degreesToRadians(theta);
-  const decimal = round4(rad);
-  const s = arcLength(r, rad);
-
-  if (!isIntegerDegrees(theta)) {
-    const absDecimal = round4(Math.abs(rad));
-    // "1 radian(s)" must agree with English grammar for both the signed
-    // conversion and the unsigned value the arc equation substitutes.
-    const radianWord = (value: string): string => (Math.abs(Number(value)) === 1 ? 'radian' : 'radians');
-    return {
-      chain: `${round4(theta)}^\\circ = ${decimal}\\text{ rad}`,
-      // s = r|θ|: the arc length is a magnitude, so the substituted angle
-      // must be unsigned too, or the equation is untrue for negative sweeps.
-      arc: `s = r|\\theta| = ${round4(r)} \\times ${absDecimal} \\approx ${round4(s)}`,
-      spoken:
-        `${round4(theta)} degrees is ${decimal} ${radianWord(decimal)}. ` +
-        `Arc length uses the absolute angle, ${absDecimal} ${radianWord(absDecimal)}, giving ${round4(s)}.`,
-    };
-  }
-
-  // isIntegerDegrees only confirms θ is WITHIN epsilon of an integer — it can still
-  // be 59.99999999999999 (e.g. from typing pi/3 into Radians). Rounding to the
-  // nearest whole degree before handing it to turnFraction/piMultiple is required:
-  // those reduce n/d with an integer gcd, which is meaningless on a raw float and
-  // renders as an astronomically large "reduced" fraction otherwise.
-  const whole = Math.round(theta);
-  const turn = formatFractionLatex(turnFraction(whole));
-  const pi = formatPiLatex(piMultiple(whole));
-  const turnSpoken = formatFractionSpoken(turnFraction(whole));
-  const piSpoken = formatPiSpoken(piMultiple(whole));
-  // The arc substitution uses the unsigned angle (see the non-integer branch above).
-  const piAbsLatex = formatPiLatex(piMultiple(Math.abs(whole)));
-  const piAbsSpoken = formatPiSpoken(piMultiple(Math.abs(whole)));
-  return {
-    chain:
-      `${whole}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
-      `= ${pi} \\approx ${decimal}\\text{ rad}`,
-    // Written out with real numbers, not a bare s = rθ. |θ| keeps the equation
-    // true for negative sweeps: a length has no sign even when θ does.
-    arc: `s = r|\\theta| = ${round4(r)} \\times ${piAbsLatex} \\approx ${round4(s)}`,
-    spoken:
-      `${whole} degrees is ${turnSpoken} of a full turn, ${piSpoken} radians, about ${decimal}. ` +
-      `Arc length uses the absolute angle, ${piAbsSpoken} radians, giving ${round4(s)}.`,
-  };
-}
+const DEFAULTS = { theta: 0, r: 1, beta: 0, wave: 'none' as WaveMode };
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
@@ -98,30 +53,15 @@ function buildReadout(theta: number, r: number): { chain: string; arc: string; s
  *  this component and the export snapshot draw through. */
 const VIEW = 320;
 
-/** Plain-text (non-KaTeX) exact fraction, e.g. "0", "1", "1/12", "-1/4". Mirrors
- *  `formatFractionLatex` without LaTeX markup — the export artifact renders as
- *  plain HTML text, never through KaTeX. */
-function formatFractionText(f: Fraction): string {
-  if (f.n === 0) return '0';
-  const sign = f.n < 0 ? '-' : '';
-  const mag = Math.abs(f.n);
-  return f.d === 1 ? `${sign}${mag}` : `${sign}${mag}/${f.d}`;
-}
-
-/** Plain-text exact π-multiple, e.g. "0", "π", "2π", "π/6", "-2π/3". Mirrors
- *  `formatPiLatex` without LaTeX markup, for the same reason. */
-function formatPiText(f: Fraction): string {
-  if (f.n === 0) return '0';
-  const sign = f.n < 0 ? '-' : '';
-  const mag = Math.abs(f.n);
-  const numerator = mag === 1 ? 'π' : `${mag}π`;
-  return f.d === 1 ? `${sign}${numerator}` : `${sign}${numerator}/${f.d}`;
-}
-
 export default function AngleExplorer(): React.JSX.Element {
   const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
   const [r, setR] = useState(DEFAULTS.r);
   const [beta, setBeta] = useState(DEFAULTS.beta); // degrees
+  const [wave, setWave] = useState<WaveMode>(DEFAULTS.wave);
+
+  // Unique per mounted instance, so the wave radio group's ids never collide
+  // if two AngleExplorer components ever land on the same page.
+  const waveGroupId = useId();
 
   const [dark, setDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
@@ -165,19 +105,26 @@ export default function AngleExplorer(): React.JSX.Element {
     [coords.tripleLatex, coords.xLatex, coords.yLatex],
   );
 
+  // `undefined` rather than 'none' is what both builders expect for "draw neither".
+  const waveFn: WaveFn | undefined = wave === 'none' ? undefined : wave;
+
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
   // so a slider drag announces once on settle rather than on every frame.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(`${readout.spoken} ${coords.spoken}`), 250);
+    const id = setTimeout(() => {
+      const wavePart = waveFn ? ` ${waveSpoken(waveFn, theta, r)}` : '';
+      setAnnounced(`${readout.spoken} ${coords.spoken}${wavePart}`);
+    }, 250);
     return () => clearTimeout(id);
-  }, [readout.spoken, coords.spoken]);
+  }, [readout.spoken, coords.spoken, waveFn, theta, r]);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
     setR(DEFAULTS.r);
     setBeta(DEFAULTS.beta);
+    setWave(DEFAULTS.wave);
     setEditing(null);
     setInputError(null);
   };
@@ -272,6 +219,7 @@ export default function AngleExplorer(): React.JSX.Element {
     const snapshotTheta = theta;
     const snapshotR = r;
     const snapshotBeta = beta;
+    const snapshotWave = waveFn;
     const lightColors = explorerColors(false);
     const whole = Math.round(snapshotTheta);
     const integer = isIntegerDegrees(snapshotTheta);
@@ -294,6 +242,17 @@ export default function AngleExplorer(): React.JSX.Element {
             color: lightColors.curve,
           },
           { label: 'Angle measure', color: lightColors.arrow },
+          ...(snapshotWave
+            ? [
+                {
+                  label:
+                    snapshotWave === 'sin'
+                      ? 'sin θ — height is the y-coordinate'
+                      : 'cos θ — height is the x-coordinate',
+                  color: lightColors.wave,
+                },
+              ]
+            : []),
         ],
         sections: [
           {
@@ -313,6 +272,25 @@ export default function AngleExplorer(): React.JSX.Element {
               { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
           },
+          ...(snapshotWave
+            ? [
+                {
+                  title: 'Wave',
+                  color: lightColors.wave,
+                  facts: [
+                    {
+                      label: 'Function',
+                      value: snapshotWave === 'sin' ? 'y = r·sin θ' : 'y = r·cos θ',
+                    },
+                    {
+                      label: 'Value',
+                      value: round4(waveValue(snapshotWave, snapshotTheta, snapshotR)),
+                    },
+                    { label: 'Traced', value: `0° to ${formatDegrees(snapshotTheta)}°` },
+                  ],
+                },
+              ]
+            : []),
         ],
         table: {
           title: 'Representations',
@@ -329,16 +307,47 @@ export default function AngleExplorer(): React.JSX.Element {
         },
       },
       renderGraph: (target) => {
-        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
-          {
-            theta: snapshotTheta,
-            r: snapshotR,
-            beta: snapshotBeta,
-            colors: lightColors,
-            tickText: '#334155',
-            coordinateLabel: snapshotCoords.labelText,
-          },
-        )}</svg>`;
+        // With a wave, the circle yields height so both figures fit the 560 the
+        // artifact template allows. Without one, the export is unchanged.
+        const circleHeight = snapshotWave ? 360 : EXPORT_GRAPH_HEIGHT;
+        const circle =
+          `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${circleHeight}" ` +
+          `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" ` +
+          // display:block: an inline (the SVG default) element carries baseline
+          // leading below its own box, which is exactly the ~2px the container's
+          // fixed height and overflow:hidden were found to clip against.
+          `style="display:block">${buildAngleDiagramSvg(
+            {
+              theta: snapshotTheta,
+              r: snapshotR,
+              beta: snapshotBeta,
+              colors: lightColors,
+              tickText: '#334155',
+              coordinateLabel: snapshotCoords.labelText,
+              projection: snapshotWave,
+            },
+          )}</svg>`;
+
+        // A matching viewBox, NOT the live strip's 512 × 176. Reusing that here
+        // would make `meet` fit to the height and render the wave ~552px wide,
+        // letterboxed inside a 960px box.
+        const strip = snapshotWave
+          ? `<svg viewBox="0 0 ${EXPORT_GRAPH_WIDTH} 190" width="${EXPORT_GRAPH_WIDTH}" height="190" ` +
+            `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" ` +
+            `style="display:block">${buildWaveSvg(
+              {
+                fn: snapshotWave,
+                theta: snapshotTheta,
+                r: snapshotR,
+                colors: lightColors,
+                tickText: '#334155',
+                width: EXPORT_GRAPH_WIDTH,
+                height: 190,
+              },
+            )}</svg>`
+          : '';
+
+        target.innerHTML = circle + strip;
       },
     };
   };
@@ -368,6 +377,32 @@ export default function AngleExplorer(): React.JSX.Element {
             />
           </div>
         ))}
+        <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-medium" id={`${waveGroupId}-wave-group-label`}>
+            Wave
+          </p>
+          <RadioGroup
+            aria-labelledby={`${waveGroupId}-wave-group-label`}
+            value={wave}
+            onValueChange={(v) => setWave(v as WaveMode)}
+          >
+            {(
+              [
+                { value: 'none' as const, label: 'none' },
+                { value: 'sin' as const, label: 'sin θ' },
+                { value: 'cos' as const, label: 'cos θ' },
+              ]
+            ).map((o) => (
+              <div key={o.value} className="flex items-center gap-2">
+                <RadioGroupItem id={`${waveGroupId}-wave-${o.value}`} value={o.value} />
+                <Label htmlFor={`${waveGroupId}-wave-${o.value}`}>{o.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Drag <strong>angle</strong> to trace the wave from 0.
+          </p>
+        </div>
         <div className="space-y-3 rounded-lg border p-3">
           <p className="text-sm font-medium">Convert</p>
           {(
@@ -445,9 +480,43 @@ export default function AngleExplorer(): React.JSX.Element {
               colors,
               tickText,
               coordinateLabel: coords.labelText,
+              projection: waveFn,
             }),
           }}
         />
+
+        {waveFn && (
+          <div data-testid="angle-wave" className="mt-4">
+            <svg
+              data-testid="angle-wave-figure"
+              viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
+              className="h-auto w-full"
+              role="img"
+              aria-label={`Graph of ${waveFn === 'sin' ? 'sine' : 'cosine'} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
+              dangerouslySetInnerHTML={{
+                __html: buildWaveSvg({
+                  fn: waveFn,
+                  theta,
+                  r,
+                  colors,
+                  tickText,
+                }),
+              }}
+            />
+            {/* The value is the coordinate the strip plots, so this reuses the
+                equation angle-coordinates.ts already built rather than
+                formatting it a second time — the strip's number and the
+                coordinate box's number cannot then disagree. */}
+            <div
+              data-testid="angle-wave-caption"
+              aria-hidden="true"
+              className="mt-2 text-center text-sm text-muted-foreground"
+              dangerouslySetInnerHTML={{
+                __html: waveFn === 'sin' ? coordHtml.y : coordHtml.x,
+              }}
+            />
+          </div>
+        )}
 
         <div
           data-testid="angle-readout"
