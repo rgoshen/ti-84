@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.9.0](https://github.com/rgoshen/ti-84/compare/v0.8.0...v0.9.0) (2026-07-30)
+
+
+### Bug Fixes
+
+* **explorer:** resolve final review findings on the wave projection branch ([0cc63e8](https://github.com/rgoshen/ti-84/commit/0cc63e80c3f4288b104d73d8520998d5418626d2))
+* **explorer:** state the θ=0 identity once instead of four times ([78d8b5b](https://github.com/rgoshen/ti-84/commit/78d8b5b22e10a2b1eba6349fca6e94548109a722))
+
+
+### Features
+
+* **explorer:** add the sin/cos wave selector to the Angle Explorer ([7962252](https://github.com/rgoshen/ti-84/commit/7962252f6cdfd277842051219f3a779d077e1981))
+* **explorer:** add wave strip scales, π/4 ticks and values ([5bac8d3](https://github.com/rgoshen/ti-84/commit/5bac8d3b8d72c1ebad804d9b429fafec725aee1f))
+* **explorer:** build the wave strip's SVG ([290cb24](https://github.com/rgoshen/ti-84/commit/290cb2421435c477570704b0b756daf28160a68d))
+* **explorer:** carry the wave into the exported artifact ([3967265](https://github.com/rgoshen/ti-84/commit/39672658167ba44807c826f40794de6bbf6e97e5))
+* **explorer:** default the angle to 0 degrees ([f5b0052](https://github.com/rgoshen/ti-84/commit/f5b00528be700bb852c7d24c143d0c291c174ff7))
+* **explorer:** highlight the reference-triangle leg the wave plots ([de4864a](https://github.com/rgoshen/ti-84/commit/de4864a16c2ad267d9c995814c9d5f08c90f9d5b))
+* **explorer:** trace the wave from 0 to θ ([93bdf34](https://github.com/rgoshen/ti-84/commit/93bdf34ad684be651cc38c35c30524670ca6757f))
+* **theme:** add the wave colour to the explorer palette ([d19bb83](https://github.com/rgoshen/ti-84/commit/d19bb8356f4fcd7e1f3502ae834508602acecfd6))
+
 # [0.8.0](https://github.com/rgoshen/ti-84/compare/v0.7.0...v0.8.0) (2026-07-28)
 
 
