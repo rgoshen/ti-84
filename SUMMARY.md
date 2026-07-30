@@ -4122,3 +4122,55 @@ zero-length edge cases.
 - src/scripts/explorer/angle-diagram.test.ts (eight new tests covering the projection leg)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 7)
+
+## [2026-07-29 21:05] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — default angle
+
+**Summary:**
+Changed `DEFAULTS.theta` in `src/components/explorer/AngleExplorer.tsx` from `30` to
+`0`, so the Angle Explorer (and the wave strip Task 9 adds to it) opens at the identity
+angle instead of a pre-swept one — the first drag of the slider is now the one that
+draws the wave from nothing. Updated the e2e suite to match: three tests in
+`tests/e2e/angle.spec.ts` whose real subject is the default value itself (the landing
+readout, and the `deg`/`rad` pair in each of the two reset tests, `[G8]` and `[G14]`)
+now assert `0` instead of `30`. Six tests across `angle.spec.ts` and
+`angle-export.spec.ts` whose real subject is exact-radical rendering or geometry that
+is degenerate at θ = 0 (the unit-circle-point radical test, the diagram's terminal-point
+label, the radius-scaling decimal-switch test, the position-slider rotation guard
+`[G3]`, and both export artifact tests) now set `30°` explicitly via a `deg` locator
+rather than inheriting it from the default — `angle-export.spec.ts` did not previously
+define a `deg` helper, so one was added with the same Playwright strict-mode note
+`angle.spec.ts` already carries. One further test, `invalid input reports an error and
+leaves the diagram intact`, asserts that the last valid angle survives a typo; its
+expected literal moved from `30` to `0` since that value is the default it inherits, not
+a value under its own test.
+
+**Rationale:**
+The task brief anticipated seven broken assertions across the two spec files; running
+the suite after the one-line default change surfaced eleven. The four not named in the
+brief (`invalid input reports an error…`, `the angle slider drives the readout and both
+fields`, `the position slider rotates the figure [G3]`, and `switches to decimals and
+shows the r scaling when the radius moves`) break for the identical underlying reason —
+each hard-coded an expected value or relied on non-degenerate geometry derived from the
+old 30° default — so the same governing rule applied to the seven named tests (never
+weaken an assertion to accommodate the new default; pin an explicit non-default angle
+when the test's real subject needs one) was extended to these four rather than leaving
+them broken or loosening their checks. Notably, `[G3]` needed an explicit non-zero angle
+for a structural reason beyond exact-radical rendering: at θ = 0 the swept arc's SVG
+path is empty regardless of rotation (`arcPath` collapses when start === end), so the
+test's core assertion — that the arc's `d` attribute changes when the position slider
+rotates it — would otherwise compare `""` to `""` and fail unconditionally rather than
+prove anything about rotation.
+
+**Bug Fix Context (if applicable):**
+Not a bug fix — a deliberate default change with cascading, pre-anticipated test churn.
+
+**References:**
+- src/components/explorer/AngleExplorer.tsx (DEFAULTS.theta)
+- tests/e2e/angle.spec.ts (nine tests touched: three re-pinned to 0°, four re-pinned to
+  30° explicitly, one comment/value correction, plus the renamed radical test)
+- tests/e2e/angle-export.spec.ts (deg helper added; two tests pin 30° explicitly)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 8)

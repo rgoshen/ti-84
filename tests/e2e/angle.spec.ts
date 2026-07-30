@@ -3,13 +3,14 @@ import { test, expect, type Page } from '@playwright/test';
 const DIAGRAM = '[data-testid="angle-diagram"]';
 // The figure carries its own test id (`angle-figure`) rather than being found
 // by shape (a descendant or direct-child `svg` selector under DIAGRAM). The
-// coordinates block renders KaTeX radicals (e.g. the default 30° angle's
-// √3/2) as their own nested <svg> elements, so a descendant selector is
-// ambiguous, and a direct-child selector only works by accident — it
-// silently depends on the figure's `<svg>` never being wrapped by markup
-// that later lands inside the container. A dedicated test id can't be
-// captured that way. DIAGRAM itself is still legitimate for lookups that
-// really do target the container, e.g. the coordinate-label below.
+// coordinates block renders KaTeX radicals (e.g. a chart angle's √3/2 — the
+// default is now 0°, whose point (1, 0) has no radical) as their own nested
+// <svg> elements, so a descendant selector is ambiguous, and a direct-child
+// selector only works by accident — it silently depends on the figure's
+// `<svg>` never being wrapped by markup that later lands inside the
+// container. A dedicated test id can't be captured that way. DIAGRAM itself
+// is still legitimate for lookups that really do target the container, e.g.
+// the coordinate-label below.
 const FIGURE = '[data-testid="angle-figure"]';
 const READOUT = '[data-testid="angle-readout"]';
 
@@ -23,11 +24,15 @@ async function goto(page: Page): Promise<void> {
   await expect(page.locator(FIGURE)).toBeVisible();
 }
 
-test('renders the default angle with its exact radian form', async ({ page }) => {
+test('renders the default angle, stating the zero identity once', async ({ page }) => {
   await goto(page);
   const readout = page.locator(READOUT);
-  await expect(readout).toContainText('30');
-  await expect(readout).toContainText('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
+  // The collapsed form. "0° = 0 of a full turn = 0 × 2π = 0 ≈ 0 rad" was true
+  // and useless, and at the 0° default it is the first thing a visitor reads.
+  await expect(readout).not.toContainText('full turn');
+  await expect(readout).toContainText('rad');
 });
 
 test('is reachable from the explorers catalog', async ({ page }) => {
@@ -58,10 +63,15 @@ test('degrees drive radians in the other direction', async ({ page }) => {
 
 test('invalid input reports an error and leaves the diagram intact', async ({ page }) => {
   await goto(page);
+  // A distinct valid angle first, independent of the default: if this stayed
+  // at 0 (or any digit shared with the default's other readouts), a regression
+  // that fell back to the wrong angle on invalid input could still leave a '0'
+  // somewhere in the readout and pass here for the wrong reason.
+  await deg(page).fill('37');
   await deg(page).fill('abc');
   await expect(page.getByTestId('angle-input-error')).toHaveText(/./);
   // The last valid angle survives the typo.
-  await expect(page.locator(READOUT)).toContainText('30');
+  await expect(page.locator(READOUT)).toContainText('37');
   await expect(page.locator(FIGURE)).toBeVisible();
 });
 
@@ -70,9 +80,10 @@ test('the angle slider drives the readout and both fields', async ({ page }) => 
   const angle = page.getByRole('slider', { name: 'angle' });
   await angle.focus();
   for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
-  await expect(deg(page)).toHaveValue('35');
-  await expect(rad(page)).toHaveValue('0.6109');
-  await expect(page.locator(READOUT)).toContainText('35');
+  // Five 1° steps from the 0° default land on 5°, not the old 30° + 5.
+  await expect(deg(page)).toHaveValue('5');
+  await expect(rad(page)).toHaveValue('0.0873');
+  await expect(page.locator(READOUT)).toContainText('5');
 });
 
 test('a full 360 degree sweep still draws an arc', async ({ page }) => {
@@ -87,6 +98,10 @@ test('a full 360 degree sweep still draws an arc', async ({ page }) => {
 
 test('the position slider rotates the figure [G3]', async ({ page }) => {
   await goto(page);
+  // Explicit, non-zero angle: at the 0° default the swept arc's path is empty
+  // (start === end regardless of β), so this test would fail every time rather
+  // than proving rotation — it needs a real sweep to have a shape that rotates.
+  await deg(page).fill('30');
   const arcOf = () =>
     page.locator(`${FIGURE} path`).first().getAttribute('d');
   const before = await arcOf();
@@ -118,8 +133,8 @@ test('reset restores every control [G8]', async ({ page }) => {
   await page.getByRole('button', { name: 'Reset' }).click();
 
   // All four controls, not just the two fields.
-  await expect(deg(page)).toHaveValue('30');
-  await expect(rad(page)).toHaveValue('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
   await expect(radius).toHaveAttribute('aria-valuenow', '1');
   await expect(position).toHaveAttribute('aria-valuenow', '0');
 });
@@ -138,8 +153,8 @@ test('reset still works while a validation error is showing [G14]', async ({ pag
 
   await page.getByRole('button', { name: 'Reset' }).click();
 
-  await expect(deg(page)).toHaveValue('30');
-  await expect(rad(page)).toHaveValue('0.5236');
+  await expect(deg(page)).toHaveValue('0');
+  await expect(rad(page)).toHaveValue('0');
 });
 
 test('the controls column does not reflow when an error appears [G14]', async ({ page }) => {
@@ -154,8 +169,11 @@ test('the controls column does not reflow when an error appears [G14]', async ({
 
 const COORDS = '[data-testid="angle-coordinates"]';
 
-test('shows the exact unit-circle point at the default angle', async ({ page }) => {
+test('shows the exact unit-circle point at a chart angle', async ({ page }) => {
   await goto(page);
+  // Explicit, not inherited from the default: this test is about radical
+  // rendering, and weakening it to the 0° point (1, 0) would test nothing.
+  await deg(page).fill('30');
   const coords = page.locator(COORDS);
   // KaTeX draws \sqrt as a vector path (SVG or native MathML rendering), never
   // as a literal "√" text node — toContainText('√3') can never match here,
@@ -168,6 +186,7 @@ test('shows the exact unit-circle point at the default angle', async ({ page }) 
 
 test('labels the terminal point on the diagram itself', async ({ page }) => {
   await goto(page);
+  await deg(page).fill('30');
   await expect(
     page.locator(`${DIAGRAM} [data-role="coordinate-label"]`),
   ).toContainText('√3/2');
@@ -177,6 +196,10 @@ test('switches to decimals and shows the r scaling when the radius moves', async
   page,
 }) => {
   await goto(page);
+  // Explicit 30°: the "switch to decimals" this test names only makes sense
+  // starting from an angle that has an exact radical form to switch away
+  // from — the 0° default's (1, 0) was never exact/irrational to begin with.
+  await deg(page).fill('30');
   // Radix puts role="slider" on the THUMB, while the id and aria-label sit on the
   // root — so getByRole('slider', {name: 'radius'}) does not resolve. Target the
   // thumb inside the identified root instead.

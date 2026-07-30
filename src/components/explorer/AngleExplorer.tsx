@@ -34,7 +34,7 @@ import {
 } from '@/scripts/export/model';
 
 /** Slider defaults, also the reset target. */
-const DEFAULTS = { theta: 30, r: 1, beta: 0 };
+const DEFAULTS = { theta: 0, r: 1, beta: 0 };
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
