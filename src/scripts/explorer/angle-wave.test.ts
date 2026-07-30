@@ -8,7 +8,10 @@ import {
   waveTickLabel,
   waveTickRadians,
   waveValue,
+  wavePath,
+  waveSpoken,
 } from './angle-wave';
+import { degreesToRadians } from './angle';
 
 describe('waveTickRadians', () => {
   it('emits every multiple of π/4 across -2π…2π — seventeen of them', () => {
@@ -108,5 +111,90 @@ describe('waveScales', () => {
     const wide = waveScales(960, 190);
     expect(wide.xFor(0)).toBeCloseTo(480, 6);
     expect(wide.xFor(2 * Math.PI)).toBeGreaterThan(wide.xFor(0));
+  });
+});
+
+/** Pull the vertices back out of an `M x y L x y …` path. */
+function vertices(path: string): Array<{ x: number; y: number }> {
+  return [...path.matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)].map((m) => ({
+    x: Number(m[1]),
+    y: Number(m[2]),
+  }));
+}
+
+describe('wavePath', () => {
+  const s = waveScales();
+
+  it('draws nothing at θ = 0 — a zero-length trace is nothing, not a degenerate path', () => {
+    // Same threshold and same reasoning as arcPath in angle-render.ts.
+    expect(wavePath('sin', 0, 1, s)).toBe('');
+    expect(wavePath('cos', 0, 1, s)).toBe('');
+    expect(wavePath('sin', 1e-12, 1, s)).toBe('');
+  });
+
+  it('starts at θ = 0 and ends exactly at θ, so the curve meets the marker', () => {
+    const v = vertices(wavePath('sin', 137, 1, s));
+    expect(v[0]!.x).toBeCloseTo(s.xFor(0), 6);
+    expect(v.at(-1)!.x).toBeCloseTo(s.xFor(degreesToRadians(137)), 6);
+    expect(v.at(-1)!.y).toBeCloseTo(s.yFor(waveValue('sin', 137, 1)), 6);
+  });
+
+  it('grows rightward for positive θ and leftward for negative θ', () => {
+    expect(vertices(wavePath('sin', 90, 1, s)).at(-1)!.x).toBeGreaterThan(s.xFor(0));
+    expect(vertices(wavePath('sin', -90, 1, s)).at(-1)!.x).toBeLessThan(s.xFor(0));
+  });
+
+  it('samples densely enough to read as a curve, and bounds the vertex count', () => {
+    // 2° steps: 360° needs 181 vertices. Enough to look smooth, few enough that
+    // a slider drag redraws without a visible cost.
+    const full = vertices(wavePath('sin', 360, 1, s));
+    expect(full.length).toBe(181);
+    expect(vertices(wavePath('sin', 10, 1, s)).length).toBe(6);
+  });
+
+  it('scales the traced height by r', () => {
+    const peakAt = (r: number) => vertices(wavePath('sin', 90, r, s)).at(-1)!.y;
+    expect(peakAt(1.5)).toBeCloseTo(s.yFor(1.5), 6);
+    expect(peakAt(0.5)).toBeCloseTo(s.yFor(0.5), 6);
+    expect(peakAt(1.5)).toBeLessThan(peakAt(0.5));
+  });
+
+  it('emits no NaN across the whole θ × r domain', () => {
+    for (let theta = -360; theta <= 360; theta += 7) {
+      for (const r of [0.5, 1, 1.5]) {
+        for (const fn of ['sin', 'cos'] as const) {
+          const path = wavePath(fn, theta, r, s);
+          expect(path).not.toContain('NaN');
+          expect(path).not.toContain('undefined');
+        }
+      }
+    }
+  });
+
+  it('keeps every vertex inside the viewBox', () => {
+    for (let theta = -360; theta <= 360; theta += 11) {
+      for (const v of vertices(wavePath('cos', theta, AMP_MAX, s))) {
+        expect(v.x).toBeGreaterThanOrEqual(0);
+        expect(v.x).toBeLessThanOrEqual(WAVE_WIDTH);
+        expect(v.y).toBeGreaterThanOrEqual(0);
+        expect(v.y).toBeLessThanOrEqual(WAVE_HEIGHT);
+      }
+    }
+  });
+});
+
+describe('waveSpoken', () => {
+  it('names the function and the swept range for the live region', () => {
+    expect(waveSpoken('sin', 135, 1)).toBe(
+      'Sine wave traced from 0 to 135 degrees. sin of theta is 0.7071.',
+    );
+    expect(waveSpoken('cos', 0, 1.5)).toBe(
+      'Cosine wave traced from 0 to 0 degrees. cos of theta is 1.5.',
+    );
+  });
+
+  it('carries no LaTeX for a screen reader to read aloud', () => {
+    expect(waveSpoken('cos', -210, 1.2)).not.toContain('\\');
+    expect(waveSpoken('cos', -210, 1.2)).toContain('-210 degrees');
   });
 });

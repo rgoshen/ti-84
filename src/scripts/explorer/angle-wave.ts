@@ -90,3 +90,60 @@ export function waveValue(fn: WaveFn, theta: number, r: number): number {
   const rad = degreesToRadians(theta);
   return fn === 'sin' ? r * Math.sin(rad) : r * Math.cos(rad);
 }
+
+/** Below this, a sweep is nothing rather than a degenerate path. Mirrors `arcPath`. */
+const ZERO_DEG = 1e-9;
+
+/** Sampling interval along θ, in degrees. 360° yields 181 vertices. */
+const STEP_DEG = 2;
+
+/**
+ * The curve traced from 0 out to θ, as an SVG path.
+ *
+ * Grows in whichever direction θ points, so a negative angle traces leftward
+ * from the origin and sin's odd symmetry / cos's even symmetry become visible by
+ * dragging rather than by assertion. The final vertex is snapped to θ exactly
+ * (rather than to the last whole step) so the curve always meets the marker,
+ * which is positioned from θ itself.
+ *
+ * Returns `''` below `ZERO_DEG` — the same gate `arcPath` applies, for the same
+ * reason. Note the marker is drawn independently of this, so at θ = 0 `cos`
+ * still shows a dot at r while `sin` shows one at 0.
+ */
+export function wavePath(
+  fn: WaveFn,
+  theta: number,
+  r: number,
+  scales: WaveScales,
+): string {
+  if (Math.abs(theta) < ZERO_DEG) return '';
+
+  const dir = theta < 0 ? -1 : 1;
+  const steps = Math.ceil(Math.abs(theta) / STEP_DEG);
+  const points: string[] = [];
+
+  for (let i = 0; i <= steps; i++) {
+    const at = i === steps ? theta : dir * i * STEP_DEG;
+    const x = scales.xFor(degreesToRadians(at));
+    const y = scales.yFor(waveValue(fn, at, r));
+    points.push(`${x} ${y}`);
+  }
+
+  return `M ${points[0]}${points.slice(1).map((p) => ` L ${p}`).join('')}`;
+}
+
+/** Whole-degree display, matching what the Degrees field shows. */
+const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1e4);
+
+/**
+ * The strip as prose, for the existing debounced live region. Both KaTeX boxes
+ * are `aria-hidden`, so this is the only channel a screen-reader user has.
+ */
+export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
+  const name = fn === 'sin' ? 'Sine' : 'Cosine';
+  const value = Math.round(waveValue(fn, theta, r) * 1e4) / 1e4;
+  return (
+    `${name} wave traced from 0 to ${degreeText(theta)} degrees. ` +
+    `${fn} of theta is ${value}.`
+  );
+}

@@ -4018,3 +4018,35 @@ and interactivity; they depend on these scale and value functions.
 - src/scripts/explorer/angle.ts (degreesToRadians, formatPiText, reduceFraction)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 4)
+
+## [2026-07-29 20:32] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave path
+
+**Summary:**
+Added two functions to `src/scripts/explorer/angle-wave.ts`: `wavePath(fn, theta, r, scales)`
+traces the curve from 0 out to θ as an SVG path string with 2° sampling (360° yields 181 vertices),
+snapping the final vertex to θ exactly so the curve meets its marker; returns `''` below 1e-9
+threshold, the same gate `arcPath` applies. `waveSpoken(fn, theta, r)` provides screen-reader
+prose naming the function and swept range with a prose value display, carrying no LaTeX. Nine
+tests verify path generation (zero-length handling, endpoint exactness, directional growth,
+vertex count and sampling, radius scaling, NaN-free domains, viewBox containment) and prose
+generation (function naming, degree display, no LaTeX escape sequences).
+
+**Rationale:**
+The wave strip curves must be traced as the angle sweeps, with the path growing in whatever
+direction θ points — negative angles trace leftward, visualizing odd/even symmetry by dragging
+rather than assertion. Snapping the final vertex to θ exactly ensures the curve always meets the
+marker (which is positioned from θ itself). The 2° step size balances smoothness (reads as a
+curve at any scale) against performance (slider drags redraws instantly, no perceptible lag).
+The zero-length gate mirrors `arcPath` — a degenerate path is nothing, not an empty stroke.
+Screen-reader prose routes through a separate text channel (both KaTeX boxes are `aria-hidden`)
+with rounding to 4 decimal places, matching the Degrees field's precision. Tasks 6-10 consume
+these builders for DOM rendering, styling, and interactivity.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (wavePath, waveSpoken functions)
+- src/scripts/explorer/angle-wave.test.ts (nine new tests covering both functions)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 5)
