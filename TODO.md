@@ -914,3 +914,50 @@ pass unmodified. No new visual snapshot — baselines are Linux/Docker-only.
 **References:**
 - Issue: GH-26 (Phase 2)
 - Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+
+## [2026-07-29] Feature: Angle Explorer Wave Projection
+
+**Objective:**
+Teach the step the Angle Explorer stops short of — that sweeping an angle and recording one
+coordinate generates a wave. A `Wave` radio group (`none` · `sin θ` · `cos θ`, defaulting to
+`none`) reveals a strip below the circle, and the angle slider traces the selected wave from
+0 out to θ. Also moves the explorer's default angle from 30° to 0°, so the first drag of the
+slider is the one that draws the wave from nothing.
+
+**Approach:**
+New pure builder `angle-wave.ts` (DOM-free string concatenation, mirroring `angle-diagram.ts`)
+draws the strip: x-domain −2π…2π matching the angle slider's range, ticks at all 17 multiples
+of π/4 with labels staggered onto two baselines, y-domain fixed at ±1.5, and the curve traced
+in 2° steps from 0 toward θ. The wave plots `r·sin θ` / `r·cos θ`, so its height agrees with
+the coordinate readout already on screen; the strip's caption reuses `coords.yLatex` /
+`coords.xLatex` rather than formatting the value a second time. Stacked layout forecloses a
+tie-line, so `buildAngleDiagramSvg` gains an optional `projection` that highlights the
+matching reference-triangle leg in a new `ExplorerColors.wave`. `buildReadout` and the two
+plain-text formatters are extracted out of the component first — they are untestable inside a
+`.tsx` under the node test env, which is what currently blocks fixing the θ = 0 readout.
+
+**Tests:**
+Unit: tick positions and exact-π labels, both scales, `wavePath`'s zero gate and direction,
+amplitude scaling with r, sin's oddness and cos's evenness, sin-vs-cos at θ = 0, and a domain
+sweep for NaN. The core invariant — the projection leg's length equals `r·|sin θ|` / `r·|cos θ|`
+for any β — is asserted directly. Plus `wave`'s 3:1 non-text contrast in both themes and the
+θ = 0 readout collapse. E2E: default `none` with no strip in the DOM, reveal/remove, radio
+arrow keys, curve growth under slider drag, cos's non-zero marker at θ = 0, amplitude under
+the radius slider, and reset. Seven existing assertions depend on the 30° default and are
+updated without weakening any of them. No visual snapshot — this explorer has no baseline.
+
+**Risks & Tradeoffs:**
+- 17 π/4 labels is the tightest thing in the design; staggering is the mitigation and
+  labelling only π/2 multiples is the retreat.
+- Losing the tie-line is an accepted cost of the stacked layout. The projection leg and a
+  shared marker colour carry the link, and that needs a browser check before done.
+- `wave`'s hex must clear 3:1 in both themes (test-enforced) *and* read distinctly from the
+  initial-side blue (needs eyes). Green is the fallback family.
+- The exported circle shrinks 560 → 360 px when a wave is included, to stay inside the
+  template's 560 budget.
+- `buildReadout` is extracted while untestable, so it is characterised with tests before the
+  θ = 0 change lands, keeping the two commits separable.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+- Extends: docs/superpowers/plans/2026-07-23-angle-explorer.md

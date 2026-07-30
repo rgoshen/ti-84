@@ -3799,3 +3799,38 @@ phase.
 - Issue: GH-26 (Phase 2)
 - TODO.md: [2026-07-28] Feature: Implicit Relations (GH-26 Phase 2)
 - Spec: docs/superpowers/specs/2026-07-28-implicit-relations-design.md
+
+## [2026-07-29 19:15] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — design spec
+
+**Summary:**
+Added the approved design spec for the Angle Explorer wave projection, plus its TODO.md
+feature entry. A `Wave` radio group (`none` · `sin θ` · `cos θ`, default `none`) reveals a
+strip below the circle; the angle slider traces the selected wave from 0 to θ. The default
+angle moves from 30° to 0°. No code changes yet — spec and planning docs only.
+
+**Rationale:**
+Four design questions were settled against alternatives before writing anything. The wave
+plots `r·sin θ` rather than a fixed-amplitude `sin θ` because a ±1 wave would show 0.5 while
+the coordinate box two inches below read 0.75 at r = 1.5 — two numbers for one quantity, the
+same class of quiet false mathematics this project fixed in the relations work. The x-domain
+spans −2π…2π rather than the literal 0…2π because the angle slider reaches −360°, and a wave
+that blanks over a third of the slider's travel reads as a bug. Nothing self-plays: the
+slider is the drawing instrument, which keeps θ the single source of truth and removes the
+reduced-motion and WCAG 2.2.2 branches entirely. Stacked layout was chosen over a
+side-by-side unrolled figure to keep the circle at full size, accepting the loss of a
+horizontal tie-line and compensating with a highlighted reference-triangle leg whose length
+provably equals the wave's height for any β.
+
+Spec self-review caught four defects before commit: the export slot's aspect ratio would have
+letterboxed the strip to ~552 px inside a 960 px box had it reused the live viewBox; the
+sampling rule said "≤2° steps" without fixing direction or endpoint snapping; `WaveFn` had no
+stated home, leaving a possible `angle-diagram` → `angle-wave` coupling unexamined; and the
+radio group had no accessible group name, so its options would have announced without saying
+what they select.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
