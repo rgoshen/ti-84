@@ -4,6 +4,7 @@ import {
   AMP_MAX,
   WAVE_HEIGHT,
   WAVE_WIDTH,
+  buildWaveSvg,
   waveScales,
   waveTickLabel,
   waveTickRadians,
@@ -12,6 +13,7 @@ import {
   waveSpoken,
 } from './angle-wave';
 import { degreesToRadians } from './angle';
+import { explorerColors } from '@/scripts/graphing/theme';
 
 describe('waveTickRadians', () => {
   it('emits every multiple of π/4 across -2π…2π — seventeen of them', () => {
@@ -196,5 +198,91 @@ describe('waveSpoken', () => {
   it('carries no LaTeX for a screen reader to read aloud', () => {
     expect(waveSpoken('cos', -210, 1.2)).not.toContain('\\');
     expect(waveSpoken('cos', -210, 1.2)).toContain('-210 degrees');
+  });
+});
+
+const colors = explorerColors(false);
+const tickText = '#334155';
+const waveBase = { r: 1, colors, tickText };
+
+describe('buildWaveSvg', () => {
+  it('draws all seventeen π/4 ticks with their exact labels', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    expect([...svg.matchAll(/data-role="wave-tick"/g)]).toHaveLength(17);
+    for (const label of ['-2π', '-7π/4', '-π/2', '0', 'π/4', 'π', '3π/2', '2π']) {
+      expect(svg).toContain(`>${label}</text>`);
+    }
+  });
+
+  it('staggers odd π/4 labels onto a second baseline so they do not collide', () => {
+    // 17 labels on one baseline gives each ~29px where -7π/4 needs ~25px.
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    const yOf = (label: string) =>
+      Number(svg.match(new RegExp(`<text[^>]*y="([-\\d.]+)"[^>]*>${label.replace('/', '\\/')}</text>`))![1]);
+    expect(yOf('π/2')).not.toBe(yOf('π/4'));
+    expect(yOf('π/2')).toBe(yOf('π'));
+    expect(yOf('π/4')).toBe(yOf('3π/4'));
+  });
+
+  it('draws the ±1 references dashed, like the figure\'s dashed unit circle', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    expect([...svg.matchAll(/data-role="wave-unit-ref"/g)]).toHaveLength(2);
+    expect(svg).toContain('stroke-dasharray="3 3"');
+  });
+
+  it('draws the traced curve in the wave colour', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    expect(svg).toContain('data-role="wave-curve"');
+    expect(svg).toContain(colors.wave);
+  });
+
+  it('omits the curve element entirely at θ = 0 rather than emitting an empty path', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 0 });
+    expect(svg).not.toContain('data-role="wave-curve"');
+    expect(svg).not.toContain('d=""');
+  });
+
+  it('always draws the marker, so cos reads as non-zero at θ = 0 where sin reads as zero', () => {
+    const s = waveScales();
+    const markerY = (fn: 'sin' | 'cos') => {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 0 });
+      return Number(svg.match(/data-role="wave-marker"[^>]*cy="([-\d.]+)"/)![1]);
+    };
+    expect(markerY('sin')).toBeCloseTo(s.yFor(0), 6);
+    expect(markerY('cos')).toBeCloseTo(s.yFor(1), 6);
+    expect(markerY('sin')).not.toBeCloseTo(markerY('cos'), 3);
+  });
+
+  it('uses the circle\'s own point colours for the marker — this is the link', () => {
+    // Stacked layout forecloses a tie-line, so a shared marker colour and the
+    // projection leg are what connect the strip to the terminal point.
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 });
+    const marker = svg.match(/<circle data-role="wave-marker"[^>]*>/)![0];
+    expect(marker).toContain(`fill="${colors.point}"`);
+    expect(marker).toContain(`stroke="${colors.pointStroke}"`);
+  });
+
+  it('drops a line from the marker to the zero axis to show the signed height', () => {
+    expect(buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 })).toContain(
+      'data-role="wave-drop"',
+    );
+  });
+
+  it('honours a custom box so the export can fill its 960 × 190 slot', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90, width: 960, height: 190 });
+    const cx = Number(svg.match(/data-role="wave-marker"[^>]*cx="([-\d.]+)"/)![1]);
+    expect(cx).toBeCloseTo(waveScales(960, 190).xFor(Math.PI / 2), 6);
+  });
+
+  it('emits no NaN across the whole domain', () => {
+    for (let theta = -360; theta <= 360; theta += 7) {
+      for (const r of [0.5, 1, 1.5]) {
+        for (const fn of ['sin', 'cos'] as const) {
+          const svg = buildWaveSvg({ ...waveBase, fn, theta, r });
+          expect(svg).not.toContain('NaN');
+          expect(svg).not.toContain('undefined');
+        }
+      }
+    }
   });
 });

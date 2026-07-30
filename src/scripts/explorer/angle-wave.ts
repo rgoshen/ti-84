@@ -147,3 +147,109 @@ export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
     `${fn} of theta is ${value}.`
   );
 }
+
+/** Font size of the π/4 tick labels, in px. */
+const TICK_FONT_SIZE = 10;
+/** Offsets of the two staggered label baselines from the viewBox bottom, in px. */
+const LABEL_BASELINE = { primary: 20, secondary: 6 } as const;
+/** Half-length of a tick's vertical line beyond the plot area, in px. */
+const TICK_OVERSHOOT = 4;
+/** Marker radius, in px. Matches the polar figure's endpoint dots. */
+const MARKER_R = 3.5;
+
+export interface WaveDiagramOptions {
+  fn: WaveFn;
+  /** Swept angle in degrees — the same θ that drives the circle. */
+  theta: number;
+  /** Circle radius. The wave's amplitude. */
+  r: number;
+  colors: ExplorerColors;
+  /** Stroke colour for the π/4 tick labels. */
+  tickText: string;
+  /** viewBox width, px. Defaults to the live strip's 512. */
+  width?: number;
+  /** viewBox height, px. Defaults to the live strip's 176. */
+  height?: number;
+}
+
+/**
+ * Build the wave strip's SVG children as a markup string — π/4 gridlines and
+ * their staggered exact-π labels, the zero axis, the dashed ±1 references, the
+ * curve traced from 0 to θ, and the marker with its drop-line.
+ *
+ * Returns only the INNER markup; the caller owns the outer `<svg>`, its viewBox
+ * and its accessible name. Both the live component and the export snapshot draw
+ * through this one builder, differing only in the box they pass, so the figure
+ * on screen and the figure in the PNG cannot drift apart.
+ */
+export function buildWaveSvg(opts: WaveDiagramOptions): string {
+  const { fn, theta, r, colors, tickText } = opts;
+  const width = opts.width ?? WAVE_WIDTH;
+  const height = opts.height ?? WAVE_HEIGHT;
+  const s = waveScales(width, height);
+
+  const top = s.yFor(AMP_MAX);
+  const bottom = s.yFor(-AMP_MAX);
+  const zeroY = s.yFor(0);
+
+  // Full-height gridlines rather than short ticks at the axis: the label sits at
+  // the bottom of the box, and a line spanning the plot is what ties the two
+  // together without ambiguity about which tick a label belongs to.
+  const ticks = waveTickRadians()
+    .map(({ k, radians }) => {
+      const x = s.xFor(radians);
+      const label = waveTickLabel(k);
+      const even = k % 2 === 0;
+      const labelY =
+        height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
+      // The π/2 multiples (even k) hold the primary baseline; odd π/4 multiples
+      // drop to the second, doubling each label's horizontal room.
+      return (
+        `<g data-role="wave-tick">` +
+        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
+        `stroke="${colors.axis}" stroke-width="${even ? 0.75 : 0.5}" />` +
+        `<text x="${x}" y="${labelY}" fill="${tickText}" font-size="${TICK_FONT_SIZE}" ` +
+        `text-anchor="middle" dominant-baseline="middle">${label}</text>` +
+        `</g>`
+      );
+    })
+    .join('');
+
+  // The strip's counterpart to the polar figure's dashed unit circle — same
+  // dasharray, same idea: this is the reference, the solid thing is yours.
+  const unitRefs = [1, -1]
+    .map(
+      (v) =>
+        `<line data-role="wave-unit-ref" x1="${s.xFor(-X_SPAN / 2)}" y1="${s.yFor(v)}" ` +
+        `x2="${s.xFor(X_SPAN / 2)}" y2="${s.yFor(v)}" stroke="${colors.axis}" ` +
+        `stroke-width="1" stroke-dasharray="3 3" />`,
+    )
+    .join('');
+
+  const path = wavePath(fn, theta, r, s);
+  const curve =
+    path !== ''
+      ? `<path data-role="wave-curve" d="${path}" fill="none" stroke="${colors.wave}" ` +
+        `stroke-width="2.5" stroke-linejoin="round" />`
+      : '';
+
+  const markerX = s.xFor(degreesToRadians(theta));
+  const markerY = s.yFor(waveValue(fn, theta, r));
+
+  return (
+    ticks +
+    unitRefs +
+    // Zero axis and the x = 0 vertical, matching the polar figure's reference axes.
+    `<line x1="${s.xFor(-X_SPAN / 2)}" y1="${zeroY}" x2="${s.xFor(X_SPAN / 2)}" y2="${zeroY}" ` +
+    `stroke="${colors.axis}" stroke-width="1" />` +
+    `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +
+    `stroke="${colors.axis}" stroke-width="1" />` +
+    curve +
+    `<line data-role="wave-drop" x1="${markerX}" y1="${zeroY}" x2="${markerX}" y2="${markerY}" ` +
+    `stroke="${colors.wave}" stroke-width="1" stroke-dasharray="2 2" />` +
+    // Drawn unconditionally, unlike the curve: at θ = 0 the marker is the only
+    // thing that distinguishes cos (at r) from sin (at 0).
+    `<circle data-role="wave-marker" cx="${markerX}" cy="${markerY}" r="${MARKER_R}" ` +
+    `fill="${colors.point}" stroke="${colors.pointStroke}" />`
+  );
+}

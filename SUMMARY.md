@@ -4050,3 +4050,36 @@ these builders for DOM rendering, styling, and interactivity.
 - src/scripts/explorer/angle-wave.test.ts (nine new tests covering both functions)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 5)
+
+## [2026-07-29 20:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave markup
+
+**Summary:**
+Added `buildWaveSvg(opts: WaveDiagramOptions): string` to `src/scripts/explorer/angle-wave.ts`,
+assembling the complete wave strip's SVG inner markup. Includes: π/4 gridlines (full-height, one
+per tick) with staggered labels (π/2 multiples on primary baseline, odd π/4 on secondary to avoid
+collision), dashed ±1 reference lines (matching the polar figure's dashed unit circle), zero axis
+(horizontal and vertical lines), the traced curve (or empty if θ=0), a drop-line from marker to
+zero axis, and the marker dot (drawn unconditionally so cos reads as non-zero at θ=0). Returns
+inner markup only; the caller owns the outer `<svg>`, viewBox, and accessible name. Consumed by
+tasks 9-10. The previously-unused `ExplorerColors` import is now properly consumed via
+`WaveDiagramOptions`, clearing the TypeScript hint. Ten tests verify: tick count/labels, label
+staggering, dashed references, curve rendering and null-handling, marker drawing (with correct
+colors and position), drop-line presence, custom box sizing (960×190 export), and NaN-free output
+across the full domain.
+
+**Rationale:**
+One builder for both live strip and export snapshot (differing only in the box passed) ensures
+they cannot drift. Full-height gridlines with staggered labels eliminate ambiguity about label
+ownership. Unconditional marker draw at θ=0 (unlike the curve) preserves the sin/cos distinction
+that the marker encodes. DOM-free string building ensures all layout decisions unit-test in node
+without jsdom. The export path reuses the live defaults (512×176), scaled when the caller passes
+960×190. Ten new tests bring the angle-wave suite total from 21 to 31.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (buildWaveSvg, WaveDiagramOptions, MARKER_R, TICK_FONT_SIZE, LABEL_BASELINE, TICK_OVERSHOOT)
+- src/scripts/explorer/angle-wave.test.ts (ten new tests covering buildWaveSvg)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 6)
