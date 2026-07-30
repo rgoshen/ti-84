@@ -57,6 +57,18 @@ export function buildReadout(theta: number, r: number): AngleReadout {
     };
   }
 
+  // θ = 0 is the one angle whose every exact form is the same symbol, so the
+  // full chain degenerates into "0 = 0 = 0 = 0". State it once. With 0° as the
+  // explorer's default this is the first mathematics a visitor reads, and the
+  // arc relation is `=` rather than `≈` because r × 0 is exactly 0 for any r.
+  if (Math.round(theta) === 0) {
+    return {
+      chain: '0^\\circ = 0\\text{ rad}',
+      arc: `s = r|\\theta| = ${round4(r)} \\times 0 = 0`,
+      spoken: `0 degrees is 0 radians. Arc length is ${round4(r)} times 0, giving 0.`,
+    };
+  }
+
   // isIntegerDegrees only confirms θ is WITHIN epsilon of an integer — it can still
   // be 59.99999999999999 (e.g. from typing pi/3 into Radians). Rounding to the
   // nearest whole degree before handing it to turnFraction/piMultiple is required:

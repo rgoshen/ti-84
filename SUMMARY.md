@@ -3924,3 +3924,31 @@ smuggled into a refactor commit.
 **References:**
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)
+
+## [2026-07-29 20:05] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — readout
+
+**Summary:**
+`buildReadout(0, r)` no longer walks the full five-way identity chain. At
+θ = 0, degrees, turn fraction, π multiple, and radians are all the same
+symbol, so `"0° = 0 of a full turn = 0 × 2π = 0 ≈ 0 rad"` collapsed to
+`0^\circ = 0\text{ rad}`. The arc line now reads `= 0` instead of `≈ 0`,
+since r × 0 is exactly zero for any r. The spoken form drops "of a full
+turn" for the same reason. Guarded on `Math.round(theta) === 0` — matching
+the existing `isIntegerDegrees` convention — rather than `theta === 0`,
+since a typed value can land at `4e-17` instead of a literal zero. Four
+new tests cover the collapsed chain, arc, and spoken form, plus a
+regression guard confirming 1°, -30°, and 360° still show the full chain.
+
+**Rationale:**
+Task 1 characterized this verbose chain as-is so this behavior change
+would show up as its own diff, not be smuggled into the extraction
+commit. It matters now because task 8 moves the explorer's default angle
+to 0°, making this the first mathematics every visitor reads — a chain
+that's technically true but repeats "zero" four times teaches nothing.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 2)
