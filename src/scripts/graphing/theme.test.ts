@@ -77,7 +77,7 @@ describe('explorer palette legibility (Function Explorer)', () => {
   // background. Unlike the low-opacity gridlines, these overlay marks are drawn
   // at full opacity, so contrast is measured at opacity 1.
   const NON_TEXT_MIN_CONTRAST = 3.0;
-  const MARK_KEYS = ['curve', 'wall', 'floor', 'arrow', 'ghost', 'axis'] as const;
+  const MARK_KEYS = ['curve', 'wall', 'floor', 'arrow', 'ghost', 'axis', 'wave'] as const;
 
   for (const dark of [true, false] as const) {
     const label = dark ? 'dark' : 'light';
@@ -98,6 +98,27 @@ describe('explorer palette legibility (Function Explorer)', () => {
       // The point sits on the curve; its stroke ring must contrast with the
       // curve colour so the dot's outline reads.
       expect(lineContrast(c.pointStroke, 1, c.curve)).toBeGreaterThanOrEqual(1.5);
+    });
+  }
+});
+
+describe('the wave colour is distinguishable from the marks it sits beside', () => {
+  // The projection leg is drawn inside the polar figure, where six other marks
+  // already compete. Contrast against the BACKGROUND is covered by MARK_KEYS
+  // above; this guards against picking a hue that reads as one of the others.
+  for (const dark of [true, false] as const) {
+    const label = dark ? 'dark' : 'light';
+    const c = explorerColors(dark);
+
+    it(`${label}: wave differs from every other overlay mark`, () => {
+      const others = [c.curve, c.wall, c.floor, c.arrow, c.ghost, c.axis];
+      expect(others).not.toContain(c.wave);
+    });
+
+    it(`${label}: wave separates from the initial-side ray it runs alongside`, () => {
+      // The cos leg lies ON the initial side. If the two colours are close, the
+      // leg vanishes into the ray it is supposed to be measuring against.
+      expect(lineContrast(c.wave, 1, c.floor)).toBeGreaterThanOrEqual(1.5);
     });
   }
 });

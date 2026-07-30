@@ -3952,3 +3952,29 @@ that's technically true but repeats "zero" four times teaches nothing.
 **References:**
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 2)
+
+## [2026-07-29 20:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Theme palette
+
+**Summary:**
+Added the `wave` colour to the `ExplorerColors` interface and palette. Two new distinguishability
+tests confirm the wave colour differs from all existing overlay marks (curve, wall, floor, arrow,
+ghost, axis) and clears 1.5:1 contrast against the floor colour it runs alongside. Dark theme uses
+#5eead4 (teal-300), light theme uses #0f766e (teal-700). Both pass 3:1 non-text contrast
+against the plot background (WCAG 1.4.11). The existing 6-mark contrast loop now covers 7 keys
+(14 tests across both themes), plus the new 4-test distinguishability block = 18 total theme tests.
+
+**Rationale:**
+Six existing `ExplorerColors` entries are already used in the angle figure; the wave and its
+projection leg need a seventh. Isolated into the theme module so colour decisions are unit-testable
+and centralized. Contrast decisions are enforced by the test suite, not manual inspection. Teal
+was chosen as a cohesive hue across both themes, occupying an unused hue family distinct from
+the existing palette (violet=curve, red=wall, blue=floor, orange=arrow, slate=ghost/axis).
+
+**References:**
+- src/scripts/graphing/theme.ts (ExplorerColors interface, explorerColors dark/light palettes)
+- src/scripts/graphing/theme.test.ts (MARK_KEYS tuple, wave distinguishability tests)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 3)
