@@ -10,6 +10,8 @@ import {
   formatFractionLatex,
   formatFractionSpoken,
   formatPiSpoken,
+  formatFractionText,
+  formatPiText,
   arcLength,
 } from './angle';
 
@@ -132,5 +134,29 @@ describe('arcLength — s = rθ', () => {
 
   it('is a magnitude, so a negative sweep still has positive length', () => {
     expect(arcLength(1, -Math.PI / 2)).toBeCloseTo(Math.PI / 2, 12);
+  });
+});
+
+describe('plain-text exact forms (for SVG labels and the export artifact)', () => {
+  it('formats fractions without LaTeX markup', () => {
+    expect(formatFractionText({ n: 0, d: 1 })).toBe('0');
+    expect(formatFractionText({ n: 1, d: 1 })).toBe('1');
+    expect(formatFractionText({ n: 1, d: 12 })).toBe('1/12');
+    expect(formatFractionText({ n: -1, d: 4 })).toBe('-1/4');
+  });
+
+  it('formats π multiples without LaTeX markup', () => {
+    expect(formatPiText({ n: 0, d: 1 })).toBe('0');
+    expect(formatPiText({ n: 1, d: 1 })).toBe('π');
+    expect(formatPiText({ n: 2, d: 1 })).toBe('2π');
+    expect(formatPiText({ n: 1, d: 6 })).toBe('π/6');
+    expect(formatPiText({ n: -2, d: 3 })).toBe('-2π/3');
+  });
+
+  it('uses an ASCII hyphen, not a Unicode minus sign', () => {
+    // The SVG label and the export artifact are plain text; a U+2212 would not
+    // match the tick-label assertions in angle-wave.test.ts.
+    expect(formatPiText({ n: -1, d: 4 })).toBe('-π/4');
+    expect(formatPiText({ n: -1, d: 4 })).not.toContain('−');
   });
 });

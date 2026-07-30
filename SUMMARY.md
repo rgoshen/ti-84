@@ -3873,3 +3873,26 @@ need a `deg` locator helper that file does not define, and without the strict-mo
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md
+
+## [2026-07-29 19:47] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — formatters
+
+**Summary:**
+Moved `formatFractionText` and `formatPiText` out of `AngleExplorer.tsx` and into
+`angle.ts`, alongside their LaTeX counterparts. Behaviour is unchanged — same bodies,
+same output — only their location and visibility (module-level `export` instead of a
+component-local function) changed. Three characterization tests were added, including
+one that pins the exact-π hyphen to ASCII (`-`) rather than a Unicode minus sign.
+
+**Rationale:**
+They were always general-purpose formatters that happened to live in a component. The
+upcoming wave-strip builder (`angle-wave.ts`) needs `formatPiText` for its tick labels,
+and a `.ts` module cannot import from a `.tsx` component. Moving them next to
+`formatFractionLatex`/`formatPiLatex`, which they mirror, also keeps the four sibling
+formatters together instead of splitting the pair across two files.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)

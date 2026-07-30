@@ -13,8 +13,10 @@ import {
   degreesToRadians,
   formatFractionLatex,
   formatFractionSpoken,
+  formatFractionText,
   formatPiLatex,
   formatPiSpoken,
+  formatPiText,
   isIntegerDegrees,
   piMultiple,
   turnFraction,
@@ -97,26 +99,6 @@ function buildReadout(theta: number, r: number): { chain: string; arc: string; s
  *  used to live here now default inside `buildAngleDiagramSvg`, which both
  *  this component and the export snapshot draw through. */
 const VIEW = 320;
-
-/** Plain-text (non-KaTeX) exact fraction, e.g. "0", "1", "1/12", "-1/4". Mirrors
- *  `formatFractionLatex` without LaTeX markup — the export artifact renders as
- *  plain HTML text, never through KaTeX. */
-function formatFractionText(f: Fraction): string {
-  if (f.n === 0) return '0';
-  const sign = f.n < 0 ? '-' : '';
-  const mag = Math.abs(f.n);
-  return f.d === 1 ? `${sign}${mag}` : `${sign}${mag}/${f.d}`;
-}
-
-/** Plain-text exact π-multiple, e.g. "0", "π", "2π", "π/6", "-2π/3". Mirrors
- *  `formatPiLatex` without LaTeX markup, for the same reason. */
-function formatPiText(f: Fraction): string {
-  if (f.n === 0) return '0';
-  const sign = f.n < 0 ? '-' : '';
-  const mag = Math.abs(f.n);
-  const numerator = mag === 1 ? 'π' : `${mag}π`;
-  return f.d === 1 ? `${sign}${numerator}` : `${sign}${numerator}/${f.d}`;
-}
 
 export default function AngleExplorer(): React.JSX.Element {
   const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
