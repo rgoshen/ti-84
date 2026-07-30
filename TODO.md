@@ -961,3 +961,20 @@ updated without weakening any of them. No visual snapshot — this explorer has 
 **References:**
 - Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
 - Extends: docs/superpowers/plans/2026-07-23-angle-explorer.md
+
+**Status:** Done on `feature/angle-wave-projection` — ten-task TDD plan executed
+task-by-task with per-task review. `Wave` radio group (`none` · `sin θ` · `cos θ`,
+default `none`) reveals the strip and traces it from 0 to θ as the angle slider is
+dragged; the projection leg highlights the matching reference-triangle side on the
+circle; the default angle moved from 30° to 0°. The exported PNG/PDF carries both
+figures — the circle at 360px plus the wave strip at its own 960×190 viewBox — with
+a conditional `Wave` legend entry and details section. Page copy updated. Final
+verification: 407/407 Vitest, `astro check` clean, 100/103 Playwright (the 3 failures
+are pre-existing `export-visual.spec.ts` macOS-vs-Linux baseline mismatches,
+unrelated to this feature and not regenerated per this project's Linux/Docker-only
+baseline rule), production build green. Browser-verified (task 9): the circle's
+projection leg and the wave strip's curve/drop-line share one colour and read
+clearly linked at the default β = 0°; the link weakens (accepted risk) when β is
+rotated off-axis since the leg rotates with the circle while the strip stays flat;
+all 17 π/4 tick labels are legible at desktop and 375px mobile widths; the wave
+teal stays distinct from the initial-side blue in both themes.

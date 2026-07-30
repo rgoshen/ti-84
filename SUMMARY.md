@@ -4263,3 +4263,95 @@ matches the task brief's code exactly.
   the brief's literal text, explained above)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 9)
+
+## [2026-07-29 22:10] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export + docs
+
+**Summary:**
+Carried the wave into the Angle Explorer's PNG/PDF export and closed out the
+feature's docs. `createExportSnapshot` in `AngleExplorer.tsx` now captures
+`snapshotWave` (the `waveFn` derivation, `undefined` for `'none'`) and:
+appends a conditional legend entry naming which coordinate the wave plots
+(`sin θ — height is the y-coordinate` / `cos θ — height is the x-coordinate`);
+appends a conditional `Wave` section after `Circle` with `Function`, `Value`
+(via `waveValue`), and `Traced` (`0° to <θ>°`) facts; and replaces
+`renderGraph` to draw both figures when a wave is present — the circle at a
+reduced 360px height (leaving `EXPORT_GRAPH_HEIGHT` at 560 only when there is
+no wave) via `buildAngleDiagramSvg`'s existing `projection` option, plus the
+wave strip via `buildWaveSvg` at its own 960×190 viewBox rather than the live
+strip's 512×176 one. No new table row: the Representations table already
+carries `x = r·cos θ` and `y = r·sin θ`, so a fourth row would duplicate the
+wave's value. Updated `src/pages/explorers/angles.astro`'s intro paragraph to
+mention the `sin θ`/`cos θ` picker and the projection leg. Marked the
+`Angle Explorer Wave Projection` TODO.md entry `Done`.
+
+**Rationale:**
+An export that contradicts the screen is worse than none, so both figures
+travel together. The strip needs its own viewBox because the live 512×176
+box, if reused verbatim against a 960px-wide box, would have `preserveAspectRatio="xMidYMid
+meet"` fit to the taller dimension and render the wave roughly 552px wide,
+letterboxed inside the 960px artifact — a real, verified failure mode, not a
+hypothetical one, since the export template is a fixed 960px column.
+
+Strict TDD surfaced a real conflict in the task plan's own test text: the
+"omits the wave section when no wave is selected" guard, as originally
+specified, asserted the artifact text does NOT contain `y = r·sin θ` /
+`y = r·cos θ` — but the Representations table has carried rows labeled with
+those exact strings unconditionally since the Unit Circle Coordinates
+feature (2026-07-27), independent of any wave selection. That assertion can
+never pass, with or without this task's `createExportSnapshot` changes,
+because the collision is with pre-existing, in-scope-to-keep table rows, not
+with anything this task added. Root-caused (not guessed) via the initial red
+run: both new tests failed at Step 2, but the second failed on the wrong
+assertion for the wrong reason — the exact string was already present before
+any Wave-section code existed. Corrected the two assertions to check for
+`Wave` (the new section's title) and `Traced` (a fact label unique to that
+section) instead, preserving the guard's intent — the section renders only
+when a wave is selected — without the false collision. Confirmed both
+strings are absent from the artifact in the pre-Step-3 baseline. Everything
+else in the brief's test and implementation code was applied verbatim.
+
+**Tests:**
+Appended two Playwright e2e tests to `tests/e2e/angle-export.spec.ts` per
+plan: "carries the wave into the exported artifact" (selects `sin θ`, sets
+30°, downloads PNG, asserts `Wave`, `y = r·sin θ`, `0.5`, and at least two
+`<svg>` elements in the artifact) and "omits the wave section when no wave
+is selected" (downloads PNG at the `none` default, asserts absence of `Wave`
+and `Traced`, per the correction above). TDD evidence: at Step 2, "carries"
+failed on the `Wave` assertion (no such text existed yet) and "omits" passed
+immediately, confirming the guard's premise once corrected. After the
+`createExportSnapshot` changes, both passed; the full `angle-export.spec.ts`
+file (5 tests) passed; the full Playwright suite ran 100/103 passed, the
+only 3 failures being the pre-existing `export-visual.spec.ts` PNG-snapshot
+mismatches (macOS-generated run vs. Linux/Docker-only baselines), unrelated
+to this change and not regenerated, per this project's standing rule.
+Final verification suite: `npm test` 407/407 Vitest, `npx astro check` 0
+errors/0 warnings/0 hints across 101 files, `npx playwright test` 100/103 (3
+known pre-existing), `npm run build` succeeded (7 pages).
+
+**Bug Fix Context (if applicable):**
+Not a product bug — the correction above was to a test assertion in the
+implementation plan itself, discovered during the mandated red run and fixed
+before any implementation code was written, per Strict TDD.
+
+**Browser findings (carried forward from Task 9, not re-verified here):**
+Per the Task 9 SUMMARY entry above (manual, real-browser verification of the
+live component, which the export now shares its renderer with): the circle's
+teal projection leg and the wave strip's teal curve/drop-line use the
+identical colour and read as clearly linked at the default β = 0° — the
+documented primary usage path. The link reads weaker when β is rotated off
+0° (the leg rotates with the circle while the strip stays flat) — an
+accepted risk, not redesigned. All 17 π/4 tick labels are legible at desktop
+(512px live SVG) and 375px mobile widths. The wave teal stays visually
+distinct from the initial-side blue in both light and dark themes.
+
+**References:**
+- src/components/explorer/AngleExplorer.tsx (`createExportSnapshot`: legend,
+  sections, renderGraph)
+- tests/e2e/angle-export.spec.ts (two new tests; corrected assertions,
+  explained above)
+- src/pages/explorers/angles.astro (intro paragraph)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection (marked Done)
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 10, final)

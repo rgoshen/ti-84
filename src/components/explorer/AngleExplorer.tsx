@@ -31,6 +31,7 @@ import { round4 } from '@/scripts/explorer/format';
 import {
   buildWaveSvg,
   waveSpoken,
+  waveValue,
   WAVE_HEIGHT,
   WAVE_WIDTH,
   type WaveFn,
@@ -214,6 +215,7 @@ export default function AngleExplorer(): React.JSX.Element {
     const snapshotTheta = theta;
     const snapshotR = r;
     const snapshotBeta = beta;
+    const snapshotWave = waveFn;
     const lightColors = explorerColors(false);
     const whole = Math.round(snapshotTheta);
     const integer = isIntegerDegrees(snapshotTheta);
@@ -236,6 +238,17 @@ export default function AngleExplorer(): React.JSX.Element {
             color: lightColors.curve,
           },
           { label: 'Angle measure', color: lightColors.arrow },
+          ...(snapshotWave
+            ? [
+                {
+                  label:
+                    snapshotWave === 'sin'
+                      ? 'sin θ — height is the y-coordinate'
+                      : 'cos θ — height is the x-coordinate',
+                  color: lightColors.wave,
+                },
+              ]
+            : []),
         ],
         sections: [
           {
@@ -255,6 +268,25 @@ export default function AngleExplorer(): React.JSX.Element {
               { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
           },
+          ...(snapshotWave
+            ? [
+                {
+                  title: 'Wave',
+                  color: lightColors.wave,
+                  facts: [
+                    {
+                      label: 'Function',
+                      value: snapshotWave === 'sin' ? 'y = r·sin θ' : 'y = r·cos θ',
+                    },
+                    {
+                      label: 'Value',
+                      value: round4(waveValue(snapshotWave, snapshotTheta, snapshotR)),
+                    },
+                    { label: 'Traced', value: `0° to ${formatDegrees(snapshotTheta)}°` },
+                  ],
+                },
+              ]
+            : []),
         ],
         table: {
           title: 'Representations',
@@ -271,16 +303,42 @@ export default function AngleExplorer(): React.JSX.Element {
         },
       },
       renderGraph: (target) => {
-        target.innerHTML = `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${EXPORT_GRAPH_HEIGHT}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
-          {
-            theta: snapshotTheta,
-            r: snapshotR,
-            beta: snapshotBeta,
-            colors: lightColors,
-            tickText: '#334155',
-            coordinateLabel: snapshotCoords.labelText,
-          },
-        )}</svg>`;
+        // With a wave, the circle yields height so both figures fit the 560 the
+        // artifact template allows. Without one, the export is unchanged.
+        const circleHeight = snapshotWave ? 360 : EXPORT_GRAPH_HEIGHT;
+        const circle =
+          `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${circleHeight}" ` +
+          `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
+            {
+              theta: snapshotTheta,
+              r: snapshotR,
+              beta: snapshotBeta,
+              colors: lightColors,
+              tickText: '#334155',
+              coordinateLabel: snapshotCoords.labelText,
+              projection: snapshotWave,
+            },
+          )}</svg>`;
+
+        // A matching viewBox, NOT the live strip's 512 × 176. Reusing that here
+        // would make `meet` fit to the height and render the wave ~552px wide,
+        // letterboxed inside a 960px box.
+        const strip = snapshotWave
+          ? `<svg viewBox="0 0 ${EXPORT_GRAPH_WIDTH} 190" width="${EXPORT_GRAPH_WIDTH}" height="190" ` +
+            `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildWaveSvg(
+              {
+                fn: snapshotWave,
+                theta: snapshotTheta,
+                r: snapshotR,
+                colors: lightColors,
+                tickText: '#334155',
+                width: EXPORT_GRAPH_WIDTH,
+                height: 190,
+              },
+            )}</svg>`
+          : '';
+
+        target.innerHTML = circle + strip;
       },
     };
   };

@@ -63,3 +63,39 @@ test('carries the terminal point into the exported artifact', async ({ page }) =
     expect(text).toContain('0.866');
   });
 });
+
+test('carries the wave into the exported artifact', async ({ page }) => {
+  await goto(page);
+  await page.getByRole('radio', { name: 'sin θ' }).check();
+  await deg(page).fill('30');
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.evaluate((node) => node.textContent);
+    expect(text).toContain('Wave');
+    expect(text).toContain('y = r·sin θ');
+    // 30° on the unit circle: sin is exactly 1/2.
+    expect(text).toContain('0.5');
+    // Two figures, so the exported graph cannot contradict the screen.
+    const svgCount = await artifact.evaluate((node) => node.querySelectorAll('svg').length);
+    expect(svgCount).toBeGreaterThanOrEqual(2);
+  });
+});
+
+test('omits the wave section when no wave is selected', async ({ page }) => {
+  await goto(page);
+  // Regression guard: the section must be conditional, not emitted empty — the
+  // same discipline the optional export table already follows.
+  //
+  // Checked against the section title and its 'Traced' fact label rather than
+  // the Function fact's 'y = r·sin θ' / 'y = r·cos θ' text (the brief's literal
+  // assertion): the Representations table unconditionally carries a row
+  // labeled exactly 'y = r·sin θ' (and 'x = r·cos θ') regardless of the wave
+  // selection, so that text is never absent and the brief's original assertion
+  // can never pass. 'Wave' and 'Traced' are introduced only by the new
+  // section and are absent everywhere else in the artifact.
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.evaluate((node) => node.textContent);
+    expect(text).not.toContain('Wave');
+    expect(text).not.toContain('Traced');
+  });
+});
