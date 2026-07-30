@@ -3896,3 +3896,31 @@ formatters together instead of splitting the pair across two files.
 **References:**
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)
+
+## [2026-07-29 19:50] Commit Summary
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — readout
+
+**Summary:**
+Extracted `buildReadout` out of `AngleExplorer.tsx` into a new module,
+`angle-readout.ts`, moved verbatim (same body, same doc comment, same
+`{ chain, arc, spoken }` shape — now named `AngleReadout`). Six characterization
+tests pin the current behaviour, including the verbose θ = 0° chain that task 2
+will change. Pruned `formatFractionLatex`, `formatFractionSpoken`, `formatPiSpoken`,
+and the `Fraction` type from the component's `angle.ts` import — none of them are
+referenced anywhere else in the file once `buildReadout` moves out. `arcLength` and
+`turnFraction` stay imported: both are also used directly in `createExportSnapshot`,
+independent of `buildReadout`.
+
+**Rationale:**
+vitest collects only `.ts` files in the node test environment, so `buildReadout`'s
+branching (exact forms for whole degrees, decimal fallback otherwise, singular/plural
+radian agreement) was unreachable by the test runner while it lived inside the `.tsx`
+component. Moving it first and characterizing it with tests — before task 2 changes
+its θ = 0° behaviour — means that fix will show up as a visible diff instead of being
+smuggled into a refactor commit.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 1)

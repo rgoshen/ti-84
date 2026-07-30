@@ -11,16 +11,12 @@ import { explorerColors } from '@/scripts/graphing/theme';
 import {
   arcLength,
   degreesToRadians,
-  formatFractionLatex,
-  formatFractionSpoken,
   formatFractionText,
   formatPiLatex,
-  formatPiSpoken,
   formatPiText,
   isIntegerDegrees,
   piMultiple,
   turnFraction,
-  type Fraction,
 } from '@/scripts/explorer/angle';
 import {
   formatDegrees,
@@ -29,6 +25,7 @@ import {
 } from '@/scripts/explorer/angle-parse';
 import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
+import { buildReadout } from '@/scripts/explorer/angle-readout';
 import { round4 } from '@/scripts/explorer/format';
 import {
   EXPORT_GRAPH_HEIGHT,
@@ -38,60 +35,6 @@ import {
 
 /** Slider defaults, also the reset target. */
 const DEFAULTS = { theta: 30, r: 1, beta: 0 };
-
-/**
- * The five-way identity plus arc length, as KaTeX source.
- *
- * Exact π and turn forms are shown ONLY for whole degrees. `piMultiple` reduces
- * deg/180 with integer gcd, so a typed 1.047 rad (59.9885°) would otherwise render
- * as an absurd fraction. Non-integer angles fall back to decimals alone.
- */
-function buildReadout(theta: number, r: number): { chain: string; arc: string; spoken: string } {
-  const rad = degreesToRadians(theta);
-  const decimal = round4(rad);
-  const s = arcLength(r, rad);
-
-  if (!isIntegerDegrees(theta)) {
-    const absDecimal = round4(Math.abs(rad));
-    // "1 radian(s)" must agree with English grammar for both the signed
-    // conversion and the unsigned value the arc equation substitutes.
-    const radianWord = (value: string): string => (Math.abs(Number(value)) === 1 ? 'radian' : 'radians');
-    return {
-      chain: `${round4(theta)}^\\circ = ${decimal}\\text{ rad}`,
-      // s = r|θ|: the arc length is a magnitude, so the substituted angle
-      // must be unsigned too, or the equation is untrue for negative sweeps.
-      arc: `s = r|\\theta| = ${round4(r)} \\times ${absDecimal} \\approx ${round4(s)}`,
-      spoken:
-        `${round4(theta)} degrees is ${decimal} ${radianWord(decimal)}. ` +
-        `Arc length uses the absolute angle, ${absDecimal} ${radianWord(absDecimal)}, giving ${round4(s)}.`,
-    };
-  }
-
-  // isIntegerDegrees only confirms θ is WITHIN epsilon of an integer — it can still
-  // be 59.99999999999999 (e.g. from typing pi/3 into Radians). Rounding to the
-  // nearest whole degree before handing it to turnFraction/piMultiple is required:
-  // those reduce n/d with an integer gcd, which is meaningless on a raw float and
-  // renders as an astronomically large "reduced" fraction otherwise.
-  const whole = Math.round(theta);
-  const turn = formatFractionLatex(turnFraction(whole));
-  const pi = formatPiLatex(piMultiple(whole));
-  const turnSpoken = formatFractionSpoken(turnFraction(whole));
-  const piSpoken = formatPiSpoken(piMultiple(whole));
-  // The arc substitution uses the unsigned angle (see the non-integer branch above).
-  const piAbsLatex = formatPiLatex(piMultiple(Math.abs(whole)));
-  const piAbsSpoken = formatPiSpoken(piMultiple(Math.abs(whole)));
-  return {
-    chain:
-      `${whole}^\\circ = ${turn}\\text{ of a full turn} = ${turn} \\times 2\\pi ` +
-      `= ${pi} \\approx ${decimal}\\text{ rad}`,
-    // Written out with real numbers, not a bare s = rθ. |θ| keeps the equation
-    // true for negative sweeps: a length has no sign even when θ does.
-    arc: `s = r|\\theta| = ${round4(r)} \\times ${piAbsLatex} \\approx ${round4(s)}`,
-    spoken:
-      `${whole} degrees is ${turnSpoken} of a full turn, ${piSpoken} radians, about ${decimal}. ` +
-      `Arc length uses the absolute angle, ${piAbsSpoken} radians, giving ${round4(s)}.`,
-  };
-}
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
