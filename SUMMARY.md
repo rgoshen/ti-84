@@ -3834,3 +3834,42 @@ what they select.
 **References:**
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+
+## [2026-07-29 19:40] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — implementation plan
+
+**Summary:**
+Added the ten-task TDD implementation plan for the Angle Explorer wave projection. Each task
+carries its own red-green-refactor cycle with real test and implementation code, an exact file
+list, and an Interfaces block naming the signatures neighbouring tasks depend on. No code
+changes yet — planning docs only.
+
+**Rationale:**
+Task boundaries were drawn where a reviewer could meaningfully reject one task while approving
+its neighbour. Three consequences worth recording:
+
+The two extractions (tasks 1-2) are split from the behaviour change they enable. `buildReadout`
+is untestable inside a `.tsx` under a node-only test runner, so it is moved verbatim and
+characterised with tests capturing the *current* verbose θ = 0 chain, and only then changed.
+That makes the fix a visible diff rather than something smuggled in with a refactor.
+
+The default-angle change (task 8) is isolated because it breaks seven existing e2e assertions,
+and the fix for each is a judgement call. The governing rule is written into the plan: do not
+weaken an assertion to accommodate the new default. Three tests whose real subject is the
+default move to 0°; four whose subject is exact-radical rendering now set 30° explicitly, so
+they keep testing radicals rather than being softened to the 0° point (1, 0).
+
+`radio-group.tsx` is folded into the wiring task rather than standing alone. It carries no
+logic, and nothing can test a `.tsx` component in isolation here, so a separate task would
+have been a commit with no test cycle to gate it.
+
+Plan self-review found one gap and closed it inline: task 8's changes to `angle-export.spec.ts`
+need a `deg` locator helper that file does not define, and without the strict-mode note from
+`angle.spec.ts`, `getByLabel('Degrees')` also matches the figure's `aria-label` and throws.
+
+**References:**
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Spec: docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md
