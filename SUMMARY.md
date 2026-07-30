@@ -4174,3 +4174,92 @@ Not a bug fix — a deliberate default change with cascading, pre-anticipated te
 - tests/e2e/angle-export.spec.ts (deg helper added; two tests pin 30° explicitly)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 8)
+
+## [2026-07-29 21:39] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave selector
+
+**Summary:**
+Wired the sin/cos wave projection into `AngleExplorer.tsx`. Added
+`src/components/ui/radio-group.tsx` (shadcn-style scaffolding over
+`radix-ui`'s `RadioGroup`, modelled on `slider.tsx`'s structure and
+`checkbox.tsx`'s focus styling — no logic of its own). Added a `wave` state
+(`WaveMode`, default `'none'`) with its own radio group (`none` / `sin θ` /
+`cos θ`) inserted between the sliders and the Convert box; a `waveFn`
+derivation (`undefined` when `'none'`) feeds both the new wave strip — an
+SVG built by `buildWaveSvg` and its caption, inserted between the
+`angle-figure` SVG and the `angle-readout` box, reusing the existing
+`coordHtml.x`/`coordHtml.y` equations rather than formatting the value a
+second time — and the `projection` option on the existing
+`buildAngleDiagramSvg` call, which highlights the matching projection leg
+on the circle. The debounced live region now appends `waveSpoken(...)` so
+the wave reaches assistive tech. `reset()` returns `wave` to `'none'`.
+Appended the ten e2e tests specified for this task to
+`tests/e2e/angle.spec.ts` (default-none, show/hide on selection, keyboard
+operability, no-curve-at-zero then drawn on drag, curve growth with θ,
+leftward tracing for negative θ, cos-vs-sin marker ordering at θ = 0, radius
+changing amplitude, the projection leg appearing with the wave, and reset
+restoring `none`).
+
+**Rationale:**
+Strict TDD: the ten tests were appended first and confirmed red (`npx
+playwright test tests/e2e/angle.spec.ts -g "wave|projection leg"` failed —
+no radio named `none` existed yet) before any component wiring, then the
+component was wired and the same run turned green. One deliberate departure
+from the task brief's literal test text: the keyboard-operability test's two
+`page.keyboard.press('ArrowDown')` calls needed an explicit `{ delay: 50 }`.
+Root-caused rather than assumed: Radix's `RovingFocusGroup` defers the
+actual arrow-key focus move via `setTimeout(0)` and tracks "an arrow key was
+just pressed" with a flag that a same-item `keyup` listener clears; this
+repo's bundled Playwright Chromium (headless 149.0.7827.55) dispatches a
+zero-delay synthetic `keydown`+`keyup` pair fast enough that the `keyup`
+clears the flag before the deferred focus-and-select fires, so the arrow
+press moves focus but never checks the new radio — confirmed by dispatching
+the identical `page.keyboard.press('ArrowDown')` call by hand against both
+the dev and production builds in a differently-versioned Chromium (151),
+where it worked immediately, and by confirming the *unmodified* component
+selects correctly on arrow-down in that browser. A `{ delay: 50 }` — closer
+to how a human actually holds a key than an instantaneous synthetic press —
+gives the deferred callback time to win the race and passes deterministically
+(5/5 across repeated runs, single-worker and parallel, headed and headless).
+This is a test-robustness fix for a third-party timing race, not a change to
+product behaviour or to the component under test.
+
+**Bug Fix Context (if applicable):**
+Not a product bug. The flaky keyboard-select test above was root-caused to
+a Chromium-version-dependent race inside Radix UI's own roving-focus
+implementation, not to the `RadioGroup`/`RadioGroupItem` wiring, which
+matches the task brief's code exactly.
+
+**Browser verification (manual, real browser, not covered by any automated test):**
+- *Circle-to-strip visual link:* with `sin θ` selected and β = 0°, the
+  circle's teal projection leg (a vertical drop from the terminal point to
+  the x-axis) and the wave strip's teal curve + dashed drop-line use the
+  identical colour (`#5eead4` dark / `#0f766e` light, confirmed by reading
+  both elements' `stroke` attributes) and the same vertical-segment shape,
+  so the link reads clearly at the default β = 0° — the primary,
+  documented usage path (drag angle, watch the strip fill in). It reads
+  weaker when β is rotated away from 0: the circle's leg rotates with the
+  rigid body (by design — task 7 keeps its length r|sin θ| / r|cos θ| for
+  any β) while the wave strip stays flat, so the two shapes point in
+  different directions even though the colour match still holds. Noting
+  this as the accepted risk the brief called out, not redesigning it.
+- *Tick labels:* all 17 π/4 labels are legible and read as intentional
+  (not misaligned) at desktop width (512px-wide SVG) and at a 375px mobile
+  viewport (SVG renders at 327 CSS px wide; the two-row stagger keeps every
+  label clear of its neighbours even at that width).
+- *Dark/light contrast:* toggled via the header's theme button. The wave
+  teal (`#5eead4` dark, `#0f766e` light) stays visually distinct from the
+  initial-side ray's blue (`#60a5fa` dark, `#378add` light) in both themes;
+  confirmed both at β = 0° (where the initial ray sits under the x-axis)
+  and with β rotated off-axis so the blue ray is visible on its own.
+
+**References:**
+- src/components/ui/radio-group.tsx (new)
+- src/components/explorer/AngleExplorer.tsx (wave state, radio group,
+  wave strip, projection wiring, live-region extension, reset)
+- tests/e2e/angle.spec.ts (ten new tests; one `{ delay: 50 }` deviation from
+  the brief's literal text, explained above)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 9)

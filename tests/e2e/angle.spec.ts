@@ -270,3 +270,135 @@ test('restores the tick label once the sweep moves clear', async ({ page }) => {
   await deg(page).fill('90');
   await expect(tickText(page)).toHaveText('1 rad');
 });
+
+const WAVE = '[data-testid="angle-wave"]';
+const WAVE_FIGURE = '[data-testid="angle-wave-figure"]';
+
+// The strip carries its own test id for the reason FIGURE documents at the top of
+// this file: the caption renders KaTeX, whose radicals become nested <svg>
+// elements, so any descendant svg selector inside the container is ambiguous.
+const curve = (page: Page) => page.locator(`${WAVE_FIGURE} [data-role="wave-curve"]`);
+const waveOption = (page: Page, name: string) => page.getByRole('radio', { name });
+
+test('shows no wave strip by default — none is the obvious default', async ({ page }) => {
+  await goto(page);
+  await expect(page.locator(WAVE)).toHaveCount(0);
+  await expect(waveOption(page, 'none')).toBeChecked();
+});
+
+test('selecting sin reveals the strip, selecting none removes it', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+
+  await waveOption(page, 'none').check();
+  await expect(page.locator(WAVE)).toHaveCount(0);
+});
+
+test('the wave selector is reachable and operable by keyboard', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'none').focus();
+  // { delay: 50 } is load-bearing, not decorative. Radix's roving-focus group
+  // defers the arrow-key focus move to a setTimeout(0) and cancels its "arrow
+  // key just pressed" flag on keyup; a zero-delay synthetic keydown+keyup pair
+  // (this repo's bundled headless Chromium) can complete BOTH before that
+  // timeout fires, so the flag is already cleared and the new radio never gets
+  // auto-selected — focus moves, but nothing checks. A 50ms gap (closer to how
+  // a human actually holds a key than an instant synthetic press) gives the
+  // deferred callback time to win the race. Confirmed by hand: the identical
+  // press against a different Chromium build (151) selects correctly with no
+  // delay at all, so this is a test-timing fix, not evidence of a real bug.
+  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await expect(waveOption(page, 'sin θ')).toBeChecked();
+  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await expect(waveOption(page, 'cos θ')).toBeChecked();
+});
+
+test('draws no curve at the 0 degree default, then the slider draws it', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  // The whole lesson: pick sin, then drag. At θ = 0 there is nothing to trace.
+  await expect(curve(page)).toHaveCount(0);
+
+  await deg(page).fill('90');
+  await expect(curve(page)).toHaveCount(1);
+});
+
+test('the angle slider lengthens the traced curve', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('90');
+  const short = (await curve(page).getAttribute('d'))!.length;
+
+  await deg(page).fill('270');
+  const long = (await curve(page).getAttribute('d'))!.length;
+  expect(long).toBeGreaterThan(short);
+});
+
+test('traces leftward for a negative angle', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cos θ').check();
+  await deg(page).fill('-90');
+  const d = (await curve(page).getAttribute('d'))!;
+  const xs = [...d.matchAll(/[ML] ([-\d.e]+) /g)].map((m) => Number(m[1]));
+  expect(xs.at(-1)!).toBeLessThan(xs[0]!);
+});
+
+test('cos reads non-zero at 0 degrees where sin reads zero', async ({ page }) => {
+  await goto(page);
+  const markerY = async () =>
+    Number(
+      await page
+        .locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)
+        .getAttribute('cy'),
+    );
+
+  await waveOption(page, 'sin θ').check();
+  const sinY = await markerY();
+  await waveOption(page, 'cos θ').check();
+  const cosY = await markerY();
+  expect(cosY).toBeLessThan(sinY); // cos = 1 sits above sin = 0
+});
+
+test('the radius slider changes the wave amplitude', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('90');
+  const peak = async () =>
+    Number(
+      await page
+        .locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)
+        .getAttribute('cy'),
+    );
+  const atOne = await peak();
+
+  // Radix puts role="slider" on the THUMB while the id sits on the root.
+  const radius = page.locator('#slider-radius [role="slider"]');
+  await radius.focus();
+  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
+
+  // A taller amplitude is a SMALLER y in SVG coordinates.
+  expect(await peak()).toBeLessThan(atOne);
+});
+
+test('the highlighted projection leg appears with the wave and matches it', async ({ page }) => {
+  await goto(page);
+  const leg = page.locator(`${FIGURE} [data-role="projection-leg"]`);
+  await expect(leg).toHaveCount(0);
+
+  await waveOption(page, 'sin θ').check();
+  await deg(page).fill('45');
+  await expect(leg).toHaveCount(1);
+});
+
+test('reset returns the wave selector to none', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cos θ').check();
+  await deg(page).fill('200');
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset' }).click();
+
+  await expect(waveOption(page, 'none')).toBeChecked();
+  await expect(page.locator(WAVE)).toHaveCount(0);
+});

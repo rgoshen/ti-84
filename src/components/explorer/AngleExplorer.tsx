@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import { explorerColors } from '@/scripts/graphing/theme';
 import {
@@ -28,13 +29,21 @@ import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
 import { buildReadout } from '@/scripts/explorer/angle-readout';
 import { round4 } from '@/scripts/explorer/format';
 import {
+  buildWaveSvg,
+  waveSpoken,
+  WAVE_HEIGHT,
+  WAVE_WIDTH,
+  type WaveFn,
+  type WaveMode,
+} from '@/scripts/explorer/angle-wave';
+import {
   EXPORT_GRAPH_HEIGHT,
   EXPORT_GRAPH_WIDTH,
   type ExportSnapshot,
 } from '@/scripts/export/model';
 
 /** Slider defaults, also the reset target. */
-const DEFAULTS = { theta: 0, r: 1, beta: 0 };
+const DEFAULTS = { theta: 0, r: 1, beta: 0, wave: 'none' as WaveMode };
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
@@ -47,6 +56,7 @@ export default function AngleExplorer(): React.JSX.Element {
   const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
   const [r, setR] = useState(DEFAULTS.r);
   const [beta, setBeta] = useState(DEFAULTS.beta); // degrees
+  const [wave, setWave] = useState<WaveMode>(DEFAULTS.wave);
 
   const [dark, setDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
@@ -90,19 +100,26 @@ export default function AngleExplorer(): React.JSX.Element {
     [coords.tripleLatex, coords.xLatex, coords.yLatex],
   );
 
+  // `undefined` rather than 'none' is what both builders expect for "draw neither".
+  const waveFn: WaveFn | undefined = wave === 'none' ? undefined : wave;
+
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
   // so a slider drag announces once on settle rather than on every frame.
   const [announced, setAnnounced] = useState('');
   useEffect(() => {
-    const id = setTimeout(() => setAnnounced(`${readout.spoken} ${coords.spoken}`), 250);
+    const id = setTimeout(() => {
+      const wavePart = waveFn ? ` ${waveSpoken(waveFn, theta, r)}` : '';
+      setAnnounced(`${readout.spoken} ${coords.spoken}${wavePart}`);
+    }, 250);
     return () => clearTimeout(id);
-  }, [readout.spoken, coords.spoken]);
+  }, [readout.spoken, coords.spoken, waveFn, theta, r]);
 
   const reset = (): void => {
     setTheta(DEFAULTS.theta);
     setR(DEFAULTS.r);
     setBeta(DEFAULTS.beta);
+    setWave(DEFAULTS.wave);
     setEditing(null);
     setInputError(null);
   };
@@ -294,6 +311,32 @@ export default function AngleExplorer(): React.JSX.Element {
           </div>
         ))}
         <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-medium" id="wave-group-label">
+            Wave
+          </p>
+          <RadioGroup
+            aria-labelledby="wave-group-label"
+            value={wave}
+            onValueChange={(v) => setWave(v as WaveMode)}
+          >
+            {(
+              [
+                { value: 'none' as const, label: 'none' },
+                { value: 'sin' as const, label: 'sin θ' },
+                { value: 'cos' as const, label: 'cos θ' },
+              ]
+            ).map((o) => (
+              <div key={o.value} className="flex items-center gap-2">
+                <RadioGroupItem id={`wave-${o.value}`} value={o.value} />
+                <Label htmlFor={`wave-${o.value}`}>{o.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Drag <strong>angle</strong> to trace the wave from 0.
+          </p>
+        </div>
+        <div className="space-y-3 rounded-lg border p-3">
           <p className="text-sm font-medium">Convert</p>
           {(
             [
@@ -370,9 +413,43 @@ export default function AngleExplorer(): React.JSX.Element {
               colors,
               tickText,
               coordinateLabel: coords.labelText,
+              projection: waveFn,
             }),
           }}
         />
+
+        {waveFn && (
+          <div data-testid="angle-wave" className="mt-4">
+            <svg
+              data-testid="angle-wave-figure"
+              viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
+              className="h-auto w-full"
+              role="img"
+              aria-label={`Graph of ${waveFn === 'sin' ? 'sine' : 'cosine'} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
+              dangerouslySetInnerHTML={{
+                __html: buildWaveSvg({
+                  fn: waveFn,
+                  theta,
+                  r,
+                  colors,
+                  tickText,
+                }),
+              }}
+            />
+            {/* The value is the coordinate the strip plots, so this reuses the
+                equation angle-coordinates.ts already built rather than
+                formatting it a second time — the strip's number and the
+                coordinate box's number cannot then disagree. */}
+            <div
+              data-testid="angle-wave-caption"
+              aria-hidden="true"
+              className="mt-2 text-center text-sm text-muted-foreground"
+              dangerouslySetInnerHTML={{
+                __html: waveFn === 'sin' ? coordHtml.y : coordHtml.x,
+              }}
+            />
+          </div>
+        )}
 
         <div
           data-testid="angle-readout"
