@@ -3978,3 +3978,43 @@ the existing palette (violet=curve, red=wall, blue=floor, orange=arrow, slate=gh
 - src/scripts/graphing/theme.test.ts (MARK_KEYS tuple, wave distinguishability tests)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 3)
+
+## [2026-07-29 20:25] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave scales
+
+**Summary:**
+Created `src/scripts/explorer/angle-wave.ts`, a pure geometry module (DOM-free)
+that defines the wave strip's coordinate system, π/4 tick generation, and value
+calculation. The module exports types `WaveFn` ('sin' | 'cos') and `WaveMode`
+('none' | WaveFn), constants `WAVE_WIDTH` (512) `WAVE_HEIGHT` (176) `AMP_MAX`
+(1.5), and four functions: `waveScales()` provides x/y scale closures that map
+radians to screen pixels (x: -2π…2π, y: ±1.5 fixed regardless of radius),
+`waveTickRadians()` generates seventeen ticks at every π/4 across the full range,
+`waveTickLabel(k)` formats each tick's π label by routing through
+`reduceFraction` + `formatPiText`, and `waveValue(fn, theta, r)` returns the
+terminal point's y (sin) or x (cos) coordinate scaled by radius. Twelve passing
+tests characterize tick generation, label formatting (including negative handling),
+value calculation (odd/even parity of sin/cos), and scale linearity with custom
+dimensions support.
+
+**Rationale:**
+The wave strip shows what sweeping the angle generates; it must never become a
+separate code path that could drift from the angle diagram itself. DOM-free
+construction (string/number math only, no `document` calls) ensures every scale
+decision unit-tests in vitest's node environment, the same contract
+`angle-diagram.ts` already follows. A fixed y-domain at ±AMP_MAX (not adaptive
+to r) keeps the radius slider's amplitude effect visible — a dynamic scale would
+cancel that out. Tick labels route through the same `formatPiText` that the
+Radians field uses, so the axis and companion display cannot express the same
+value differently. x-scale spans -2π…2π to match the angle slider's
+-360°…360° range. Tasks 5-10 extend this module with SVG builders, styling,
+and interactivity; they depend on these scale and value functions.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts (types, constants, functions)
+- src/scripts/explorer/angle-wave.test.ts (twelve tests covering all exports)
+- src/scripts/explorer/angle.ts (degreesToRadians, formatPiText, reduceFraction)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 4)
