@@ -4083,3 +4083,42 @@ without jsdom. The export path reuses the live defaults (512×176), scaled when 
 - src/scripts/explorer/angle-wave.test.ts (ten new tests covering buildWaveSvg)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
 - Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 6)
+
+## [2026-07-29 20:50] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram
+
+**Summary:**
+Added an optional `projection?: WaveFn` option to `AngleDiagramOptions` in
+`src/scripts/explorer/angle-diagram.ts`, and taught `buildAngleDiagramSvg` to emit a
+`data-role="projection-leg"` `<line>` when it is set: the vertical leg of the reference
+triangle for `sin`, the leg along the initial side for `cos`. The stacked layout (wave
+strip below the circle) shares no coordinate axis with the polar figure, so a horizontal
+tie-line connecting a point on the circle to the wave's plotted height is not
+geometrically possible. Highlighting the in-circle leg instead works because its length —
+r·|sin θ| or r·|cos θ| — is exactly the quantity the wave strip plots, drawn in the same
+`colors.wave` colour so the two figures visibly agree. The leg's foot is computed with
+`polarToCartesian` through `betaRad`, the same rotated-frame pattern every other element
+in the figure already follows, so its length stays invariant as β rotates the figure even
+though its on-screen endpoints move. The change is purely additive: `projection` defaults
+to `undefined`, in which case no leg markup is emitted and all pre-existing behaviour is
+unchanged.
+
+**Rationale:**
+A type-only import of `WaveFn` from `./angle-wave` avoids duplicating the `'sin' | 'cos'`
+union and confirms there is no import cycle (`angle-wave.ts` does not import
+`angle-diagram.ts`). Anchoring the `cos` leg at the origin and the `sin` leg at the
+terminal dot matches how each coordinate is actually read off the reference triangle.
+Drawing a zero-length line rather than omitting the element at sin 0° / cos 90° is
+deliberate — a missing element would read as "no projection selected" rather than "the
+value is zero." Eight new tests cover: the additive no-op baseline, leg length under the
+full r × θ domain for both `sin` and `cos`, length invariance under β rotation while
+endpoints move, anchor points for both leg kinds, the wave-coloured stroke, and the
+zero-length edge cases.
+
+**References:**
+- src/scripts/explorer/angle-diagram.ts (AngleDiagramOptions.projection, projectionMarkup)
+- src/scripts/explorer/angle-diagram.test.ts (eight new tests covering the projection leg)
+- TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+- Plan: docs/superpowers/plans/2026-07-29-angle-wave-projection.md (Task 7)

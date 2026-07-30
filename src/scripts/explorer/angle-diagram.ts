@@ -19,6 +19,7 @@ import {
   polarToCartesian,
   tickAngles,
 } from '@/scripts/explorer/angle-render';
+import type { WaveFn } from './angle-wave';
 
 export interface AngleDiagramOptions {
   /** Swept angle, in degrees. */
@@ -42,6 +43,16 @@ export interface AngleDiagramOptions {
    * about exact maths. Omitted or empty draws no label.
    */
   coordinateLabel?: string;
+  /**
+   * Highlight the reference-triangle leg the named wave plots — the vertical leg
+   * for `sin`, the leg along the initial side for `cos`. Omitted draws neither.
+   *
+   * This exists because the wave strip is stacked BELOW the circle rather than
+   * beside it, so the two figures share no axis and no horizontal tie-line is
+   * geometrically possible. The leg's length is exactly the wave's plotted
+   * height, in the same colour, which is what carries the link instead.
+   */
+  projection?: WaveFn;
 }
 
 /**
@@ -245,6 +256,23 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const initialDot = polarToCartesian(c, c, r * unit, betaRad);
   const terminalDot = polarToCartesian(c, c, r * unit, endRad);
 
+  // The foot of the perpendicular from the terminal point onto the initial side,
+  // expressed in the β-rotated frame. Positioned through betaRad like every other
+  // element, so the leg rotates with the rigid body — and its length is therefore
+  // r|sin θ| (sin) or r|cos θ| (cos) for ANY β, which is what makes it equal to
+  // the wave's plotted height.
+  const foot = polarToCartesian(c, c, r * Math.cos(thetaRad) * unit, betaRad);
+  const projectionMarkup =
+    opts.projection === undefined
+      ? ''
+      : (() => {
+          const from = opts.projection === 'sin' ? terminalDot : { x: c, y: c };
+          return (
+            `<line data-role="projection-leg" x1="${from.x}" y1="${from.y}" ` +
+            `x2="${foot.x}" y2="${foot.y}" stroke="${colors.wave}" stroke-width="2.5" />`
+          );
+        })();
+
   // tickText, not the terminal-side red: #e24b4a clears only 3.93:1 against
   // white, below the 4.5:1 floor for text. Weight and size carry the emphasis
   // instead.
@@ -271,6 +299,7 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     `<line x1="${c}" y1="${c}" x2="${terminalTip.x}" y2="${terminalTip.y}" stroke="${colors.wall}" stroke-width="2" />` +
     `<circle cx="${initialDot.x}" cy="${initialDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
     `<circle cx="${terminalDot.x}" cy="${terminalDot.y}" r="3.5" fill="${colors.point}" stroke="${colors.pointStroke}" />` +
+    projectionMarkup +
     labelMarkup
   );
 }

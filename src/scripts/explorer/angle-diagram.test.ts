@@ -238,3 +238,87 @@ describe('buildAngleDiagramSvg — tick label vs coordinate label', () => {
     expect(tickLines(svg)).toBe(2);
   });
 });
+
+/** Pull a projection leg's endpoints back out of the markup. */
+function readLeg(svg: string): { x1: number; y1: number; x2: number; y2: number } | null {
+  const m = svg.match(
+    /<line data-role="projection-leg" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/,
+  );
+  return m
+    ? { x1: Number(m[1]), y1: Number(m[2]), x2: Number(m[3]), y2: Number(m[4]) }
+    : null;
+}
+
+const legLength = (svg: string): number => {
+  const l = readLeg(svg)!;
+  return Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+};
+
+/** The builder's default pixels-per-unit. */
+const UNIT = 88;
+
+describe('buildAngleDiagramSvg — projection leg', () => {
+  it('draws nothing when no projection is asked for, leaving today\'s markup untouched', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30 });
+    expect(svg).not.toContain('data-role="projection-leg"');
+  });
+
+  it('draws the sin leg with length r·|sin θ| — the wave\'s own height', () => {
+    // THE core invariant. The highlighted leg and the strip's plotted height are
+    // the same quantity, which is what replaces the tie-line the stacked layout
+    // cannot draw.
+    for (const theta of [30, 45, 137, 210, -60, 300]) {
+      for (const r of [0.5, 1, 1.5]) {
+        const svg = buildAngleDiagramSvg({ ...base, theta, r, projection: 'sin' });
+        const expected = r * Math.abs(Math.sin((theta * Math.PI) / 180)) * UNIT;
+        expect(legLength(svg)).toBeCloseTo(expected, 6);
+      }
+    }
+  });
+
+  it('draws the cos leg with length r·|cos θ|', () => {
+    for (const theta of [30, 45, 137, 210, -60, 300]) {
+      for (const r of [0.5, 1, 1.5]) {
+        const svg = buildAngleDiagramSvg({ ...base, theta, r, projection: 'cos' });
+        const expected = r * Math.abs(Math.cos((theta * Math.PI) / 180)) * UNIT;
+        expect(legLength(svg)).toBeCloseTo(expected, 6);
+      }
+    }
+  });
+
+  it('keeps the leg\'s length invariant under β while its endpoints move', () => {
+    // β rotates the figure as a rigid body, so the leg must be computed in the
+    // rotated frame. A leg built in the unrotated frame would change length.
+    const at = (beta: number) =>
+      buildAngleDiagramSvg({ ...base, theta: 50, beta, projection: 'sin' });
+    expect(legLength(at(0))).toBeCloseTo(legLength(at(37)), 6);
+    expect(legLength(at(0))).toBeCloseTo(legLength(at(-140)), 6);
+    expect(readLeg(at(0))).not.toEqual(readLeg(at(37)));
+  });
+
+  it('anchors the cos leg at the origin', () => {
+    const l = readLeg(buildAngleDiagramSvg({ ...base, theta: 50, projection: 'cos' }))!;
+    expect(l.x1).toBeCloseTo(160, 6); // view 320 / 2
+    expect(l.y1).toBeCloseTo(160, 6);
+  });
+
+  it('anchors the sin leg at the terminal point', () => {
+    const l = readLeg(buildAngleDiagramSvg({ ...base, theta: 50, projection: 'sin' }))!;
+    const rad = (50 * Math.PI) / 180;
+    expect(l.x1).toBeCloseTo(160 + UNIT * Math.cos(rad), 6);
+    expect(l.y1).toBeCloseTo(160 - UNIT * Math.sin(rad), 6);
+  });
+
+  it('draws the leg in the wave colour, so the strip and the circle agree', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 50, projection: 'sin' });
+    expect(svg).toContain(`data-role="projection-leg"`);
+    expect(svg.match(/<line data-role="projection-leg"[^>]*>/)![0]).toContain(colors.wave);
+  });
+
+  it('collapses to zero length rather than vanishing when the coordinate is 0', () => {
+    // sin 0° = 0 and cos 90° = 0. A zero-length line is honest; omitting the
+    // element would read as "no projection selected".
+    expect(legLength(buildAngleDiagramSvg({ ...base, theta: 0, projection: 'sin' }))).toBeCloseTo(0, 6);
+    expect(legLength(buildAngleDiagramSvg({ ...base, theta: 90, projection: 'cos' }))).toBeCloseTo(0, 6);
+  });
+});
