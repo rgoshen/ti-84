@@ -141,10 +141,14 @@ const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1
  */
 export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
   const name = fn === 'sin' ? 'Sine' : 'Cosine';
+  // Spelled out, not the abbreviation: a screen reader pronounces "sin" as the
+  // English word "sin" (as in wrongdoing), not the trig function, and mangles
+  // "cos" too.
+  const spokenName = fn === 'sin' ? 'sine' : 'cosine';
   const value = Math.round(waveValue(fn, theta, r) * 1e4) / 1e4;
   return (
     `${name} wave traced from 0 to ${degreeText(theta)} degrees. ` +
-    `${fn} of theta is ${value}.`
+    `${spokenName} of theta is ${value}.`
   );
 }
 

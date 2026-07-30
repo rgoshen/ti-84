@@ -137,6 +137,7 @@ test('reset restores every control [G8]', async ({ page }) => {
   await expect(rad(page)).toHaveValue('0');
   await expect(radius).toHaveAttribute('aria-valuenow', '1');
   await expect(position).toHaveAttribute('aria-valuenow', '0');
+  await expect(waveOption(page, 'none')).toBeChecked();
 });
 
 test('reset still works while a validation error is showing [G14]', async ({ page }) => {
@@ -381,7 +382,7 @@ test('the radius slider changes the wave amplitude', async ({ page }) => {
   expect(await peak()).toBeLessThan(atOne);
 });
 
-test('the highlighted projection leg appears with the wave and matches it', async ({ page }) => {
+test('the highlighted projection leg appears with the wave', async ({ page }) => {
   await goto(page);
   const leg = page.locator(`${FIGURE} [data-role="projection-leg"]`);
   await expect(leg).toHaveCount(0);

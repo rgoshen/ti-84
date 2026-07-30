@@ -72,9 +72,13 @@ test('carries the wave into the exported artifact', async ({ page }) => {
   await downloadExport(page, 'PNG', async (artifact) => {
     const text = await artifact.evaluate((node) => node.textContent);
     expect(text).toContain('Wave');
-    expect(text).toContain('y = r·sin θ');
-    // 30° on the unit circle: sin is exactly 1/2.
-    expect(text).toContain('0.5');
+    // 'Traced' and its '0° to 30°' value are introduced only by the
+    // conditional Wave section — unlike 'y = r·sin θ' (an unconditional
+    // Representations-table row label) and '0.5' (which also matches inside
+    // '0.5236', the unconditional Decimal radians fact), so these are
+    // actually unique to a wave being selected.
+    expect(text).toContain('Traced');
+    expect(text).toContain('0° to 30°');
     // Two figures, so the exported graph cannot contradict the screen.
     const svgCount = await artifact.evaluate((node) => node.querySelectorAll('svg').length);
     expect(svgCount).toBeGreaterThanOrEqual(2);

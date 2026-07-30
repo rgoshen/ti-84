@@ -156,7 +156,7 @@ puts it at 0 — the clearest possible statement of how the two functions differ
 | --- | --- | --- |
 | y = 0 axis, x = 0 axis | Solid, `colors.axis`, width 1 | Matches the polar figure's reference axes. |
 | y = ±1 references | Dashed `3 3`, `colors.axis` | The strip's counterpart to the dashed unit circle, same dasharray. Same visual language for the same idea. |
-| π/4 ticks | Short lines, `colors.axis`, width 1 | 17 of them, all drawn. |
+| π/4 ticks | Full-height gridlines spanning the plot area, `colors.axis`, width 0.75 (π/2 multiples) / 0.5 (odd π/4 multiples) | 17 of them, all drawn. A gridline spanning the plot, rather than a short tick at the axis, is what ties each label at the bottom of the box back to its position without ambiguity about which tick it belongs to. |
 | π/4 labels | `tickText`, font-size 10, staggered | π/2 multiples on the primary baseline, odd π/4 multiples on a second baseline below. Doubles the pitch to ~59px. |
 | Traced curve | `colors.wave`, width 2.5 | New colour, see below. |
 | Marker | `colors.point` fill, `colors.pointStroke` ring, r 3.5 | Identical to the circle's terminal dot — this is the link. |

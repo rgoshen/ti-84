@@ -1,5 +1,5 @@
 import * as React from 'react'; // [G1] required for the React.JSX.Element return type
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { renderMathHtml } from '@/scripts/katex-html';
 
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,10 @@ export default function AngleExplorer(): React.JSX.Element {
   const [r, setR] = useState(DEFAULTS.r);
   const [beta, setBeta] = useState(DEFAULTS.beta); // degrees
   const [wave, setWave] = useState<WaveMode>(DEFAULTS.wave);
+
+  // Unique per mounted instance, so the wave radio group's ids never collide
+  // if two AngleExplorer components ever land on the same page.
+  const waveGroupId = useId();
 
   const [dark, setDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
@@ -308,7 +312,11 @@ export default function AngleExplorer(): React.JSX.Element {
         const circleHeight = snapshotWave ? 360 : EXPORT_GRAPH_HEIGHT;
         const circle =
           `<svg viewBox="0 0 320 320" width="${EXPORT_GRAPH_WIDTH}" height="${circleHeight}" ` +
-          `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildAngleDiagramSvg(
+          `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" ` +
+          // display:block: an inline (the SVG default) element carries baseline
+          // leading below its own box, which is exactly the ~2px the container's
+          // fixed height and overflow:hidden were found to clip against.
+          `style="display:block">${buildAngleDiagramSvg(
             {
               theta: snapshotTheta,
               r: snapshotR,
@@ -325,7 +333,8 @@ export default function AngleExplorer(): React.JSX.Element {
         // letterboxed inside a 960px box.
         const strip = snapshotWave
           ? `<svg viewBox="0 0 ${EXPORT_GRAPH_WIDTH} 190" width="${EXPORT_GRAPH_WIDTH}" height="190" ` +
-            `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">${buildWaveSvg(
+            `preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" ` +
+            `style="display:block">${buildWaveSvg(
               {
                 fn: snapshotWave,
                 theta: snapshotTheta,
@@ -369,11 +378,11 @@ export default function AngleExplorer(): React.JSX.Element {
           </div>
         ))}
         <div className="space-y-3 rounded-lg border p-3">
-          <p className="text-sm font-medium" id="wave-group-label">
+          <p className="text-sm font-medium" id={`${waveGroupId}-wave-group-label`}>
             Wave
           </p>
           <RadioGroup
-            aria-labelledby="wave-group-label"
+            aria-labelledby={`${waveGroupId}-wave-group-label`}
             value={wave}
             onValueChange={(v) => setWave(v as WaveMode)}
           >
@@ -385,8 +394,8 @@ export default function AngleExplorer(): React.JSX.Element {
               ]
             ).map((o) => (
               <div key={o.value} className="flex items-center gap-2">
-                <RadioGroupItem id={`wave-${o.value}`} value={o.value} />
-                <Label htmlFor={`wave-${o.value}`}>{o.label}</Label>
+                <RadioGroupItem id={`${waveGroupId}-wave-${o.value}`} value={o.value} />
+                <Label htmlFor={`${waveGroupId}-wave-${o.value}`}>{o.label}</Label>
               </div>
             ))}
           </RadioGroup>

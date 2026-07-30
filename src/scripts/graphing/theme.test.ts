@@ -118,6 +118,13 @@ describe('the wave colour is distinguishable from the marks it sits beside', () 
     it(`${label}: wave separates from the initial-side ray it runs alongside`, () => {
       // The cos leg lies ON the initial side. If the two colours are close, the
       // leg vanishes into the ray it is supposed to be measuring against.
+      //
+      // The light theme clears this floor by a thin margin (~1.52 vs the 1.5
+      // threshold) by design. Raw colour contrast is not the leg's primary
+      // safeguard against blending into the floor ray — its heavier stroke
+      // width (2.5 vs the floor ray's 2.0, in angle-diagram.ts) is. Don't
+      // "fix" a future contrast dip here by changing the stroke width; that
+      // would mask a real colour regression instead of catching it.
       expect(lineContrast(c.wave, 1, c.floor)).toBeGreaterThanOrEqual(1.5);
     });
   }

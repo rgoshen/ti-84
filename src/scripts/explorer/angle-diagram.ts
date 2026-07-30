@@ -256,20 +256,27 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const initialDot = polarToCartesian(c, c, r * unit, betaRad);
   const terminalDot = polarToCartesian(c, c, r * unit, endRad);
 
-  // The foot of the perpendicular from the terminal point onto the initial side,
-  // expressed in the β-rotated frame. Positioned through betaRad like every other
-  // element, so the leg rotates with the rigid body — and its length is therefore
-  // r|sin θ| (sin) or r|cos θ| (cos) for ANY β, which is what makes it equal to
-  // the wave's plotted height.
-  const foot = polarToCartesian(c, c, r * Math.cos(thetaRad) * unit, betaRad);
   const projectionMarkup =
     opts.projection === undefined
       ? ''
       : (() => {
+          // The foot of the perpendicular from the terminal point onto the initial
+          // side, expressed in the β-rotated frame. Positioned through betaRad like
+          // every other element, so the leg rotates with the rigid body — and its
+          // length is therefore r|sin θ| (sin) or r|cos θ| (cos) for ANY β, which is
+          // what makes it equal to the wave's plotted height.
+          const foot = polarToCartesian(c, c, r * Math.cos(thetaRad) * unit, betaRad);
           const from = opts.projection === 'sin' ? terminalDot : { x: c, y: c };
+          // stroke-linecap="round": a zero-length line (sin 0° / cos 90°) is
+          // deliberately drawn rather than omitted — a missing element would read
+          // as "no projection selected" rather than "the value is zero" — but
+          // "butt" (the SVG default) paints nothing for a zero-length line. Only
+          // "round" (or "square") gives it any visible extent, so the zero value
+          // renders honestly instead of silently as nothing.
           return (
             `<line data-role="projection-leg" x1="${from.x}" y1="${from.y}" ` +
-            `x2="${foot.x}" y2="${foot.y}" stroke="${colors.wave}" stroke-width="2.5" />`
+            `x2="${foot.x}" y2="${foot.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+            `stroke-linecap="round" />`
           );
         })();
 

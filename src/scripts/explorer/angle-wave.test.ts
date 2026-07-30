@@ -188,10 +188,10 @@ describe('wavePath', () => {
 describe('waveSpoken', () => {
   it('names the function and the swept range for the live region', () => {
     expect(waveSpoken('sin', 135, 1)).toBe(
-      'Sine wave traced from 0 to 135 degrees. sin of theta is 0.7071.',
+      'Sine wave traced from 0 to 135 degrees. sine of theta is 0.7071.',
     );
     expect(waveSpoken('cos', 0, 1.5)).toBe(
-      'Cosine wave traced from 0 to 0 degrees. cos of theta is 1.5.',
+      'Cosine wave traced from 0 to 0 degrees. cosine of theta is 1.5.',
     );
   });
 
