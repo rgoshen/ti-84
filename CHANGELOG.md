@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.10.0](https://github.com/rgoshen/ti-84/compare/v0.9.0...v0.10.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **explorer:** suppress colliding standard-angle labels among neighbors ([e21aa63](https://github.com/rgoshen/ti-84/commit/e21aa63b580fbd2dad412abb2df8481fcab52f20))
+
+
+### Features
+
+* **explorer:** add circle-labels and standard-angles controls ([3a4ca18](https://github.com/rgoshen/ti-84/commit/3a4ca1866a5ed1011872c871d5e280fb4ea92e55))
+* **explorer:** add standard-angle label module ([19f514d](https://github.com/rgoshen/ti-84/commit/19f514d7fbf3301a88a49e0aba7e95baedef4af9))
+* **explorer:** add unit-aware counting ticks ([1f31ab6](https://github.com/rgoshen/ti-84/commit/1f31ab6fe7ad3bd06cf4ce502a16779ae5304ace))
+* **explorer:** carry circle labels and standard angles into export ([aaa5d3a](https://github.com/rgoshen/ti-84/commit/aaa5d3a15ad71c6f8bfb3d65096d7cb1f0204d41))
+* **explorer:** draw standard-angle ring with three-way label priority ([87f6dfb](https://github.com/rgoshen/ti-84/commit/87f6dfbf513b784d071f3bcc98a1f8a264c04364))
+
 # [0.9.0](https://github.com/rgoshen/ti-84/compare/v0.8.0...v0.9.0) (2026-07-30)
 
 
