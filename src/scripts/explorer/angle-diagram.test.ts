@@ -489,6 +489,125 @@ describe('buildAngleDiagramSvg — three-way label priority', () => {
   });
 });
 
+function readTangentSegment(svg: string): { x1: number; y1: number; x2: number; y2: number } | null {
+  const m = svg.match(
+    /<line data-role="tangent-segment" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/,
+  );
+  return m ? { x1: Number(m[1]), y1: Number(m[2]), x2: Number(m[3]), y2: Number(m[4]) } : null;
+}
+
+const tangentSegmentLength = (svg: string): number => {
+  const l = readTangentSegment(svg)!;
+  return Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+};
+
+describe('buildAngleDiagramSvg — tangent segment', () => {
+  it('draws nothing for sin/cos/undefined, and no old-style projection-leg for tan', () => {
+    expect(buildAngleDiagramSvg({ ...base, theta: 30 })).not.toContain('tangent-segment');
+    expect(buildAngleDiagramSvg({ ...base, theta: 30, projection: 'sin' })).not.toContain(
+      'tangent-segment',
+    );
+    expect(buildAngleDiagramSvg({ ...base, theta: 30, projection: 'tan' })).not.toContain(
+      'data-role="projection-leg"',
+    );
+  });
+
+  it('has length |tan θ| · unit, for any β and any r — unclamped', () => {
+    // Kept well inside ±60° so the segment never clamps at the default view,
+    // plus 135° and -135° to test the sign-flip branch when cos(θ) is negative.
+    for (const theta of [10, 30, 45, -20, -55, 135, -135]) {
+      for (const beta of [0, 40, -90]) {
+        for (const r of [0.5, 1, 1.5]) {
+          const svg = buildAngleDiagramSvg({ ...base, theta, beta, r, projection: 'tan' });
+          const expected = Math.abs(Math.tan((theta * Math.PI) / 180)) * UNIT;
+          expect(tangentSegmentLength(svg)).toBeCloseTo(expected, 4);
+        }
+      }
+    }
+  });
+
+  it('is unchanged by r — the same cancellation, now in the figure', () => {
+    const at = (r: number) => buildAngleDiagramSvg({ ...base, theta: 40, r, projection: 'tan' });
+    expect(tangentSegmentLength(at(0.5))).toBeCloseTo(tangentSegmentLength(at(1.5)), 4);
+  });
+
+  it('places the segment endpoint at sec(θ)·unit when θ is obtuse, testing the sign-flip branch', () => {
+    // At θ = -135°, β = 0, r = 1: cos(θ) = cos(-135°) = -√2/2, so sec(θ) ≈ -1.4142.
+    // The endpoint E should sit at signed distance sec(θ)·88 ≈ -124.45 along the terminal ray,
+    // which places it on the opposite side of the origin from the standard acute-angle case.
+    // This test verifies the sign-flip construction by computing the expected coordinates
+    // and checking that the segment's (x2, y2) match to within rounding tolerance.
+    const svg = buildAngleDiagramSvg({ ...base, theta: -135, beta: 0, r: 1, projection: 'tan' });
+    const seg = readTangentSegment(svg)!;
+
+    const theta = -135;
+    const beta = 0;
+    const c = 160; // half of 320×320 viewBox
+    const unit = 88;
+    const thetaRad = (theta * Math.PI) / 180;
+    const betaRad = (beta * Math.PI) / 180;
+    const endRad = betaRad + thetaRad;
+
+    // Compute the expected endpoint under the sign-flip branch
+    const secTheta = 1 / Math.cos(thetaRad);
+    const rawDist = secTheta * unit;
+    const maxDist = c - 4; // LABEL_MARGIN = 4
+    const dist = Math.abs(rawDist) > maxDist ? Math.sign(rawDist) * maxDist : rawDist;
+
+    const expectedX2 = c + dist * Math.cos(endRad);
+    const expectedY2 = c - dist * Math.sin(endRad);
+
+    expect(seg.x2).toBeCloseTo(expectedX2, 2);
+    expect(seg.y2).toBeCloseTo(expectedY2, 2);
+  });
+
+  it('collapses to zero length at θ = 0, drawn with a round cap so it stays visible', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 0, projection: 'tan' });
+    expect(tangentSegmentLength(svg)).toBeCloseTo(0, 6);
+    expect(svg.match(/<line data-role="tangent-segment"[^>]*>/)![0]).toContain(
+      'stroke-linecap="round"',
+    );
+  });
+
+  it('draws a dashed extension from the terminal point to the segment endpoint', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 40, projection: 'tan' });
+    expect(svg).toContain('data-role="tangent-extension"');
+    expect(svg.match(/<line data-role="tangent-extension"[^>]*>/)![0]).toContain(
+      'stroke-dasharray',
+    );
+  });
+
+  it('draws both elements in the wave colour', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 40, projection: 'tan' });
+    expect(svg.match(/<line data-role="tangent-segment"[^>]*>/)![0]).toContain(colors.wave);
+    expect(svg.match(/<line data-role="tangent-extension"[^>]*>/)![0]).toContain(colors.wave);
+  });
+
+  it('never leaves the viewBox near an asymptote, across β', () => {
+    for (const beta of [0, 90, -45, 180]) {
+      for (const theta of [88, 89, 89.9, -89, -89.9]) {
+        const svg = buildAngleDiagramSvg({ ...base, theta, beta, projection: 'tan' });
+        const seg = readTangentSegment(svg)!;
+        for (const v of [seg.x1, seg.x2]) {
+          expect(v, `x out of range θ=${theta} β=${beta}`).toBeGreaterThanOrEqual(0);
+          expect(v, `x out of range θ=${theta} β=${beta}`).toBeLessThanOrEqual(320);
+        }
+        for (const v of [seg.y1, seg.y2]) {
+          expect(v, `y out of range θ=${theta} β=${beta}`).toBeGreaterThanOrEqual(0);
+          expect(v, `y out of range θ=${theta} β=${beta}`).toBeLessThanOrEqual(320);
+        }
+      }
+    }
+  });
+
+  it('keeps the length invariant under β while its endpoints move, matching the sin/cos legs', () => {
+    const at = (beta: number) =>
+      buildAngleDiagramSvg({ ...base, theta: 40, beta, projection: 'tan' });
+    expect(tangentSegmentLength(at(0))).toBeCloseTo(tangentSegmentLength(at(75)), 4);
+    expect(readTangentSegment(at(0))).not.toEqual(readTangentSegment(at(75)));
+  });
+});
+
 describe('buildAngleDiagramSvg — standard-angle labels stay inside the frame', () => {
   const view = 320;
 

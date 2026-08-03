@@ -1,3 +1,17 @@
+## [2026-08-02 21:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram
+
+**Summary:**
+`projection: 'tan'` now draws a tangent segment anchored on the unit circle, geometrically clamped to the viewBox's inscribed circle so it never overflows near an asymptote.
+
+**Rationale:**
+The segment connects T (on the unit circle at angle β, independent of r) to E (along the terminal ray at signed distance sec(θ)·unit, also independent of r), so its length is exactly |tan θ|·unit for any r — the cancellation geometrically in the figure. A magnitude-based clamp (bounded by distance-from-origin) ensures the segment stays inside the viewBox uniformly in all directions near an asymptote, unlike per-axis clamping which would treat x and y separately and create directional artifacts.
+
+**References:**
+- Task 6 of 10-task plan: `tan θ` option
+
 ## [2026-08-02 21:33] Commit Summary
 
 **Change Type:** Feature
