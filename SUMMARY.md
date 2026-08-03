@@ -4466,3 +4466,41 @@ DOM ids, and a 2px layout overflow), each fixed at its source rather than deferr
 - src/components/explorer/AngleExplorer.tsx (`useId()`-prefixed wave radio ids;
   `display:block` on both exported `<svg>` strings)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+
+## [2026-08-02 18:15] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — design spec
+
+**Summary:**
+Added the approved design for two new Angle Explorer diagram controls: a **Circle labels**
+selector (Degrees | Radians) governing every angle label on the figure, and a **Show
+standard angles** toggle drawing the full sixteen-mark reference ring of 30°/45° multiples,
+labelled in the selected unit. No code yet — spec and TODO entry only.
+
+**Rationale:**
+Four design decisions were settled by walking real rendered geometry rather than reasoning
+in the abstract, using the brainstorming visual companion:
+
+1. *One unit governs the whole figure* rather than the standard ring alone — otherwise the
+   circle can show `1 rad` and `45°` side by side.
+2. *All sixteen standard angles*, not a subset, because the memorised chart is the thing
+   being taught.
+3. *Labels ride the adjustable circle* at `r + 0.22`, consistent with the existing ticks.
+   An initial concern that sixteen radian labels would overflow the 320 viewBox at max
+   radius proved unfounded once drawn: the widest labels (`11π/6`, `5π/6`) sit at
+   30°/150°/210°/330° where `cos` is ±0.866, and the axis-aligned labels are short.
+4. *Counting-tick text yields* on collision, generalising the suppression rule already in
+   `angle-diagram.ts` into a three-way priority order. This keeps both the "how big is a
+   radian" lesson and the reference chart visible simultaneously.
+
+Radian labels reuse `formatPiText(piMultiple(deg))`, which already reduces `330 → 11π/6`,
+so the feature adds placement and priority logic but no new arithmetic. Defaults are
+Radians + standard angles off, which preserves today's rendering and therefore keeps the
+Linux/Docker-only visual PNG baselines valid.
+
+**References:**
+- docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md (new)
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Prior art: src/scripts/explorer/angle-diagram.ts:218-246 (tick-text suppression),
+  src/scripts/explorer/angle.ts:59,127 (`piMultiple`, `formatPiText`)
