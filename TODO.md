@@ -1074,4 +1074,4 @@ wave-projection design.
 - Plan: `docs/superpowers/plans/2026-08-02-angle-wave-tangent.md`
 
 **Status:** Implemented on `feature/angle-wave-tangent`, all 9 plan tasks complete and reviewed;
-final whole-branch review fixes pending before merge.
+final whole-branch review's 8 fixes applied (see SUMMARY.md, 2026-08-02 22:50) — ready for merge.

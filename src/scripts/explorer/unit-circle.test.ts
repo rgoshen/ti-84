@@ -151,6 +151,15 @@ describe('exactTangent', () => {
     expect(exactTangent(390)).toEqual(exactTangent(30));
     expect(exactTangent(-330)).toEqual(exactTangent(30));
   });
+
+  it('is undefined for a hand-typed near-90° decimal, not merely off-chart null', () => {
+    // A value like 89.9999999° is not an integer degree, so the isIntegerDegrees
+    // gate alone would fall through to null ("no exact form") — but this angle
+    // is functionally the asymptote, and reporting a bogus huge tangent instead
+    // of "undefined" is the exact regression this closes.
+    expect(exactTangent(89.9999999)).toBe('undefined');
+    expect(exactTangent(-89.9999995)).toBe('undefined');
+  });
 });
 
 describe('exactCoordinates — never needs a denominator of 3', () => {

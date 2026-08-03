@@ -355,12 +355,27 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
       // a circle centred on the origin is bounded the same way in every
       // direction. No endpoint dot is ever drawn at E, clamped or not, so a
       // clamped segment never asserts a value it was truncated out of.
-      const secTheta = 1 / Math.cos(thetaRad);
-      const rawDist = secTheta * unit;
-      const maxDist = c - LABEL_MARGIN;
-      const dist = Math.abs(rawDist) > maxDist ? Math.sign(rawDist) * maxDist : rawDist;
+      // T sits on the unit circle at angle β — the fixed anchor of the
+      // tangent line. E is placed as an offset from T, perpendicular to OT
+      // (angle β + 90°), by the tangent value itself: this is what keeps E
+      // ON the tangent line at every angle, clamped or not — unlike clamping
+      // the ray distance from the origin, which pulls E off the line as it
+      // shrinks. The clamp bound is chosen so that when it engages, E's
+      // distance from the origin is still exactly maxDist: by the right
+      // triangle O-T-E (OT = unit, right angle at T), OE² = unit² + TE², so
+      // capping TE at sqrt(maxDist² − unit²) caps OE at exactly maxDist —
+      // the same inscribed-circle safety bound the old clamp provided.
       const tangentPoint = polarToCartesian(c, c, unit, betaRad);
-      const lineEnd = polarToCartesian(c, c, dist, endRad);
+      const rawTan = Math.tan(thetaRad);
+      const maxDist = c - LABEL_MARGIN;
+      const capMax = Math.sqrt(maxDist ** 2 - unit ** 2) / unit;
+      const cappedTan = Math.abs(rawTan) > capMax ? Math.sign(rawTan) * capMax : rawTan;
+      const lineEnd = polarToCartesian(
+        tangentPoint.x,
+        tangentPoint.y,
+        cappedTan * unit,
+        betaRad + Math.PI / 2,
+      );
       return (
         `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
         `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +

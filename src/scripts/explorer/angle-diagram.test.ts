@@ -606,6 +606,20 @@ describe('buildAngleDiagramSvg — tangent segment', () => {
     expect(tangentSegmentLength(at(0))).toBeCloseTo(tangentSegmentLength(at(75)), 4);
     expect(readTangentSegment(at(0))).not.toEqual(readTangentSegment(at(75)));
   });
+
+  it('keeps the endpoint ON the tangent line near an asymptote, even when clamped', () => {
+    // Regression guard: the old clamp shortened the segment along the terminal
+    // ray, which pulled E off the x = 1 tangent line as θ approached 90°. The
+    // fix clamps |tan θ| directly, so E's x-coordinate must always equal the
+    // tangent point's x-coordinate — clamped or not.
+    const svg = buildAngleDiagramSvg({ ...base, theta: 89, projection: 'tan' });
+    const seg = readTangentSegment(svg)!;
+    const c = 160;
+    const unit = 88;
+    const betaRad = 0;
+    const tangentPointX = c + unit * Math.cos(betaRad);
+    expect(seg.x2).toBeCloseTo(tangentPointX, 6);
+  });
 });
 
 describe('buildAngleDiagramSvg — standard-angle labels stay inside the frame', () => {

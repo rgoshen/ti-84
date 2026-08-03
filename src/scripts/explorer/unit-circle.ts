@@ -12,7 +12,7 @@
  *
  * Pure and DOM-free so it unit-tests in the node environment, like `angle.ts`.
  */
-import { isIntegerDegrees } from './angle';
+import { isIntegerDegrees, isTangentUndefined } from './angle';
 
 /**
  * An exact unit-circle coordinate: `(sign · √radicand) / denominator`.
@@ -132,6 +132,7 @@ export function exactCoordinates(deg: number): ExactPoint | null {
  * (where they differ) — tan's own quadrant rule, distinct from x/y's.
  */
 export function exactTangent(deg: number): ExactValue | 'undefined' | null {
+  if (isTangentUndefined(deg)) return 'undefined';
   if (!isIntegerDegrees(deg)) return null;
   const d = normalizeDegrees(Math.round(deg));
 

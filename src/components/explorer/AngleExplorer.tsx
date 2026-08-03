@@ -35,6 +35,7 @@ import {
   waveSpoken,
   waveValue,
   WAVE_HEIGHT,
+  WAVE_SPOKEN_FN_NAME,
   WAVE_WIDTH,
   type WaveFn,
   type WaveMode,
@@ -61,9 +62,6 @@ const DEFAULTS = {
  *  used to live here now default inside `buildAngleDiagramSvg`, which both
  *  this component and the export snapshot draw through. */
 const VIEW = 320;
-
-/** Spoken function name for the wave strip's aria-label and live-region text. */
-const WAVE_SPOKEN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
 
 export default function AngleExplorer(): React.JSX.Element {
   const [theta, setTheta] = useState(DEFAULTS.theta); // degrees, float
@@ -572,7 +570,7 @@ export default function AngleExplorer(): React.JSX.Element {
               viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
               className="h-auto w-full"
               role="img"
-              aria-label={`Graph of ${WAVE_SPOKEN_NAME[waveFn]} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
+              aria-label={`Graph of ${WAVE_SPOKEN_FN_NAME[waveFn]} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
               dangerouslySetInnerHTML={{
                 __html: buildWaveSvg({
                   fn: waveFn,

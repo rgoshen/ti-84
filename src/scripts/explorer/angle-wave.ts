@@ -12,7 +12,7 @@
  * artifact draw through one builder and cannot drift.
  */
 import type { ExplorerColors } from '@/scripts/graphing/theme';
-import { degreesToRadians, formatPiText, reduceFraction } from './angle';
+import { degreesToRadians, formatPiText, isTangentUndefined, reduceFraction } from './angle';
 
 /** Which coordinate of the terminal point the strip plots. */
 export type WaveFn = 'sin' | 'cos' | 'tan';
@@ -107,7 +107,7 @@ export function waveValue(fn: WaveFn, theta: number, r: number): number | null {
   // θ arrives from a degree slider (or a parsed, already-rounded field), so a
   // tolerance-checked degree comparison is exact and honest here — unlike
   // testing Math.tan's magnitude, which never actually reaches Infinity.
-  if (Math.abs((Math.abs(theta) % 180) - 90) < 1e-6) return null;
+  if (isTangentUndefined(theta)) return null;
   return Math.tan(rad);
 }
 
@@ -145,7 +145,7 @@ const TAN_STEP_DEG = 1;
  * domain edge" are the same rule, not two.
  */
 function tanPath(theta: number, dir: 1 | -1, scales: WaveScales): string {
-  const edgeDeg = (Math.atan(TAN_MAX) * 180) / Math.PI;
+  const edgeDeg = (Math.atan(waveDomain('tan')) * 180) / Math.PI;
   const lo = Math.min(0, theta);
   const hi = Math.max(0, theta);
 
@@ -230,7 +230,7 @@ export function wavePath(
 const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1e4);
 
 const WAVE_DISPLAY_NAME: Record<WaveFn, string> = { sin: 'Sine', cos: 'Cosine', tan: 'Tangent' };
-const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
+export const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
 
 /**
  * The strip as prose, for the existing debounced live region. Both KaTeX boxes
@@ -304,10 +304,17 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       const even = k % 2 === 0;
       const labelY =
         height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
+      // At tan's asymptotes, this solid gridline would sit directly under
+      // the dashed asymptote line (drawn separately, below) — a same-colour
+      // opaque line fills in the dash gaps, so the asymptote never actually
+      // reads as dashed. Suppress just the gridline here; the label stays.
+      const isAsymptote = fn === 'tan' && (k === -6 || k === -2 || k === 2 || k === 6);
       return (
         `<g data-role="wave-tick">` +
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
-        `stroke="${colors.axis}" stroke-width="${even ? 0.75 : 0.5}" />` +
+        (isAsymptote
+          ? ''
+          : `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
+            `stroke="${colors.axis}" stroke-width="${even ? 0.75 : 0.5}" />`) +
         `<text x="${x}" y="${labelY}" fill="${tickText}" font-size="${TICK_FONT_SIZE}" ` +
         `text-anchor="middle" dominant-baseline="middle">${label}</text>` +
         `</g>`

@@ -4860,3 +4860,29 @@ The export path is a separate code path (`renderGraph` builds its own detached-D
 **References:**
 - Task 9 of 10-task plan: e2e export coverage for `tan θ` option
 
+## [2026-08-02 22:50] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — whole-branch final review
+
+**Summary:**
+Applied eight fixes surfaced only by reading the full `feature/angle-wave-tangent` branch together, after all nine task-scoped reviews had already passed individually:
+
+1. `angle-wave.ts` — the tan asymptote's dashed line was painted over an opaque solid gridline at the same x, so it never actually read as dashed; the gridline (not its label) is now suppressed at the four asymptote ticks.
+2. `angle-diagram.ts` — the tangent segment's clamp shortened the segment along the terminal ray, pulling the endpoint off the x = 1 tangent line near an asymptote. Replaced with a clamp on `|tan θ|` itself, offset perpendicular from the fixed anchor point T on the unit circle — this keeps the endpoint exactly on the tangent line at every angle, clamped or not, with the same inscribed-circle safety bound (proven via the right triangle O-T-E). Mathematically identical to the old formula in the unclamped region, confirmed by all 52 pre-existing tests passing unmodified.
+3. `angle-coordinates.ts` — `tanEquation()` duplicated `equation()`'s exact-part/relation/collapse logic; now delegates to `equation()` with `r: 1` after its own `chain` prefix and `undefined` early-return.
+4. `angle-wave.ts` / `AngleExplorer.tsx` — the spoken function-name map (`sine`/`cosine`/`tangent`) was defined identically in both files; `angle-wave.ts`'s `WAVE_SPOKEN_FN_NAME` is now exported and reused instead of a duplicate local constant.
+5. `angle-wave.ts` — `tanPath`'s asymptote-edge angle hardcoded `TAN_MAX` instead of deriving it via `waveDomain('tan')`, the function that already exists for exactly this.
+6. `angle.ts` / `angle-wave.ts` / `unit-circle.ts` — `waveValue` and `exactTangent` used two different tolerances to decide "tan is undefined" (a loose `1e-6`-degree check vs. the stricter `~1e-9` `isIntegerDegrees` gate), so a hand-typed `89.9999999°` was correctly flagged undefined by the wave strip but fell through to a nonsensical `tan 90° ≈ 572957787.3425` in the coordinate caption. Extracted a shared `isTangentUndefined()` predicate into `angle.ts` (the low-level module both already import from) and made `exactTangent()` check it before the `isIntegerDegrees` gate.
+7. `tests/e2e/angle-export.spec.ts` — the θ = 90° pass of the tangent export test only asserted `'undefined'` was present, which a dropped Wave section could still satisfy by accident; added the same `'Wave'` / `'tan θ = y/x'` assertions the θ = 45° pass already makes.
+8. Verified in-browser (Chromium, 375px viewport) that the tan caption's KaTeX rendering does not overflow or clip at narrow widths — no code change needed.
+
+**Rationale:**
+Per-task review catches defects visible within one task's diff; some defects (a shared duplicated constant, two independent tolerance checks that quietly disagree, a clamp whose geometric side-effect only shows up once the whole feature is exercised together) are only visible once the full branch is read as one unit. Fix 2 in particular was a human-approved geometry change verified algebraically against the existing test suite before implementation, not derived independently.
+
+**Tests:**
+Added 4 tests: two for fix 1 (asymptote gridline suppressed for tan, unchanged for sin/cos), one for fix 2 (endpoint stays on the tangent line near an asymptote), one for fix 6 (`exactTangent` returns `'undefined'` for near-90° decimals). Full suite: `npx astro check` 0 errors; `npm test` 490/490 (486 baseline + 4 new); `npx playwright test tests/e2e/angle.spec.ts tests/e2e/angle-export.spec.ts` 48/48.
+
+**References:**
+- Final whole-branch review of the 9-task `tan θ` plan, applied as one fix wave.
+

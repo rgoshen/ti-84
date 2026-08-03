@@ -122,6 +122,8 @@ test('carries the tangent wave into the exported artifact, including the undefin
   await deg(page).fill('90');
   await downloadExport(page, 'PNG', async (artifact) => {
     const text = await artifact.evaluate((node) => node.textContent);
+    expect(text).toContain('Wave');
+    expect(text).toContain('tan θ = y/x');
     expect(text).toContain('undefined');
   });
 });

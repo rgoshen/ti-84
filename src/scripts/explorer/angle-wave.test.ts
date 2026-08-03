@@ -500,4 +500,28 @@ describe('buildWaveSvg — tan', () => {
       expect(svg).not.toContain('undefined');
     }
   });
+
+  it('suppresses the solid gridline at each asymptote so the dashed line reads as dashed, but keeps the tick label', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    for (const k of [-6, -2, 2, 6]) {
+      const radians = (k * Math.PI) / 4;
+      const x = s.xFor(radians);
+      const label = waveTickLabel(k);
+      expect(svg).not.toContain(`<line x1="${x}" y1=`);
+      expect(svg).toContain(`>${label}</text>`);
+    }
+  });
+
+  it('leaves the gridline at those same x-positions unchanged for sin/cos, which never suppress it', () => {
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, AMP_MAX);
+    for (const fn of ['sin', 'cos'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 45 });
+      for (const k of [-6, -2, 2, 6]) {
+        const radians = (k * Math.PI) / 4;
+        const x = s.xFor(radians);
+        expect(svg).toContain(`<line x1="${x}" y1=`);
+      }
+    }
+  });
 });

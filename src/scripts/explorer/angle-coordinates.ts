@@ -124,19 +124,7 @@ function tanEquation(
     return `${chain}${latex ? '\\text{ is undefined}' : ' is undefined'}`;
   }
 
-  const approx = latex ? ' \\approx ' : ' ≈ ';
-  const exactPart =
-    exact === null
-      ? latex
-        ? `\\tan ${degreeLabel}^\\circ`
-        : `tan ${degreeLabel}°`
-      : latex
-        ? formatExactLatex(exact)
-        : formatExactText(exact);
-  const decimal = round4(value);
-  if (exactPart === decimal) return `${chain} = ${decimal}`;
-  const relation = exact !== null && isRational(exact) ? ' = ' : approx;
-  return `${chain} = ${exactPart}${relation}${decimal}`;
+  return `${chain} = ${equation({ exact, value, r: 1, fnLatex: '\\tan', fnText: 'tan', degreeLabel, alphabet })}`;
 }
 
 /** The same equation as prose, for the live region. */
