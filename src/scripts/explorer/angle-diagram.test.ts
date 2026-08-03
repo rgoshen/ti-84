@@ -459,6 +459,34 @@ describe('buildAngleDiagramSvg — three-way label priority', () => {
     );
     expect(texts).toHaveLength(16);
   });
+
+  it('suppresses a 15°-apart neighbor label at small radius, keeping the earlier angle', () => {
+    // The label ring radius is (r + 0.22) × 88px — at r = 0.5 that's small
+    // enough that 45° and 60°, the closest pair of standard angles at only
+    // 15° apart, collide with EACH OTHER rather than with the coordinate
+    // label. STANDARD_ANGLES' own ascending order breaks the tie: 45° (the
+    // smaller angle) keeps its text, 60° yields.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      r: 0.5,
+      theta: 0,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+    });
+    expect(svg).toContain('>45°<');
+    expect(svg).not.toContain('>60°<');
+  });
+
+  it('keeps both standard-angle tick LINES even when one label yields to its neighbor', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      r: 0.5,
+      theta: 0,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+    });
+    expect((svg.match(/data-role="standard-angle"/g) ?? []).length).toBe(16);
+  });
 });
 
 describe('buildAngleDiagramSvg — standard-angle labels stay inside the frame', () => {
@@ -500,6 +528,60 @@ describe('buildAngleDiagramSvg — standard-angle labels stay inside the frame',
             ).toBeLessThanOrEqual(view);
             expect(y, `top overflow "${label}"`).toBeGreaterThanOrEqual(0);
             expect(y, `bottom overflow "${label}"`).toBeLessThanOrEqual(view);
+          }
+        }
+      }
+    }
+  });
+});
+
+describe('buildAngleDiagramSvg — standard-angle labels never collide with each other', () => {
+  // Same r × β domain as the viewBox sweep above, but checking VISIBLE
+  // standard labels pairwise against each other instead of against the
+  // frame — this is what caught the 15°-apart-neighbor collision at small r
+  // that the viewBox sweep alone could not see (every label individually fit
+  // inside the frame; two of them just also overlapped each other).
+  it('no two visible standard labels overlap, across r ∈ [0.5, 1.5] × β ∈ [-360, 360], in either unit', () => {
+    for (const angleUnit of ['deg', 'rad'] as const) {
+      for (let r = 0.5; r <= 1.5001; r += 0.1) {
+        for (let beta = -360; beta <= 360; beta += 30) {
+          const roundedR = Number(r.toFixed(1));
+          const svg = buildAngleDiagramSvg({
+            ...base,
+            r: roundedR,
+            theta: 0,
+            beta,
+            angleUnit,
+            showStandardAngles: true,
+          });
+          const boxes = [
+            ...svg.matchAll(
+              /<g data-role="standard-angle">.*?<text[^>]*x="([-\d.]+)"[^>]*y="([-\d.]+)"[^>]*>([^<]*)</g,
+            ),
+          ].map(([, xStr, yStr, text]) => {
+            const x = Number(xStr);
+            const y = Number(yStr);
+            const halfWidth = labelWidth(text!, 9) / 2;
+            const halfHeight = 9 * 0.6; // mirrors labelHalfHeight(TICK_FONT_SIZE)
+            return {
+              text,
+              left: x - halfWidth,
+              right: x + halfWidth,
+              top: y - halfHeight,
+              bottom: y + halfHeight,
+            };
+          });
+          for (let i = 0; i < boxes.length; i++) {
+            for (let j = i + 1; j < boxes.length; j++) {
+              const a = boxes[i]!;
+              const b = boxes[j]!;
+              const collide =
+                a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+              expect(
+                collide,
+                `"${a.text}" overlaps "${b.text}" at r=${roundedR} β=${beta} unit=${angleUnit}`,
+              ).toBe(false);
+            }
           }
         }
       }

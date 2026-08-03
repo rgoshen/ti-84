@@ -4659,3 +4659,37 @@ test's three-way-priority suite.
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 8)
+
+## [2026-08-02 21:00] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer diagram — standard-angle label collisions
+
+**Summary:**
+Fixed a real gap a PR review comment surfaced: standard-angle labels could
+collide with each OTHER, not just with the coordinate label or a counting
+tick. The 15°-apart neighbor pairs (30°/45°, 45°/60°, 120°/135°, 210°/225°,
+etc., and their radian equivalents) overlap once the label ring shrinks with
+`r` while label width stays fixed. Added a pairwise suppression pass over
+`standardItems`, walking `STANDARD_ANGLES`' own ascending order so of two
+colliding neighbours the smaller angle deterministically keeps its label —
+same "text drops, tick line survives" bargain used three times already in
+this file.
+
+**Bug Fix Context:**
+The review comment's specific example ("π/4 vs π/3 at default sizing") does
+not reproduce — verified directly against the real code before touching
+anything, no overlap exists at r = 1. But an exhaustive pairwise sweep across
+r ∈ [0.5, 1.5] × β ∈ [-360, 360] in both units found 1,168 real collision
+instances, all concentrated at r ∈ [0.5, 0.8] among the eight 15°-apart
+neighbor pairs — a gap the Task 4 domain-sweep test didn't catch because it
+only checked viewBox containment, never mutual overlap between labels. Fixed
+with a minimal extension of the existing suppression pattern rather than
+repositioning, consistent with the file's established approach. Added a
+concrete reproducer (r = 0.5, 45°/60°) plus a second domain-sweep test
+proving no two visible standard labels overlap anywhere in the swept domain.
+
+**References:**
+- PR: #30
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md

@@ -256,6 +256,25 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     return { angle, label, text, box, suppressed };
   });
 
+  // Neighbours 15° apart (e.g. 30°/45°, 300°/315°) sit close enough that at
+  // small r their labels can collide with EACH OTHER, not just with the
+  // coordinate label — the ring's label radius shrinks with r while label
+  // width doesn't. Same rule as everywhere else in this priority chain: only
+  // text is ever dropped, never the tick line. Walking in STANDARD_ANGLES'
+  // own ascending order makes the outcome deterministic — of two colliding
+  // neighbours, the smaller angle keeps its label.
+  for (let i = 0; i < standardItems.length; i++) {
+    const item = standardItems[i]!;
+    if (item.suppressed) continue;
+    for (let j = 0; j < i; j++) {
+      const earlier = standardItems[j]!;
+      if (!earlier.suppressed && boxesOverlap(item.box, earlier.box)) {
+        item.suppressed = true;
+        break;
+      }
+    }
+  }
+
   const standardMarkup = standardItems
     .map((item) => {
       const inner = polarToCartesian(c, c, r * unit, item.angle);
