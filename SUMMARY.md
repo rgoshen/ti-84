@@ -4602,3 +4602,24 @@ legend, snapshot) is a separate commit — this one is verified by
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 5)
+
+## [2026-08-02 20:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export wiring
+
+**Summary:**
+Both new settings now flow into the PNG/PDF export: a `Circle labels` fact in
+the `Circle` section, a conditional legend entry while standard angles are
+shown, and both values passed into the exported diagram's
+`buildAngleDiagramSvg` call so the artifact matches the screen.
+
+**Rationale:**
+Follows the same snapshot-capture pattern `snapshotWave` already established,
+so the export can never observe a value that changed mid-render. Verified the
+existing `angle-export.spec.ts` suite (5/5) is unaffected at the defaults.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 6)

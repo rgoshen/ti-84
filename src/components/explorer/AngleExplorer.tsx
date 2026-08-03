@@ -235,6 +235,8 @@ export default function AngleExplorer(): React.JSX.Element {
     const snapshotR = r;
     const snapshotBeta = beta;
     const snapshotWave = waveFn;
+    const snapshotAngleUnit = angleUnit;
+    const snapshotStandardAngles = standardAngles;
     const lightColors = explorerColors(false);
     const whole = Math.round(snapshotTheta);
     const integer = isIntegerDegrees(snapshotTheta);
@@ -257,6 +259,14 @@ export default function AngleExplorer(): React.JSX.Element {
             color: lightColors.curve,
           },
           { label: 'Angle measure', color: lightColors.arrow },
+          ...(snapshotStandardAngles
+            ? [
+                {
+                  label: 'Standard angles — multiples of 30° and 45°',
+                  color: lightColors.axis,
+                },
+              ]
+            : []),
           ...(snapshotWave
             ? [
                 {
@@ -283,6 +293,10 @@ export default function AngleExplorer(): React.JSX.Element {
             facts: [
               { label: 'Radius', value: String(snapshotR) },
               { label: 'Position β', value: `${snapshotBeta}°` },
+              {
+                label: 'Circle labels',
+                value: snapshotAngleUnit === 'deg' ? 'Degrees' : 'Radians',
+              },
               { label: 'Arc length s = r|θ|', value: arcValue },
               { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
@@ -340,6 +354,8 @@ export default function AngleExplorer(): React.JSX.Element {
               tickText: '#334155',
               coordinateLabel: snapshotCoords.labelText,
               projection: snapshotWave,
+              angleUnit: snapshotAngleUnit,
+              showStandardAngles: snapshotStandardAngles,
             },
           )}</svg>`;
 
