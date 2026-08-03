@@ -1,3 +1,17 @@
+## [2026-08-02 21:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinate readout
+
+**Summary:**
+`CoordinateReadout` gains `tanLatex`/`tanText`, showing `tan θ = y/x = (r sin θ)/(r cos θ) = …` with no `r ×` prefix — the cancellation itself is the content.
+
+**Rationale:**
+Unlike the x/y `equation()` helper, `tanEquation()` never substitutes r on both sides of the fraction, because r cancels out of the ratio. The literal `(r sin θ)/(r cos θ)` step is what makes the cancellation visible; the value that follows never depends on r. Keeping the prefix-free form clarifies this key insight.
+
+**References:**
+- Task 5 of 10-task plan: `tan θ` option
+
 ## [2026-08-02 21:27] Commit Summary
 
 **Change Type:** Feature
