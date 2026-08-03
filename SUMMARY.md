@@ -4623,3 +4623,17 @@ existing `angle-export.spec.ts` suite (5/5) is unaffected at the defaults.
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 6)
+
+## [2026-08-02 20:10] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer page copy
+
+**Summary:**
+Added a sentence to `angles.astro` explaining the new Circle labels selector
+and Show standard angles toggle, including the degrees-mode quarter-turn
+counting ticks — a new idea with no precedent elsewhere in the explorer.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 7)
