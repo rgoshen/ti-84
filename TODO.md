@@ -1071,3 +1071,7 @@ wave-projection design.
 
 **References:**
 - Spec: `docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md`
+- Plan: `docs/superpowers/plans/2026-08-02-angle-wave-tangent.md`
+
+**Status:** Implemented on `feature/angle-wave-tangent`, all 9 plan tasks complete and reviewed;
+final whole-branch review fixes pending before merge.

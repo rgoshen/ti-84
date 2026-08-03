@@ -1,87 +1,3 @@
-## [2026-08-02 23:30] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — export e2e
-
-**Summary:**
-Added export coverage confirming the tan wave section, its `tan θ = y/x` function label, and the literal `undefined` text at 90° all reach the exported PNG artifact.
-
-**Rationale:**
-The export path is a separate code path (`renderGraph` builds its own detached-DOM markup) from the live figure, so it needs its own regression check rather than inheriting Task 8's coverage.
-
-**References:**
-- Task 9 of 10-task plan: e2e export coverage for `tan θ` option
-
-## [2026-08-02 23:15] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — e2e
-
-**Summary:**
-Added browser coverage for tan: keyboard reachability, the four asymptote lines, the radius slider's non-effect (the r-cancellation risk flagged in the design spec, now a permanent regression check), the undefined state at 90°, multi-subpath breaking, and the tangent segment.
-
-**Rationale:**
-This converts a design-doc "needs a browser check" risk into an automated test, ensuring the tan θ feature's core behaviors never regress as the codebase evolves.
-
-**References:**
-- Task 8 of 10-task plan: e2e coverage for `tan θ` option
-
-## [2026-08-02 21:50] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer
-
-**Summary:**
-Wired `tan θ` into `AngleExplorer.tsx` — fourth radio option, `coordHtml.tan`, export legend/facts, and the shared spoken-name map — and updated the page copy. This is the change that fixes the `waveValue` nullability typecheck error introduced in Task 1.
-
-**Rationale:**
-Every prior task (1-6) was additive and type-safe in isolation — each added a new nullable-aware primitive or SVG branch without a live call site consuming it. This task is the integration point: it is the first place `waveValue`'s `number | null` return actually reaches a caller that previously assumed `number`, which is why `npx astro check` goes from one pending error to zero here rather than at any earlier task.
-
-**References:**
-- Task 7 of 10-task plan: `tan θ` option
-
-## [2026-08-02 21:40] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — diagram
-
-**Summary:**
-`projection: 'tan'` now draws a tangent segment anchored on the unit circle, geometrically clamped to the viewBox's inscribed circle so it never overflows near an asymptote.
-
-**Rationale:**
-The segment connects T (on the unit circle at angle β, independent of r) to E (along the terminal ray at signed distance sec(θ)·unit, also independent of r), so its length is exactly |tan θ|·unit for any r — the cancellation geometrically in the figure. A magnitude-based clamp (bounded by distance-from-origin) ensures the segment stays inside the viewBox uniformly in all directions near an asymptote, unlike per-axis clamping which would treat x and y separately and create directional artifacts.
-
-**References:**
-- Task 6 of 10-task plan: `tan θ` option
-
-## [2026-08-02 21:33] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — coordinate readout
-
-**Summary:**
-`CoordinateReadout` gains `tanLatex`/`tanText`, showing `tan θ = y/x = (r sin θ)/(r cos θ) = …` with no `r ×` prefix — the cancellation itself is the content.
-
-**Rationale:**
-Unlike the x/y `equation()` helper, `tanEquation()` never substitutes r on both sides of the fraction, because r cancels out of the ratio. The literal `(r sin θ)/(r cos θ)` step is what makes the cancellation visible; the value that follows never depends on r. Keeping the prefix-free form clarifies this key insight.
-
-**References:**
-- Task 5 of 10-task plan: `tan θ` option
-
-## [2026-08-02 21:27] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — unit circle
-
-**Summary:**
-Widened `ExactValue.denominator` to admit `√3/3` and added `exactTangent`, a five-entry-plus-quadrant-rule lookup mirroring `exactCoordinates`.
-
-**Rationale:**
-The tangent function requires values at special angles, and `tan(30°) = √3/3` requires a denominator of 3. A formatter test proves the widening needed zero formatter changes, and an `exactCoordinates` sweep proves the widening is invisible to the existing x/y path, so the change is non-invasive.
-
-**References:**
-- Task 4 of 10-task plan: `tan θ` option
-
 ## [2026-06-29 17:00] Commit Summary
 
 **Change Type:** Feature
@@ -181,22 +97,6 @@ A shared nav turns the single-page site into a small themed multi-page experienc
 
 **References:**
 - index.html, graphing.html
-
-## [2026-08-02 21:07] Commit Summary
-
-**Change Type:** Feature
-**Scope:** Angle Explorer — wave strip
-
-**Summary:**
-Added `tanPath`, the exact-break-point subpath builder for tan's curve, so no subpath ever crosses an asymptote and every vertex stays inside the viewBox. The function computes the visible sub-intervals (where |tan θ| ≤ TAN_MAX) within each 180°-period branch, intersects them with [0, θ], and traces each sub-interval as its own independent `M …` subpath with 1° sampling (tighter than sin/cos's 2° because the curve steepens near asymptotes). Break points are computed exactly as the angle where |tan θ| = TAN_MAX, not interpolated between samples — tan's sharp curvature makes this necessary for precision.
-
-**Rationale:**
-Unlike sin/cos, which form a single continuous curve within [-2π, 2π], tan is periodic every 180° with four vertical asymptotes; it is unbounded and cannot be traced as one polyline without spilling outside the viewBox and crossing asymptotes. The interval-clipping algorithm isolates each branch's visible portion, and the final vertex snaps to θ itself via a single `Math.min(hi, center + edge)` clamp that serves as both the asymptote-edge rule and the θ-snap rule — no separate cases needed.
-
-**References:**
-- src/scripts/explorer/angle-wave.ts: tanPath (lines 131–185), wavePath branch (line 199)
-- src/scripts/explorer/angle-wave.test.ts: "wavePath — tan" test block (lines 191–276)
-- (Task 2)
 
 ## [2026-06-29 18:30] Commit Summary
 
@@ -4844,6 +4744,22 @@ result, confirming the compiler is doing that job.
 - Spec: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-wave-tangent.md (Task 1)
 
+## [2026-08-02 21:07] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave strip
+
+**Summary:**
+Added `tanPath`, the exact-break-point subpath builder for tan's curve, so no subpath ever crosses an asymptote and every vertex stays inside the viewBox. The function computes the visible sub-intervals (where |tan θ| ≤ TAN_MAX) within each 180°-period branch, intersects them with [0, θ], and traces each sub-interval as its own independent `M …` subpath with 1° sampling (tighter than sin/cos's 2° because the curve steepens near asymptotes). Break points are computed exactly as the angle where |tan θ| = TAN_MAX, not interpolated between samples — tan's sharp curvature makes this necessary for precision.
+
+**Rationale:**
+Unlike sin/cos, which form a single continuous curve within [-2π, 2π], tan is periodic every 180° with four vertical asymptotes; it is unbounded and cannot be traced as one polyline without spilling outside the viewBox and crossing asymptotes. The interval-clipping algorithm isolates each branch's visible portion, and the final vertex snaps to θ itself via a single `Math.min(hi, center + edge)` clamp that serves as both the asymptote-edge rule and the θ-snap rule — no separate cases needed.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts: tanPath (lines 131–185), wavePath branch (line 199)
+- src/scripts/explorer/angle-wave.test.ts: "wavePath — tan" test block (lines 191–276)
+- (Task 2)
+
 ## [2026-08-02 21:20] Commit Summary
 
 **Change Type:** Feature
@@ -4856,6 +4772,91 @@ buildWaveSvg now rescales to each function's own domain, draws tan's four asympt
 A marker pinned to the box edge would visually assert a value that was clipped away — suppressing it on real-but-off-screen tangent values maintains the same honesty as suppressing it at the literal null case. The rescaling per function lets tan occupy its own ±4 unit domain (versus sin/cos's ±1.5) so only the final ~14° before each asymptote falls off-screen, not a third of every quarter-sweep.
 
 **References:**
-- Task 3: docs/superpowers/sdd/2026-08-02-angle-wave-tangent/task-3-brief.md
-- Tests: src/scripts/explorer/angle-wave.test.ts (57 passing, 6 new)
+- Task 3: .superpowers/sdd/2026-08-02-angle-wave-tangent/task-3-brief.md
+- Tests: src/scripts/explorer/angle-wave.test.ts (57 passing as of this task, 6 new)
 - Implementation: src/scripts/explorer/angle-wave.ts (waveSpoken, buildWaveSvg, wavePath type fix)
+
+## [2026-08-02 21:27] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit circle
+
+**Summary:**
+Widened `ExactValue.denominator` to admit `√3/3` and added `exactTangent`, a five-entry-plus-quadrant-rule lookup mirroring `exactCoordinates`.
+
+**Rationale:**
+The tangent function requires values at special angles, and `tan(30°) = √3/3` requires a denominator of 3. A formatter test proves the widening needed zero formatter changes, and an `exactCoordinates` sweep proves the widening is invisible to the existing x/y path, so the change is non-invasive.
+
+**References:**
+- Task 4 of 10-task plan: `tan θ` option
+
+## [2026-08-02 21:33] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — coordinate readout
+
+**Summary:**
+`CoordinateReadout` gains `tanLatex`/`tanText`, showing `tan θ = y/x = (r sin θ)/(r cos θ) = …` with no `r ×` prefix — the cancellation itself is the content.
+
+**Rationale:**
+Unlike the x/y `equation()` helper, `tanEquation()` never substitutes r on both sides of the fraction, because r cancels out of the ratio. The literal `(r sin θ)/(r cos θ)` step is what makes the cancellation visible; the value that follows never depends on r. Keeping the prefix-free form clarifies this key insight.
+
+**References:**
+- Task 5 of 10-task plan: `tan θ` option
+
+## [2026-08-02 21:40] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — diagram
+
+**Summary:**
+`projection: 'tan'` now draws a tangent segment anchored on the unit circle, geometrically clamped to the viewBox's inscribed circle so it never overflows near an asymptote.
+
+**Rationale:**
+The segment connects T (on the unit circle at angle β, independent of r) to E (along the terminal ray at signed distance sec(θ)·unit, also independent of r), so its length is exactly |tan θ|·unit for any r — the cancellation geometrically in the figure. A magnitude-based clamp (bounded by distance-from-origin) ensures the segment stays inside the viewBox uniformly in all directions near an asymptote, unlike per-axis clamping which would treat x and y separately and create directional artifacts.
+
+**References:**
+- Task 6 of 10-task plan: `tan θ` option
+
+## [2026-08-02 21:50] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer
+
+**Summary:**
+Wired `tan θ` into `AngleExplorer.tsx` — fourth radio option, `coordHtml.tan`, export legend/facts, and the shared spoken-name map — and updated the page copy. This is the change that fixes the `waveValue` nullability typecheck error introduced in Task 1.
+
+**Rationale:**
+Every prior task (1-6) was additive and type-safe in isolation — each added a new nullable-aware primitive or SVG branch without a live call site consuming it. This task is the integration point: it is the first place `waveValue`'s `number | null` return actually reaches a caller that previously assumed `number`, which is why `npx astro check` goes from one pending error to zero here rather than at any earlier task.
+
+**References:**
+- Task 7 of 10-task plan: `tan θ` option
+
+## [2026-08-02 23:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — e2e
+
+**Summary:**
+Added browser coverage for tan: keyboard reachability, the four asymptote lines, the radius slider's non-effect (the r-cancellation risk flagged in the design spec, now a permanent regression check), the undefined state at 90°, multi-subpath breaking, and the tangent segment.
+
+**Rationale:**
+This converts a design-doc "needs a browser check" risk into an automated test, ensuring the tan θ feature's core behaviors never regress as the codebase evolves.
+
+**References:**
+- Task 8 of 10-task plan: e2e coverage for `tan θ` option
+
+## [2026-08-02 23:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export e2e
+
+**Summary:**
+Added export coverage confirming the tan wave section, its `tan θ = y/x` function label, and the literal `undefined` text at 90° all reach the exported PNG artifact.
+
+**Rationale:**
+The export path is a separate code path (`renderGraph` builds its own detached-DOM markup) from the live figure, so it needs its own regression check rather than inheriting Task 8's coverage.
+
+**References:**
+- Task 9 of 10-task plan: e2e export coverage for `tan θ` option
+
