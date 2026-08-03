@@ -4523,3 +4523,22 @@ means this feature introduces no new arithmetic.
 **References:**
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+
+## [2026-08-02 18:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-aware counting ticks
+
+**Summary:**
+Added `countingTicks(thetaDeg, unit)` to `angle-render.ts`. Radians mode
+delegates to the existing `tickAngles` unchanged; degrees mode counts quarter
+turns toward θ (`90°`, `180°`, `270°`), with the same always-at-least-one
+floor that keeps the radian scale from vanishing at small θ.
+
+**Rationale:**
+`tickAngles` keeps its signature and its own tests untouched — `countingTicks`
+wraps it rather than replacing it, so this is purely additive.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
