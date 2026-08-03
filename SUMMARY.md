@@ -4693,3 +4693,30 @@ proving no two visible standard labels overlap anywhere in the swept domain.
 - PR: #30
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md
+
+## [2026-08-02 20:20] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — wave strip
+
+**Summary:**
+Added the approved design spec for adding `tan θ` to the Angle Explorer's `Wave` selector,
+plus the matching TODO entry. No code changed.
+
+**Rationale:**
+Tangent was explicitly out of scope in the 2026-07-29 wave-projection design, so the three
+reasons it was excluded are the three decisions this spec had to make: a ±4 y-domain for tan
+alone (±1.5 hides the curve for 34° of each quarter-sweep), exact break points at the
+asymptotes so no vertical-stripe sampling artifact is drawn, and a tangent segment anchored on
+the unit circle at x = 1 so its length stays exactly `tan θ` and the leg-equals-plotted-height
+invariant survives as a unit test. The caption shows the r-cancellation explicitly rather than
+leaving the inert radius slider unexplained.
+
+Alternatives rejected: `r·tan θ` (keeps the radius slider working but is not what tan means),
+sharing the ±1.5 domain (a 34° dead zone), clamping at the domain edge (asserts a horizontal
+asymptote that does not exist), and a separate exact-value type for tangent (would duplicate
+three formatters, which is how notation drifts).
+
+**References:**
+- TODO.md: 2026-08-02 Angle Explorer Tangent Wave
+- Spec: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
