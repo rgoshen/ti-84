@@ -1,3 +1,17 @@
+## [2026-08-02 21:27] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit circle
+
+**Summary:**
+Widened `ExactValue.denominator` to admit `√3/3` and added `exactTangent`, a five-entry-plus-quadrant-rule lookup mirroring `exactCoordinates`.
+
+**Rationale:**
+The tangent function requires values at special angles, and `tan(30°) = √3/3` requires a denominator of 3. A formatter test proves the widening needed zero formatter changes, and an `exactCoordinates` sweep proves the widening is invisible to the existing x/y path, so the change is non-invasive.
+
+**References:**
+- Task 4 of 10-task plan: `tan θ` option
+
 ## [2026-06-29 17:00] Commit Summary
 
 **Change Type:** Feature

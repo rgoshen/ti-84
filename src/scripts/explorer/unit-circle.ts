@@ -24,7 +24,7 @@ import { isIntegerDegrees } from './angle';
 export interface ExactValue {
   sign: -1 | 0 | 1;
   radicand: 1 | 2 | 3;
-  denominator: 1 | 2;
+  denominator: 1 | 2 | 3;
 }
 
 export interface ExactPoint {
@@ -37,6 +37,8 @@ const ONE: ExactValue = { sign: 1, radicand: 1, denominator: 1 };
 const HALF: ExactValue = { sign: 1, radicand: 1, denominator: 2 };
 const ROOT2_OVER_2: ExactValue = { sign: 1, radicand: 2, denominator: 2 };
 const ROOT3_OVER_2: ExactValue = { sign: 1, radicand: 3, denominator: 2 };
+const ROOT3: ExactValue = { sign: 1, radicand: 3, denominator: 1 };
+const ROOT3_OVER_3: ExactValue = { sign: 1, radicand: 3, denominator: 3 };
 
 /**
  * (cos, sin) at the first-quadrant reference angles. A Map rather than an object
@@ -49,6 +51,20 @@ const FIRST_QUADRANT = new Map<number, ExactPoint>([
   [45, { x: ROOT2_OVER_2, y: ROOT2_OVER_2 }],
   [60, { x: HALF, y: ROOT3_OVER_2 }],
   [90, { x: ZERO, y: ONE }],
+]);
+
+/**
+ * tan at the first-quadrant reference angles. Five entries, the same rule
+ * `exactCoordinates` already teaches: everything else is a reference angle
+ * plus a quadrant sign. `'undefined'` at 90° propagates through unchanged —
+ * there is no sign to negate at an asymptote.
+ */
+const FIRST_QUADRANT_TAN = new Map<number, ExactValue | 'undefined'>([
+  [0, ZERO],
+  [30, ROOT3_OVER_3],
+  [45, ONE],
+  [60, ROOT3],
+  [90, 'undefined'],
 ]);
 
 /** Negate a magnitude. Zero is returned untouched so `-0` never renders. */
@@ -104,6 +120,41 @@ export function exactCoordinates(deg: number): ExactPoint | null {
     x: negX ? negate(base.x) : base.x,
     y: negY ? negate(base.y) : base.y,
   };
+}
+
+/**
+ * The exact tan θ for θ, `'undefined'` at the asymptotes, or `null` when no
+ * exact form exists — the same three-state split `exactCoordinates` uses for
+ * its two states, with `'undefined'` added because tan (unlike a coordinate)
+ * genuinely has no value at some chart angles.
+ *
+ * Positive in Q1/Q3 (where sin and cos share a sign), negative in Q2/Q4
+ * (where they differ) — tan's own quadrant rule, distinct from x/y's.
+ */
+export function exactTangent(deg: number): ExactValue | 'undefined' | null {
+  if (!isIntegerDegrees(deg)) return null;
+  const d = normalizeDegrees(Math.round(deg));
+
+  let reference: number;
+  let flip: boolean;
+  if (d <= 90) {
+    reference = d;
+    flip = false;
+  } else if (d <= 180) {
+    reference = 180 - d;
+    flip = true;
+  } else if (d <= 270) {
+    reference = d - 180;
+    flip = false;
+  } else {
+    reference = 360 - d;
+    flip = true;
+  }
+
+  const base = FIRST_QUADRANT_TAN.get(reference);
+  if (base === undefined) return null;
+  if (base === 'undefined') return base;
+  return flip ? negate(base) : base;
 }
 
 /** KaTeX source: `0`, `1`, `-1`, `\frac{1}{2}`, `-\frac{\sqrt{3}}{2}`. */
