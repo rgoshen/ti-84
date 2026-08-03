@@ -4637,3 +4637,25 @@ counting ticks — a new idea with no precedent elsewhere in the explorer.
 **References:**
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 7)
+
+## [2026-08-02 20:25] Commit Summary
+
+**Change Type:** Test
+**Scope:** Angle Explorer e2e
+
+**Summary:**
+Added Playwright coverage for the Circle labels selector and Show standard
+angles toggle: defaults, mark count, unit-correct label text in both units,
+degrees-mode quarter-turn counting ticks, and Reset restoring both controls.
+Full file: 36/36 passing, including every pre-existing test unmodified.
+
+**Rationale:**
+`260°` was chosen for the quarter-turn-ticks test (over the more obvious
+`200°`) specifically to stay clear of the terminal point's always-present
+coordinate label, mirroring the same reasoning already used in the unit
+test's three-way-priority suite.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 8)
