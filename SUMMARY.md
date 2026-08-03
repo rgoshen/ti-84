@@ -4720,3 +4720,26 @@ three formatters, which is how notation drifts).
 **References:**
 - TODO.md: 2026-08-02 Angle Explorer Tangent Wave
 - Spec: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
+
+## [2026-08-02 20:59] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave strip
+
+**Summary:**
+Widened `WaveFn` to include `'tan'`, added a per-function y-domain
+(`waveDomain`), a `null`-at-the-asymptotes `waveValue`, and
+`waveAsymptoteRadians`. `waveValue('tan', ...)` deliberately ignores `r` — the
+radius cancels out of the ratio — which is now an assertion, not a claim.
+
+**Rationale:**
+tan is unbounded, so sharing sin/cos's ±1.5 y-domain would hide a third of
+every quarter-sweep; ±4 (atan(4) ≈ 76°) hides only the last 14°. `null` rather
+than `NaN` forces every call site to handle the asymptote explicitly — the
+existing `AngleExplorer.tsx` export call site already fails to typecheck as a
+result, confirming the compiler is doing that job.
+
+**References:**
+- TODO.md: 2026-08-02 Angle Explorer Tangent Wave
+- Spec: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-wave-tangent.md (Task 1)

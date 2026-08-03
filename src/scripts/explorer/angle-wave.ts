@@ -15,7 +15,7 @@ import type { ExplorerColors } from '@/scripts/graphing/theme';
 import { degreesToRadians, formatPiText, reduceFraction } from './angle';
 
 /** Which coordinate of the terminal point the strip plots. */
-export type WaveFn = 'sin' | 'cos';
+export type WaveFn = 'sin' | 'cos' | 'tan';
 
 /** The selector's full state. `none` draws no strip at all. */
 export type WaveMode = 'none' | WaveFn;
@@ -32,6 +32,16 @@ export const WAVE_HEIGHT = 176;
  * out the one thing the radius slider exists to show.
  */
 export const AMP_MAX = 1.5;
+/** y-domain half-height for tan, in units. atan(4) ≈ 76°, so only the last 14°
+ *  before each asymptote is off-screen — atan(1.5) ≈ 56° would hide 34°. */
+export const TAN_MAX = 4;
+
+/** Per-function y-domain half-height. sin/cos share AMP_MAX; tan gets its own,
+ *  wider domain because it is unbounded and AMP_MAX would hide a third of
+ *  every quarter-sweep. */
+export function waveDomain(fn: WaveFn): number {
+  return fn === 'tan' ? TAN_MAX : AMP_MAX;
+}
 
 /** Padding inside the viewBox. `bottom` reserves both staggered label baselines. */
 const PAD = { left: 8, right: 8, top: 12, bottom: 34 } as const;
@@ -55,6 +65,7 @@ export interface WaveScales {
 export function waveScales(
   width: number = WAVE_WIDTH,
   height: number = WAVE_HEIGHT,
+  domain: number = AMP_MAX,
 ): WaveScales {
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
@@ -62,7 +73,7 @@ export function waveScales(
     xFor: (radians) => PAD.left + ((radians + X_SPAN / 2) / X_SPAN) * plotW,
     // SVG y grows downward, so the domain is inverted here — the same flip
     // `angle-render.ts` applies by negating its sine.
-    yFor: (value) => PAD.top + ((AMP_MAX - value) / (2 * AMP_MAX)) * plotH,
+    yFor: (value) => PAD.top + ((domain - value) / (2 * domain)) * plotH,
   };
 }
 
@@ -85,10 +96,24 @@ export function waveTickLabel(k: number): string {
   return formatPiText(reduceFraction(k, 4));
 }
 
-/** The plotted value: the terminal point's y (sin) or x (cos), scaled by r. */
-export function waveValue(fn: WaveFn, theta: number, r: number): number {
+/** The plotted value: the terminal point's y (sin), x (cos), or ratio (tan),
+ *  scaled by r for sin/cos. tan is NOT scaled by r — tan θ = (r sin θ)/(r cos θ)
+ *  and r cancels, so the radius slider cannot move this curve. `null` marks
+ *  the asymptotes, where tan is undefined. */
+export function waveValue(fn: WaveFn, theta: number, r: number): number | null {
   const rad = degreesToRadians(theta);
-  return fn === 'sin' ? r * Math.sin(rad) : r * Math.cos(rad);
+  if (fn === 'sin') return r * Math.sin(rad);
+  if (fn === 'cos') return r * Math.cos(rad);
+  // θ arrives from a degree slider (or a parsed, already-rounded field), so a
+  // tolerance-checked degree comparison is exact and honest here — unlike
+  // testing Math.tan's magnitude, which never actually reaches Infinity.
+  if (Math.abs((Math.abs(theta) % 180) - 90) < 1e-6) return null;
+  return Math.tan(rad);
+}
+
+/** The four vertical asymptotes tan is undefined at, within [-2π, 2π]. */
+export function waveAsymptoteRadians(): number[] {
+  return [-3, -1, 1, 3].map((k) => (k * Math.PI) / 2);
 }
 
 /** Below this, a sweep is nothing rather than a degenerate path. Mirrors `arcPath`. */

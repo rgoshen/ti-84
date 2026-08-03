@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 
 import {
   AMP_MAX,
+  TAN_MAX,
   WAVE_HEIGHT,
   WAVE_WIDTH,
   buildWaveSvg,
+  waveAsymptoteRadians,
+  waveDomain,
   waveScales,
   waveTickLabel,
   waveTickRadians,
@@ -283,6 +286,71 @@ describe('buildWaveSvg', () => {
           expect(svg).not.toContain('undefined');
         }
       }
+    }
+  });
+});
+
+describe('waveDomain', () => {
+  it('is ±1.5 for sin and cos, ±4 for tan', () => {
+    expect(waveDomain('sin')).toBe(AMP_MAX);
+    expect(waveDomain('cos')).toBe(AMP_MAX);
+    expect(waveDomain('tan')).toBe(TAN_MAX);
+  });
+});
+
+describe('waveScales — custom domain', () => {
+  it('rescales the y-axis to the given domain, leaving existing calls untouched', () => {
+    const narrow = waveScales(WAVE_WIDTH, WAVE_HEIGHT); // default domain, AMP_MAX
+    const wide = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    expect(narrow.yFor(0)).toBeCloseTo(wide.yFor(0), 6); // zero stays at the same pixel
+    expect(wide.yFor(TAN_MAX)).toBeCloseTo(narrow.yFor(AMP_MAX), 6); // both land on the top edge
+    expect(wide.yFor(1)).toBeGreaterThan(narrow.yFor(1)); // same value, smaller fraction of a wider box
+  });
+});
+
+describe('waveValue — tan', () => {
+  it('is independent of r — the radius cancels out of the ratio', () => {
+    for (const theta of [10, 30, 45, 60, 80, -50, 200]) {
+      const a = waveValue('tan', theta, 0.5);
+      const b = waveValue('tan', theta, 1.5);
+      expect(a).not.toBeNull();
+      expect(a).toBeCloseTo(b!, 12);
+    }
+  });
+
+  it('matches Math.tan away from the asymptotes', () => {
+    expect(waveValue('tan', 45, 1)).toBeCloseTo(1, 10);
+    expect(waveValue('tan', 0, 1)).toBeCloseTo(0, 10);
+    expect(waveValue('tan', 30, 1)).toBeCloseTo(Math.tan(Math.PI / 6), 10);
+  });
+
+  it('is null at every odd multiple of 90°, positive or negative', () => {
+    for (const theta of [90, -90, 270, -270]) {
+      expect(waveValue('tan', theta, 1)).toBeNull();
+    }
+  });
+
+  it('is not null anywhere else, including close neighbours of an asymptote', () => {
+    expect(waveValue('tan', 89, 1)).not.toBeNull();
+    expect(waveValue('tan', 91, 1)).not.toBeNull();
+    expect(waveValue('tan', 180, 1)).not.toBeNull();
+  });
+});
+
+describe('waveAsymptoteRadians', () => {
+  it('returns the four odd π/2 multiples in ascending order', () => {
+    expect(waveAsymptoteRadians()).toEqual([
+      -3 * (Math.PI / 2),
+      -1 * (Math.PI / 2),
+      1 * (Math.PI / 2),
+      3 * (Math.PI / 2),
+    ]);
+  });
+
+  it('lands exactly on members of waveTickRadians — the asymptotes are real gridlines', () => {
+    const tickRadians = waveTickRadians().map((t) => t.radians);
+    for (const asymptote of waveAsymptoteRadians()) {
+      expect(tickRadians.some((r) => Math.abs(r - asymptote) < 1e-12)).toBe(true);
     }
   });
 });
