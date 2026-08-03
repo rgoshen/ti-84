@@ -188,6 +188,90 @@ describe('wavePath', () => {
   });
 });
 
+describe('wavePath — tan', () => {
+  // tan needs its own domain-matched scale; the default waveScales() is
+  // still ±1.5 and would clip every tan sample well before the real edge.
+  const tanScale = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+
+  it('draws one subpath for a sweep that never reaches the visible edge', () => {
+    const path = wavePath('tan', 45, 1, tanScale);
+    expect((path.match(/M/g) ?? []).length).toBe(1);
+  });
+
+  it('breaks into multiple subpaths once the sweep crosses an asymptote', () => {
+    const path = wavePath('tan', 120, 1, tanScale);
+    expect((path.match(/M/g) ?? []).length).toBeGreaterThan(1);
+  });
+
+  it('never lets one subpath span an asymptote', () => {
+    // Every asymptote (odd multiple of 90°) must fall strictly BETWEEN two
+    // subpaths, never inside the degree range one subpath covers.
+    for (const path of [
+      wavePath('tan', 180, 1, tanScale),
+      wavePath('tan', 400, 1, tanScale),
+      wavePath('tan', -260, 1, tanScale),
+    ]) {
+      for (const subpath of path.split(' M ').map((s, i) => (i === 0 ? s : `M ${s}`))) {
+        const xs = [...subpath.matchAll(/[ML] ([-\d.e]+) /g)].map((m) => Number(m[1]));
+        for (const asymptoteRad of waveAsymptoteRadians()) {
+          const asymptoteX = tanScale.xFor(asymptoteRad);
+          const allBefore = xs.every((x) => x < asymptoteX);
+          const allAfter = xs.every((x) => x > asymptoteX);
+          expect(allBefore || allAfter, `subpath straddles an asymptote: ${subpath}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('breaks at the exact angle where |tan θ| = TAN_MAX, not an interpolated guess', () => {
+    const edgeDeg = (Math.atan(TAN_MAX) * 180) / Math.PI;
+    const path = wavePath('tan', 120, 1, tanScale);
+    const firstSubpath = path.split(' M ')[0]!;
+    const lastPoint = [...firstSubpath.matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)].at(-1)!;
+    expect(Number(lastPoint[1])).toBeCloseTo(tanScale.xFor(degreesToRadians(edgeDeg)), 4);
+    expect(Number(lastPoint[2])).toBeCloseTo(tanScale.yFor(TAN_MAX), 4);
+  });
+
+  it('snaps the final vertex to θ exactly when θ is inside the visible domain', () => {
+    const v = [...wavePath('tan', 30, 1, tanScale).matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)].at(-1)!;
+    expect(Number(v[1])).toBeCloseTo(tanScale.xFor(degreesToRadians(30)), 6);
+    expect(Number(v[2])).toBeCloseTo(tanScale.yFor(waveValue('tan', 30, 1)!), 6);
+  });
+
+  it('traces leftward for a negative sweep, mirroring sin/cos', () => {
+    const xs = [...wavePath('tan', -45, 1, tanScale).matchAll(/[ML] ([-\d.e]+) /g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(xs.at(-1)!).toBeLessThan(xs[0]!);
+  });
+
+  it('is independent of r, matching waveValue', () => {
+    expect(wavePath('tan', 45, 0.5, tanScale)).toBe(wavePath('tan', 45, 1.5, tanScale));
+  });
+
+  it('keeps every vertex inside the viewBox across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 13) {
+      if (Math.abs(theta) < 1e-9) continue;
+      for (const v of [...wavePath('tan', theta, 1, tanScale).matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)]) {
+        const x = Number(v[1]);
+        const y = Number(v[2]);
+        expect(x, `x out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+        expect(x, `x out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_WIDTH);
+        expect(y, `y out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+        expect(y, `y out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_HEIGHT);
+      }
+    }
+  });
+
+  it('emits no NaN or undefined across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 9) {
+      const path = wavePath('tan', theta, 1, tanScale);
+      expect(path).not.toContain('NaN');
+      expect(path).not.toContain('undefined');
+    }
+  });
+});
+
 describe('waveSpoken', () => {
   it('names the function and the swept range for the live region', () => {
     expect(waveSpoken('sin', 135, 1)).toBe(

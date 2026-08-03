@@ -122,6 +122,70 @@ const ZERO_DEG = 1e-9;
 /** Sampling interval along θ, in degrees. 360° yields 181 vertices. */
 const STEP_DEG = 2;
 
+/** Sampling interval for tan, in degrees. Tighter than sin/cos's 2° because
+ *  the curve steepens sharply near each asymptote, where 2° steps facet visibly. */
+const TAN_STEP_DEG = 1;
+
+/**
+ * The tangent curve traced from 0 to θ, as one or more SVG subpaths.
+ *
+ * tan is periodic every 180° and unbounded within each period, so unlike
+ * sin/cos this cannot be one polyline: it is built from the VISIBLE
+ * sub-intervals — the portion of each 180°-period branch where |tan θ| stays
+ * inside TAN_MAX — intersected with [0, θ]. Each sub-interval becomes its own
+ * `M …` subpath, so no subpath ever crosses an asymptote. Break points are the
+ * exact angle where |tan θ| = TAN_MAX (± k·180°), computed directly rather
+ * than interpolated between samples — tan's curvature near the asymptote makes
+ * a straight chord between 1° samples measurably wrong there.
+ *
+ * The final vertex of the LAST subpath falls out of the same clamp that
+ * produces every other subpath's edge: `Math.min(hi, center + edge)` is θ
+ * itself whenever θ is the binding constraint (θ inside the visible domain),
+ * and the branch's true edge otherwise — so "snap to θ" and "stop at the
+ * domain edge" are the same rule, not two.
+ */
+function tanPath(theta: number, dir: 1 | -1, scales: WaveScales): string {
+  const edgeDeg = (Math.atan(TAN_MAX) * 180) / Math.PI;
+  const lo = Math.min(0, theta);
+  const hi = Math.max(0, theta);
+
+  const intervals: Array<[number, number]> = [];
+  const kMin = Math.floor((lo - edgeDeg) / 180) - 1;
+  const kMax = Math.ceil((hi + edgeDeg) / 180) + 1;
+  for (let k = kMin; k <= kMax; k++) {
+    const center = k * 180;
+    const segLo = Math.max(lo, center - edgeDeg);
+    const segHi = Math.min(hi, center + edgeDeg);
+    if (segHi - segLo > 1e-6) intervals.push([segLo, segHi]);
+  }
+
+  // Intervals are produced in ascending order (k ascending ⇒ centre
+  // ascending), which is the sweep order for a positive θ. A negative θ
+  // sweeps from 0 DOWN to θ, so both the interval order and each interval's
+  // internal sample order must reverse.
+  const ordered = dir === 1 ? intervals : [...intervals].reverse();
+
+  return ordered
+    .map(([a, b]) => {
+      const n = Math.ceil((b - a) / TAN_STEP_DEG);
+      const points: string[] = [];
+      for (let i = 0; i <= n; i++) {
+        const deg =
+          dir === 1
+            ? i === n
+              ? b
+              : a + i * TAN_STEP_DEG
+            : i === n
+              ? a
+              : b - i * TAN_STEP_DEG;
+        const rad = degreesToRadians(deg);
+        points.push(`${scales.xFor(rad)} ${scales.yFor(Math.tan(rad))}`);
+      }
+      return `M ${points[0]}${points.slice(1).map((p) => ` L ${p}`).join('')}`;
+    })
+    .join(' ');
+}
+
 /**
  * The curve traced from 0 out to θ, as an SVG path.
  *
@@ -144,6 +208,9 @@ export function wavePath(
   if (Math.abs(theta) < ZERO_DEG) return '';
 
   const dir = theta < 0 ? -1 : 1;
+
+  if (fn === 'tan') return tanPath(theta, dir, scales);
+
   const steps = Math.ceil(Math.abs(theta) / STEP_DEG);
   const points: string[] = [];
 

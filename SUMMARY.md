@@ -98,6 +98,22 @@ A shared nav turns the single-page site into a small themed multi-page experienc
 **References:**
 - index.html, graphing.html
 
+## [2026-08-02 21:07] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave strip
+
+**Summary:**
+Added `tanPath`, the exact-break-point subpath builder for tan's curve, so no subpath ever crosses an asymptote and every vertex stays inside the viewBox. The function computes the visible sub-intervals (where |tan θ| ≤ TAN_MAX) within each 180°-period branch, intersects them with [0, θ], and traces each sub-interval as its own independent `M …` subpath with 1° sampling (tighter than sin/cos's 2° because the curve steepens near asymptotes). Break points are computed exactly as the angle where |tan θ| = TAN_MAX, not interpolated between samples — tan's sharp curvature makes this necessary for precision.
+
+**Rationale:**
+Unlike sin/cos, which form a single continuous curve within [-2π, 2π], tan is periodic every 180° with four vertical asymptotes; it is unbounded and cannot be traced as one polyline without spilling outside the viewBox and crossing asymptotes. The interval-clipping algorithm isolates each branch's visible portion, and the final vertex snaps to θ itself via a single `Math.min(hi, center + edge)` clamp that serves as both the asymptote-edge rule and the θ-snap rule — no separate cases needed.
+
+**References:**
+- src/scripts/explorer/angle-wave.ts: tanPath (lines 131–185), wavePath branch (line 199)
+- src/scripts/explorer/angle-wave.test.ts: "wavePath — tan" test block (lines 191–276)
+- (Task 2)
+
 ## [2026-06-29 18:30] Commit Summary
 
 **Change Type:** Fix
