@@ -341,30 +341,27 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     if (opts.projection === undefined) return '';
 
     if (opts.projection === 'tan') {
-      // The tangent segment's own construction: T sits on the UNIT circle
-      // (not r·unit) at angle β — the point where the initial side crosses
-      // it, and the fixed anchor of the tangent line. E sits along the
-      // TERMINAL ray at signed distance sec(θ)·unit from the origin — the
-      // standard "extend the terminal side until it meets the tangent line"
-      // construction. Because T is independent of r and E's angle is
-      // β + θ (also independent of r), segment length is exactly
-      // |tan θ|·unit for any r — the cancellation, geometrically.
+      // T sits on the UNIT circle (not r·unit) at angle β — the point where
+      // the initial side crosses it, and the fixed anchor of the tangent
+      // line. E is placed as an offset from T, perpendicular to OT (angle
+      // β + 90°), scaled by the tangent value itself — the standard
+      // "extend the terminal side until it meets the tangent line"
+      // construction, decomposed so E stays ON the tangent line even when
+      // clamped. Because T is independent of r and the offset direction is
+      // independent of r, segment length is exactly |tan θ|·unit for any
+      // r — the cancellation, geometrically.
       //
-      // Clamped to the viewBox's inscribed circle (radius c − LABEL_MARGIN)
-      // so the segment never overflows near an asymptote, regardless of β —
-      // a circle centred on the origin is bounded the same way in every
-      // direction. No endpoint dot is ever drawn at E, clamped or not, so a
-      // clamped segment never asserts a value it was truncated out of.
-      // T sits on the unit circle at angle β — the fixed anchor of the
-      // tangent line. E is placed as an offset from T, perpendicular to OT
-      // (angle β + 90°), by the tangent value itself: this is what keeps E
-      // ON the tangent line at every angle, clamped or not — unlike clamping
-      // the ray distance from the origin, which pulls E off the line as it
-      // shrinks. The clamp bound is chosen so that when it engages, E's
-      // distance from the origin is still exactly maxDist: by the right
-      // triangle O-T-E (OT = unit, right angle at T), OE² = unit² + TE², so
-      // capping TE at sqrt(maxDist² − unit²) caps OE at exactly maxDist —
-      // the same inscribed-circle safety bound the old clamp provided.
+      // Clamped by capping the tangent VALUE (not the ray distance from the
+      // origin, which would pull E off the tangent line as it shrinks): by
+      // the right triangle O-T-E (OT = unit, right angle at T),
+      // OE² = unit² + TE², so capping TE at sqrt(maxDist² − unit²) caps OE
+      // at exactly maxDist — the viewBox's inscribed-circle radius, bounded
+      // the same way in every direction regardless of β. One consequence:
+      // once the clamp engages near an asymptote, the dashed
+      // tangent-extension below is no longer collinear with the terminal
+      // side — E has left the ray to stay on the tangent line instead.
+      // No endpoint dot is ever drawn at E, clamped or not, so a clamped
+      // segment never asserts a value it was truncated out of.
       const tangentPoint = polarToCartesian(c, c, unit, betaRad);
       const rawTan = Math.tan(thetaRad);
       const maxDist = c - LABEL_MARGIN;

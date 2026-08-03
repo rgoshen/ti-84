@@ -4886,3 +4886,24 @@ Added 4 tests: two for fix 1 (asymptote gridline suppressed for tan, unchanged f
 **References:**
 - Final whole-branch review of the 9-task `tan θ` plan, applied as one fix wave.
 
+
+## [2026-08-02 22:57] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — diagram
+
+**Summary:**
+Consolidated the tangent-segment construction comment, which had accumulated two
+overlapping explanations (the original ray-distance clamp and the fix-wave's
+|tan θ|-clamp) after a prior commit. Also documents the new clamp's one visible
+side effect: the dashed tangent-extension is no longer collinear with the
+terminal side once the clamp engages near an asymptote.
+
+**Rationale:**
+This module's comments are load-bearing — the final whole-branch review flagged
+the leftover block as containing two now-conflicting accounts of the same
+construction. No code changed.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-02-angle-wave-tangent.md
+- Final review: parked finding, angle-diagram.ts comment cleanup
