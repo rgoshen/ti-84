@@ -1,3 +1,17 @@
+## [2026-08-02 23:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export e2e
+
+**Summary:**
+Added export coverage confirming the tan wave section, its `tan θ = y/x` function label, and the literal `undefined` text at 90° all reach the exported PNG artifact.
+
+**Rationale:**
+The export path is a separate code path (`renderGraph` builds its own detached-DOM markup) from the live figure, so it needs its own regression check rather than inheriting Task 8's coverage.
+
+**References:**
+- Task 9 of 10-task plan: e2e export coverage for `tan θ` option
+
 ## [2026-08-02 23:15] Commit Summary
 
 **Change Type:** Feature
