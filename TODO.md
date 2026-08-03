@@ -1118,6 +1118,8 @@ than as a wall.
 - Styling is not encoded in the e2e layer, so a future palette regression is caught by the unit
   suite only. Acceptable — stroke styling is a pure-string-builder concern.
 
+**Status:** ✅ Complete. Two new unit tests added to `angle-wave.test.ts` (wall colour assertion + heavy stroke assertion); asymptote block restyled to use `colors.wall`, `stroke-width="1.5"`, `stroke-dasharray="6 6"`; gridline-suppression comment updated to explain the new legibility rationale. Full suite green (492 Vitest, 0 type errors, all existing tests including pre-existing tan and gridline-suppression tests remain green).
+
 **References:**
 - Plan: `docs/superpowers/plans/2026-08-03-angle-wave-asymptote-legibility.md`
 - Follows: 2026-08-02 Feature: Angle Explorer Tangent Wave (PR #31, v0.11.0)
