@@ -4579,3 +4579,26 @@ today's output exactly; the full 433-test unit suite passes unmodified.
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Tasks 3-4)
+
+## [2026-08-02 19:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — Circle labels + standard-angles controls
+
+**Summary:**
+Added `angleUnit` and `standardAngles` state to `AngleExplorer.tsx`, a new
+bordered control panel (a `RadioGroup` for Degrees/Radians, a `Checkbox` for
+Show standard angles) matching the Wave group's existing markup, and wired
+both into the live figure and `Reset`. The figure's `aria-label` now names the
+active unit and whether the standard ring is shown.
+
+**Rationale:**
+Follows the Wave group's exact `useId()`-namespaced-ids pattern so two
+mounted `AngleExplorer` instances can never collide. Export wiring (facts,
+legend, snapshot) is a separate commit — this one is verified by
+`npx astro check` only; Playwright coverage lands with the e2e task.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 5)
