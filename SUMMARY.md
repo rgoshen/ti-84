@@ -4759,3 +4759,19 @@ result, confirming the compiler is doing that job.
 - TODO.md: 2026-08-02 Angle Explorer Tangent Wave
 - Spec: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
 - Plan: docs/superpowers/plans/2026-08-02-angle-wave-tangent.md (Task 1)
+
+## [2026-08-02 21:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — wave strip
+
+**Summary:**
+buildWaveSvg now rescales to each function's own domain, draws tan's four asymptotes, and suppresses the marker whenever a value is null or off-screen; waveSpoken names tan a curve and speaks undefined at the asymptotes. Implemented via strict TDD: 6 new test cases covering tan's domain-aware rescaling, asymptote line rendering, marker/drop-line suppression at the asymptote itself, and suppression when a real-but-off-screen value (e.g. tan 80° ≈ 5.67 > TAN_MAX) sits outside the visible domain. Also fixed a TypeScript error in wavePath (line 220) via a non-null assertion with a comment explaining why it's safe for sin/cos.
+
+**Rationale:**
+A marker pinned to the box edge would visually assert a value that was clipped away — suppressing it on real-but-off-screen tangent values maintains the same honesty as suppressing it at the literal null case. The rescaling per function lets tan occupy its own ±4 unit domain (versus sin/cos's ±1.5) so only the final ~14° before each asymptote falls off-screen, not a third of every quarter-sweep.
+
+**References:**
+- Task 3: docs/superpowers/sdd/2026-08-02-angle-wave-tangent/task-3-brief.md
+- Tests: src/scripts/explorer/angle-wave.test.ts (57 passing, 6 new)
+- Implementation: src/scripts/explorer/angle-wave.ts (waveSpoken, buildWaveSvg, wavePath type fix)

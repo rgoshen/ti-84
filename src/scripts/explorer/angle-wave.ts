@@ -217,7 +217,9 @@ export function wavePath(
   for (let i = 0; i <= steps; i++) {
     const at = i === steps ? theta : dir * i * STEP_DEG;
     const x = scales.xFor(degreesToRadians(at));
-    const y = scales.yFor(waveValue(fn, at, r));
+    // Safe: the tan branch above already returned via tanPath, so waveValue
+    // can only be 'sin' or 'cos' here, which never return null.
+    const y = scales.yFor(waveValue(fn, at, r)!);
     points.push(`${x} ${y}`);
   }
 
@@ -227,20 +229,23 @@ export function wavePath(
 /** Whole-degree display, matching what the Degrees field shows. */
 const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1e4);
 
+const WAVE_DISPLAY_NAME: Record<WaveFn, string> = { sin: 'Sine', cos: 'Cosine', tan: 'Tangent' };
+const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
+
 /**
  * The strip as prose, for the existing debounced live region. Both KaTeX boxes
  * are `aria-hidden`, so this is the only channel a screen-reader user has.
+ *
+ * tan is called a "curve", not a "wave" — it is periodic but not a sinusoid —
+ * and reports "undefined" at the asymptotes rather than a bogus huge number.
  */
 export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
-  const name = fn === 'sin' ? 'Sine' : 'Cosine';
-  // Spelled out, not the abbreviation: a screen reader pronounces "sin" as the
-  // English word "sin" (as in wrongdoing), not the trig function, and mangles
-  // "cos" too.
-  const spokenName = fn === 'sin' ? 'sine' : 'cosine';
-  const value = Math.round(waveValue(fn, theta, r) * 1e4) / 1e4;
+  const noun = fn === 'tan' ? 'curve' : 'wave';
+  const value = waveValue(fn, theta, r);
+  const valueText = value === null ? 'undefined' : String(Math.round(value * 1e4) / 1e4);
   return (
-    `${name} wave traced from 0 to ${degreeText(theta)} degrees. ` +
-    `${spokenName} of theta is ${value}.`
+    `${WAVE_DISPLAY_NAME[fn]} ${noun} traced from 0 to ${degreeText(theta)} degrees. ` +
+    `${WAVE_SPOKEN_FN_NAME[fn]} of theta is ${valueText}.`
   );
 }
 
@@ -282,10 +287,11 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
   const { fn, theta, r, colors, tickText } = opts;
   const width = opts.width ?? WAVE_WIDTH;
   const height = opts.height ?? WAVE_HEIGHT;
-  const s = waveScales(width, height);
+  const domain = waveDomain(fn);
+  const s = waveScales(width, height, domain);
 
-  const top = s.yFor(AMP_MAX);
-  const bottom = s.yFor(-AMP_MAX);
+  const top = s.yFor(domain);
+  const bottom = s.yFor(-domain);
   const zeroY = s.yFor(0);
 
   // Full-height gridlines rather than short ticks at the axis: the label sits at
@@ -298,8 +304,6 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       const even = k % 2 === 0;
       const labelY =
         height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
-      // The π/2 multiples (even k) hold the primary baseline; odd π/4 multiples
-      // drop to the second, doubling each label's horizontal room.
       return (
         `<g data-role="wave-tick">` +
         `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
@@ -322,6 +326,21 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     )
     .join('');
 
+  // Dashed verticals at tan's four asymptotes, spanning the plot area like the
+  // π/4 gridlines. Absent for sin/cos, which have no asymptote to mark.
+  const asymptotes =
+    fn === 'tan'
+      ? waveAsymptoteRadians()
+          .map((rad) => {
+            const x = s.xFor(rad);
+            return (
+              `<line data-role="wave-asymptote" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" ` +
+              `stroke="${colors.axis}" stroke-width="1" stroke-dasharray="2 4" />`
+            );
+          })
+          .join('')
+      : '';
+
   const path = wavePath(fn, theta, r, s);
   const curve =
     path !== ''
@@ -329,23 +348,32 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
         `stroke-width="2.5" stroke-linejoin="round" />`
       : '';
 
+  // The marker/drop-line pair is suppressed whenever the value is null (the
+  // exact asymptote) OR simply outside the visible domain (a real but
+  // off-screen tan value) — a marker pinned to the box edge would assert a
+  // value that was clipped away. For sin/cos this check never fires: their
+  // values never exceed AMP_MAX, so the marker still draws unconditionally,
+  // matching today's behaviour exactly.
+  const value = waveValue(fn, theta, r);
+  const showMarker = value !== null && Math.abs(value) <= domain;
   const markerX = s.xFor(degreesToRadians(theta));
-  const markerY = s.yFor(waveValue(fn, theta, r));
+  const markerMarkup = showMarker
+    ? `<line data-role="wave-drop" x1="${markerX}" y1="${zeroY}" x2="${markerX}" y2="${s.yFor(value)}" ` +
+      `stroke="${colors.wave}" stroke-width="1" stroke-dasharray="2 2" />` +
+      `<circle data-role="wave-marker" cx="${markerX}" cy="${s.yFor(value)}" r="${MARKER_R}" ` +
+      `fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    : '';
 
   return (
     ticks +
     unitRefs +
+    asymptotes +
     // Zero axis and the x = 0 vertical, matching the polar figure's reference axes.
     `<line x1="${s.xFor(-X_SPAN / 2)}" y1="${zeroY}" x2="${s.xFor(X_SPAN / 2)}" y2="${zeroY}" ` +
     `stroke="${colors.axis}" stroke-width="1" />` +
     `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +
     `stroke="${colors.axis}" stroke-width="1" />` +
     curve +
-    `<line data-role="wave-drop" x1="${markerX}" y1="${zeroY}" x2="${markerX}" y2="${markerY}" ` +
-    `stroke="${colors.wave}" stroke-width="1" stroke-dasharray="2 2" />` +
-    // Drawn unconditionally, unlike the curve: at θ = 0 the marker is the only
-    // thing that distinguishes cos (at r) from sin (at 0).
-    `<circle data-role="wave-marker" cx="${markerX}" cy="${markerY}" r="${MARKER_R}" ` +
-    `fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    markerMarkup
   );
 }

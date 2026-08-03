@@ -69,8 +69,8 @@ describe('waveValue', () => {
 
   it('is odd in θ for sin and even in θ for cos', () => {
     for (const theta of [17, 45, 90, 137, 210, 359]) {
-      expect(waveValue('sin', -theta, 1)).toBeCloseTo(-waveValue('sin', theta, 1), 12);
-      expect(waveValue('cos', -theta, 1)).toBeCloseTo(waveValue('cos', theta, 1), 12);
+      expect(waveValue('sin', -theta, 1)!).toBeCloseTo(-waveValue('sin', theta, 1)!, 12);
+      expect(waveValue('cos', -theta, 1)!).toBeCloseTo(waveValue('cos', theta, 1)!, 12);
     }
   });
 });
@@ -141,7 +141,7 @@ describe('wavePath', () => {
     const v = vertices(wavePath('sin', 137, 1, s));
     expect(v[0]!.x).toBeCloseTo(s.xFor(0), 6);
     expect(v.at(-1)!.x).toBeCloseTo(s.xFor(degreesToRadians(137)), 6);
-    expect(v.at(-1)!.y).toBeCloseTo(s.yFor(waveValue('sin', 137, 1)), 6);
+    expect(v.at(-1)!.y).toBeCloseTo(s.yFor(waveValue('sin', 137, 1)!), 6);
   });
 
   it('grows rightward for positive θ and leftward for negative θ', () => {
@@ -435,6 +435,69 @@ describe('waveAsymptoteRadians', () => {
     const tickRadians = waveTickRadians().map((t) => t.radians);
     for (const asymptote of waveAsymptoteRadians()) {
       expect(tickRadians.some((r) => Math.abs(r - asymptote) < 1e-12)).toBe(true);
+    }
+  });
+});
+
+describe('waveSpoken — tan', () => {
+  it('calls it a curve, not a wave, and reports the value', () => {
+    expect(waveSpoken('tan', 45, 1)).toBe(
+      'Tangent curve traced from 0 to 45 degrees. tangent of theta is 1.',
+    );
+  });
+
+  it('reports undefined at an asymptote', () => {
+    expect(waveSpoken('tan', 90, 1)).toBe(
+      'Tangent curve traced from 0 to 90 degrees. tangent of theta is undefined.',
+    );
+  });
+
+  it('is independent of r', () => {
+    expect(waveSpoken('tan', 30, 0.5)).toBe(waveSpoken('tan', 30, 1.5));
+  });
+});
+
+describe('buildWaveSvg — tan', () => {
+  const tanBase = { ...waveBase, fn: 'tan' as const };
+
+  it('draws four dashed asymptote lines, and none for sin/cos', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    expect([...svg.matchAll(/data-role="wave-asymptote"/g)]).toHaveLength(4);
+    expect(buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 })).not.toContain(
+      'data-role="wave-asymptote"',
+    );
+  });
+
+  it('rescales the box to ±TAN_MAX — a value of 1 sits on the dashed unit reference', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 }); // tan 45° = 1
+    const markerY = Number(svg.match(/data-role="wave-marker"[^>]*cy="([-\d.]+)"/)![1]);
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    expect(markerY).toBeCloseTo(s.yFor(1), 4);
+  });
+
+  it('suppresses the marker and drop-line at an asymptote', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 90 });
+    expect(svg).not.toContain('data-role="wave-marker"');
+    expect(svg).not.toContain('data-role="wave-drop"');
+  });
+
+  it('suppresses the marker once the value leaves the visible domain, short of the true asymptote', () => {
+    // tan(80°) ≈ 5.67 > TAN_MAX(4) — a real, finite value, but off-screen.
+    const svg = buildWaveSvg({ ...tanBase, theta: 80 });
+    expect(svg).not.toContain('data-role="wave-marker"');
+  });
+
+  it('still draws the marker for sin/cos everywhere, unaffected by the new domain check', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    expect(svg).toContain('data-role="wave-marker"');
+  });
+
+  it('draws the curve in one or more subpaths without NaN across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 11) {
+      if (Math.abs(theta) < 1e-9) continue;
+      const svg = buildWaveSvg({ ...tanBase, theta });
+      expect(svg).not.toContain('NaN');
+      expect(svg).not.toContain('undefined');
     }
   });
 });
