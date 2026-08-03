@@ -4504,3 +4504,22 @@ Linux/Docker-only visual PNG baselines valid.
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Prior art: src/scripts/explorer/angle-diagram.ts:218-246 (tick-text suppression),
   src/scripts/explorer/angle.ts:59,127 (`piMultiple`, `formatPiText`)
+
+## [2026-08-02 18:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — standard-angle labels
+
+**Summary:**
+Added `angle-standard.ts`: the sixteen 30°/45°-multiple standard angles and a
+`standardAngleLabel` formatter that reads `30°` in degrees mode and reuses
+`formatPiText(piMultiple(deg))` for the exact radian form (`π/6`, `11π/6`, …).
+
+**Rationale:**
+Pure, DOM-free, and node-testable, matching every other module in
+`src/scripts/explorer/`. Delegating to the existing π-fraction formatters
+means this feature introduces no new arithmetic.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
