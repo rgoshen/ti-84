@@ -1,3 +1,17 @@
+## [2026-08-02 21:50] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer
+
+**Summary:**
+Wired `tan θ` into `AngleExplorer.tsx` — fourth radio option, `coordHtml.tan`, export legend/facts, and the shared spoken-name map — and updated the page copy. This is the change that fixes the `waveValue` nullability typecheck error introduced in Task 1.
+
+**Rationale:**
+Every prior task (1-6) was additive and type-safe in isolation — each added a new nullable-aware primitive or SVG branch without a live call site consuming it. This task is the integration point: it is the first place `waveValue`'s `number | null` return actually reaches a caller that previously assumed `number`, which is why `npx astro check` goes from one pending error to zero here rather than at any earlier task.
+
+**References:**
+- Task 7 of 10-task plan: `tan θ` option
+
 ## [2026-08-02 21:40] Commit Summary
 
 **Change Type:** Feature
