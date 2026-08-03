@@ -404,6 +404,65 @@ test('reset returns the wave selector to none', async ({ page }) => {
   await expect(page.locator(WAVE)).toHaveCount(0);
 });
 
+test('the tan option is reachable by keyboard from cos', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cos θ').focus();
+  // Same 50ms rationale as the sin→cos test above: Radix's roving-focus group
+  // defers the arrow-key selection to a setTimeout(0).
+  await page.keyboard.press('ArrowDown', { delay: 50 });
+  await expect(waveOption(page, 'tan θ')).toBeChecked();
+});
+
+test('selecting tan reveals the strip with its four asymptote lines', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'tan θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+  await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-asymptote"]`)).toHaveCount(4);
+});
+
+test('the radius slider does not move the tan curve — r cancels out of the ratio', async ({
+  page,
+}) => {
+  await goto(page);
+  await waveOption(page, 'tan θ').check();
+  await deg(page).fill('45');
+  const before = await curve(page).getAttribute('d');
+
+  const radius = page.locator('#slider-radius [role="slider"]');
+  await radius.focus();
+  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
+
+  expect(await curve(page).getAttribute('d')).toBe(before);
+});
+
+test('shows undefined with no marker at 90 degrees', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'tan θ').check();
+  await deg(page).fill('90');
+  await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)).toHaveCount(0);
+  await expect(page.locator('[data-testid="angle-wave-caption"]')).toContainText('undefined');
+});
+
+test('sweeping past the asymptote breaks the curve into more than one subpath', async ({
+  page,
+}) => {
+  await goto(page);
+  await waveOption(page, 'tan θ').check();
+  await deg(page).fill('120');
+  const d = (await curve(page).getAttribute('d'))!;
+  expect((d.match(/M/g) ?? []).length).toBeGreaterThan(1);
+});
+
+test('the tangent segment appears in the circle with tan selected', async ({ page }) => {
+  await goto(page);
+  const segment = page.locator(`${FIGURE} [data-role="tangent-segment"]`);
+  await expect(segment).toHaveCount(0);
+
+  await waveOption(page, 'tan θ').check();
+  await deg(page).fill('45');
+  await expect(segment).toHaveCount(1);
+});
+
 const standardAngleMarks = (page: Page) =>
   page.locator(`${FIGURE} g[data-role="standard-angle"]`);
 // Scoped by role, not getByLabel — 'Degrees'/'Radians' also label the Convert

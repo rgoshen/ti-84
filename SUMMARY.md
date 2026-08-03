@@ -1,3 +1,17 @@
+## [2026-08-02 23:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — e2e
+
+**Summary:**
+Added browser coverage for tan: keyboard reachability, the four asymptote lines, the radius slider's non-effect (the r-cancellation risk flagged in the design spec, now a permanent regression check), the undefined state at 90°, multi-subpath breaking, and the tangent segment.
+
+**Rationale:**
+This converts a design-doc "needs a browser check" risk into an automated test, ensuring the tan θ feature's core behaviors never regress as the codebase evolves.
+
+**References:**
+- Task 8 of 10-task plan: e2e coverage for `tan θ` option
+
 ## [2026-08-02 21:50] Commit Summary
 
 **Change Type:** Feature
