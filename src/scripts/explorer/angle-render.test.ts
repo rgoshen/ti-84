@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { polarToCartesian, arcPath, tickAngles, arrowheadPoints } from './angle-render';
+import {
+  polarToCartesian,
+  arcPath,
+  tickAngles,
+  arrowheadPoints,
+  countingTicks,
+} from './angle-render';
+import { degreesToRadians } from './angle';
 
 /** Pull the numeric flags out of `A rx ry rot largeArc sweep x y`. */
 const flagsOf = (path: string): Array<{ largeArc: string; sweep: string }> =>
@@ -92,5 +99,50 @@ describe('arrowheadPoints', () => {
     const ccw = arrowheadPoints(100, 100, 50, Math.PI / 2, 1);
     const cw = arrowheadPoints(100, 100, 50, Math.PI / 2, -1);
     expect(ccw).not.toBe(cw);
+  });
+});
+
+describe('countingTicks', () => {
+  it('delegates to tickAngles in radians mode, unchanged', () => {
+    expect(countingTicks(30, 'rad')).toEqual([{ radians: 1, text: '1 rad' }]);
+    expect(countingTicks(0, 'rad')).toEqual([{ radians: 1, text: '1 rad' }]);
+  });
+
+  it('matches tickAngles exactly across a signed sweep, in radians mode', () => {
+    const thetaDeg = -3.4 * (180 / Math.PI);
+    const expected = tickAngles(-3.4).map((n) => ({ radians: n, text: `${n} rad` }));
+    expect(countingTicks(thetaDeg, 'rad')).toEqual(expected);
+  });
+
+  it('counts quarter turns toward θ in degrees mode', () => {
+    expect(countingTicks(260, 'deg')).toEqual([
+      { radians: degreesToRadians(90), text: '90°' },
+      { radians: degreesToRadians(180), text: '180°' },
+    ]);
+  });
+
+  it('always yields at least one degree tick, even below 90°', () => {
+    expect(countingTicks(30, 'deg')).toEqual([
+      { radians: degreesToRadians(90), text: '90°' },
+    ]);
+    expect(countingTicks(0, 'deg')).toEqual([
+      { radians: degreesToRadians(90), text: '90°' },
+    ]);
+  });
+
+  it('mirrors for a negative sweep in degrees mode', () => {
+    expect(countingTicks(-260, 'deg')).toEqual([
+      { radians: degreesToRadians(-90), text: '-90°' },
+      { radians: degreesToRadians(-180), text: '-180°' },
+    ]);
+  });
+
+  it('covers the full ±360° range in degrees mode (four quarter turns)', () => {
+    expect(countingTicks(360, 'deg')).toEqual([
+      { radians: degreesToRadians(90), text: '90°' },
+      { radians: degreesToRadians(180), text: '180°' },
+      { radians: degreesToRadians(270), text: '270°' },
+      { radians: degreesToRadians(360), text: '360°' },
+    ]);
   });
 });

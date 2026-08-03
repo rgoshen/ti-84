@@ -403,3 +403,65 @@ test('reset returns the wave selector to none', async ({ page }) => {
   await expect(waveOption(page, 'none')).toBeChecked();
   await expect(page.locator(WAVE)).toHaveCount(0);
 });
+
+const standardAngleMarks = (page: Page) =>
+  page.locator(`${FIGURE} g[data-role="standard-angle"]`);
+// Scoped by role, not getByLabel — 'Degrees'/'Radians' also label the Convert
+// panel's TEXTBOX inputs (see the `deg`/`rad` consts above), and getByLabel
+// would be ambiguous across both roles [G13].
+const labelsOption = (page: Page, name: string) => page.getByRole('radio', { name });
+const standardAnglesToggle = (page: Page) =>
+  page.getByRole('checkbox', { name: 'Show standard angles' });
+
+test('circle labels default to radians, standard angles off', async ({ page }) => {
+  await goto(page);
+  await expect(labelsOption(page, 'Radians')).toBeChecked();
+  await expect(standardAnglesToggle(page)).not.toBeChecked();
+  await expect(standardAngleMarks(page)).toHaveCount(0);
+});
+
+test('turning on standard angles draws all sixteen marks', async ({ page }) => {
+  await goto(page);
+  await standardAnglesToggle(page).check();
+  await expect(standardAngleMarks(page)).toHaveCount(16);
+});
+
+test('standard-angle labels read degrees text when Degrees is selected', async ({ page }) => {
+  await goto(page);
+  await standardAnglesToggle(page).check();
+  await labelsOption(page, 'Degrees').check();
+  const texts = await standardAngleMarks(page).locator('text').allTextContents();
+  expect(texts).toContain('30°');
+  expect(texts).toContain('90°');
+});
+
+test('standard-angle labels read exact pi fractions in radians mode', async ({ page }) => {
+  await goto(page);
+  await standardAnglesToggle(page).check();
+  const texts = await standardAngleMarks(page).locator('text').allTextContents();
+  expect(texts).toContain('π/6');
+  expect(texts).toContain('π/2');
+});
+
+test('degrees mode counts quarter turns instead of whole radians', async ({ page }) => {
+  await goto(page);
+  await labelsOption(page, 'Degrees').check();
+  // 260°, not the coordinate-label-sensitive 200° — clear of the terminal
+  // point's always-present coordinate label, matching the unit test in Task 4.
+  await deg(page).fill('260');
+  await expect(tickText(page)).toHaveText(['90°', '180°']);
+});
+
+test('reset restores circle labels and standard angles to their defaults', async ({ page }) => {
+  await goto(page);
+  await labelsOption(page, 'Degrees').check();
+  await standardAnglesToggle(page).check();
+  await expect(labelsOption(page, 'Degrees')).toBeChecked();
+  await expect(standardAnglesToggle(page)).toBeChecked();
+
+  await page.getByRole('button', { name: 'Reset' }).click();
+
+  await expect(labelsOption(page, 'Radians')).toBeChecked();
+  await expect(standardAnglesToggle(page)).not.toBeChecked();
+  await expect(standardAngleMarks(page)).toHaveCount(0);
+});

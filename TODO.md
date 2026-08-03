@@ -978,3 +978,55 @@ clearly linked at the default β = 0°; the link weakens (accepted risk) when β
 rotated off-axis since the leg rotates with the circle while the strip stays flat;
 all 17 π/4 tick labels are legible at desktop and 375px mobile widths; the wave
 teal stays distinct from the initial-side blue in both themes.
+
+## [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+
+**Objective:**
+Let the Angle Explorer show the chart students are actually asked to memorise. Adds a
+**Circle labels** selector (Degrees | Radians) governing every angle label on the figure,
+and a **Show standard angles** toggle that draws the full sixteen-mark reference ring
+(multiples of 30° and 45°) labelled in the selected unit.
+
+**Approach:**
+- New pure module `angle-standard.ts` — `AngleUnit`, `STANDARD_ANGLES`, and
+  `standardAngleLabel`. Radian labels delegate to the existing
+  `formatPiText(piMultiple(deg))`, so the feature introduces no new arithmetic.
+- `angle-render.ts` gains `countingTicks(thetaDeg, unit)`: radians delegates to today's
+  `tickAngles` unchanged; degrees emits quarter turns (90°/180°/270°) toward θ.
+- `angle-diagram.ts` gains `unit` and `showStandardAngles`. Standard labels share the
+  counting ticks' `r + 0.22` label radius so the two read as one ring, and all marks are
+  positioned at `betaRad + angle` so β rotates them rigidly.
+- Label collisions resolve by a total priority order — coordinate label > standard-angle
+  label > counting-tick text — generalising the suppression rule already in the file. Only
+  text is ever dropped; tick lines always survive.
+- `AngleExplorer.tsx` gains a bordered control panel matching the Wave group, both settings
+  in `DEFAULTS` for `Reset`, and both carried into the export snapshot.
+
+**Tests:**
+- `angle-standard.test.ts` — all sixteen labels in both units, edges `0 → "0"`,
+  `180 → "π"`, `330 → "11π/6"`; set is ascending, sixteen long, duplicate-free.
+- `angle-render.test.ts` — degrees quarter-turns, always-at-least-one floor, negative θ
+  direction; radians behaviour asserted unchanged.
+- `angle-diagram.test.ts` — absent when off, sixteen when on, labels track the unit, β
+  rotates them, every row of the priority table, plus a domain sweep over
+  r ∈ [0.5, 1.5] × θ ∈ [−360, 360] in both units asserting no label leaves the viewBox.
+- `tests/e2e/angle.spec.ts` — toggle on and count marks, Degrees mode reads `30°`, `Reset`
+  restores both defaults.
+
+**Risks & Tradeoffs:**
+- Three label systems on one ring; the priority order is the mitigation and the domain
+  sweep is the proof. Escape hatch if it still crowds: drop the standard label to font-size
+  8, which changes no architecture.
+- Suppression means a counting label can blink as θ sweeps past a standard mark. Accepted
+  over hiding the counting ticks entirely, because showing both lessons at once is the
+  point of the feature.
+- Defaults (Radians, standard angles off) preserve today's rendering, which is what keeps
+  the Linux/Docker-only visual PNG baselines valid. Changing those defaults later forces a
+  baseline regeneration.
+
+**References:**
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Extends: docs/superpowers/plans/2026-07-23-angle-explorer.md,
+  docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
+
+**Status:** Spec approved on `feature/angle-standard-angles`; implementation plan pending.

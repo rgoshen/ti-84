@@ -4466,3 +4466,230 @@ DOM ids, and a 2px layout overflow), each fixed at its source rather than deferr
 - src/components/explorer/AngleExplorer.tsx (`useId()`-prefixed wave radio ids;
   `display:block` on both exported `<svg>` strings)
 - TODO.md: [2026-07-29] Feature: Angle Explorer Wave Projection
+
+## [2026-08-02 18:15] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — design spec
+
+**Summary:**
+Added the approved design for two new Angle Explorer diagram controls: a **Circle labels**
+selector (Degrees | Radians) governing every angle label on the figure, and a **Show
+standard angles** toggle drawing the full sixteen-mark reference ring of 30°/45° multiples,
+labelled in the selected unit. No code yet — spec and TODO entry only.
+
+**Rationale:**
+Four design decisions were settled by walking real rendered geometry rather than reasoning
+in the abstract, using the brainstorming visual companion:
+
+1. *One unit governs the whole figure* rather than the standard ring alone — otherwise the
+   circle can show `1 rad` and `45°` side by side.
+2. *All sixteen standard angles*, not a subset, because the memorised chart is the thing
+   being taught.
+3. *Labels ride the adjustable circle* at `r + 0.22`, consistent with the existing ticks.
+   An initial concern that sixteen radian labels would overflow the 320 viewBox at max
+   radius proved unfounded once drawn: the widest labels (`11π/6`, `5π/6`) sit at
+   30°/150°/210°/330° where `cos` is ±0.866, and the axis-aligned labels are short.
+4. *Counting-tick text yields* on collision, generalising the suppression rule already in
+   `angle-diagram.ts` into a three-way priority order. This keeps both the "how big is a
+   radian" lesson and the reference chart visible simultaneously.
+
+Radian labels reuse `formatPiText(piMultiple(deg))`, which already reduces `330 → 11π/6`,
+so the feature adds placement and priority logic but no new arithmetic. Defaults are
+Radians + standard angles off, which preserves today's rendering and therefore keeps the
+Linux/Docker-only visual PNG baselines valid.
+
+**References:**
+- docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md (new)
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Prior art: src/scripts/explorer/angle-diagram.ts:218-246 (tick-text suppression),
+  src/scripts/explorer/angle.ts:59,127 (`piMultiple`, `formatPiText`)
+
+## [2026-08-02 18:30] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — standard-angle labels
+
+**Summary:**
+Added `angle-standard.ts`: the sixteen 30°/45°-multiple standard angles and a
+`standardAngleLabel` formatter that reads `30°` in degrees mode and reuses
+`formatPiText(piMultiple(deg))` for the exact radian form (`π/6`, `11π/6`, …).
+
+**Rationale:**
+Pure, DOM-free, and node-testable, matching every other module in
+`src/scripts/explorer/`. Delegating to the existing π-fraction formatters
+means this feature introduces no new arithmetic.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+
+## [2026-08-02 18:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-aware counting ticks
+
+**Summary:**
+Added `countingTicks(thetaDeg, unit)` to `angle-render.ts`. Radians mode
+delegates to the existing `tickAngles` unchanged; degrees mode counts quarter
+turns toward θ (`90°`, `180°`, `270°`), with the same always-at-least-one
+floor that keeps the radian scale from vanishing at small θ.
+
+**Rationale:**
+`tickAngles` keeps its signature and its own tests untouched — `countingTicks`
+wraps it rather than replacing it, so this is purely additive.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+
+## [2026-08-02 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer diagram — standard-angle ring + three-way label priority
+
+**Summary:**
+`buildAngleDiagramSvg` gains `angleUnit` and `showStandardAngles`. Counting
+ticks now route through `countingTicks` (degrees mode marks quarter turns
+instead of whole radians). When `showStandardAngles` is on, all sixteen
+30°/45°-multiple marks draw as a static ring at the same label radius as the
+counting ticks, rotating with β. Label crowding resolves via a total priority
+order — coordinate label > standard-angle label > counting-tick text — only
+text is ever dropped, tick lines always survive. A domain-sweep test over
+r ∈ [0.5, 1.5] × β ∈ [-360, 360] in both units proves no standard label
+leaves the 320×320 viewBox.
+
+**Rationale:**
+Implemented Tasks 3 and 4 from the plan as one commit: while drawing the
+ring, the counting-tick-vs-standard-label collision was wired in at the same
+time as the coordinate-label collision, so splitting them into separate
+commits would have left the first with dead, untested suppression code.
+
+The domain-sweep test caught a real gap the design review's manual geometry
+check missed: degree-mode axis labels ("180°", "270°", 4 characters) are
+much wider than the radian-mode axis labels ("0", "π", 1 character) the
+ring's 0.22-unit label radius was originally verified against by hand. At
+r = 1.5 and certain β, "180°" ran ~1.4px past the left edge. Fixed with a
+clamp on the label's rendered (x, y) into the frame — the same pattern the
+coordinate label already uses — rather than shrinking font size globally.
+Defaults (`angleUnit: 'rad'`, `showStandardAngles: false`) still reproduce
+today's output exactly; the full 433-test unit suite passes unmodified.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Tasks 3-4)
+
+## [2026-08-02 19:45] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — Circle labels + standard-angles controls
+
+**Summary:**
+Added `angleUnit` and `standardAngles` state to `AngleExplorer.tsx`, a new
+bordered control panel (a `RadioGroup` for Degrees/Radians, a `Checkbox` for
+Show standard angles) matching the Wave group's existing markup, and wired
+both into the live figure and `Reset`. The figure's `aria-label` now names the
+active unit and whether the standard ring is shown.
+
+**Rationale:**
+Follows the Wave group's exact `useId()`-namespaced-ids pattern so two
+mounted `AngleExplorer` instances can never collide. Export wiring (facts,
+legend, snapshot) is a separate commit — this one is verified by
+`npx astro check` only; Playwright coverage lands with the e2e task.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 5)
+
+## [2026-08-02 20:00] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — export wiring
+
+**Summary:**
+Both new settings now flow into the PNG/PDF export: a `Circle labels` fact in
+the `Circle` section, a conditional legend entry while standard angles are
+shown, and both values passed into the exported diagram's
+`buildAngleDiagramSvg` call so the artifact matches the screen.
+
+**Rationale:**
+Follows the same snapshot-capture pattern `snapshotWave` already established,
+so the export can never observe a value that changed mid-render. Verified the
+existing `angle-export.spec.ts` suite (5/5) is unaffected at the defaults.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 6)
+
+## [2026-08-02 20:10] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer page copy
+
+**Summary:**
+Added a sentence to `angles.astro` explaining the new Circle labels selector
+and Show standard angles toggle, including the degrees-mode quarter-turn
+counting ticks — a new idea with no precedent elsewhere in the explorer.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 7)
+
+## [2026-08-02 20:25] Commit Summary
+
+**Change Type:** Test
+**Scope:** Angle Explorer e2e
+
+**Summary:**
+Added Playwright coverage for the Circle labels selector and Show standard
+angles toggle: defaults, mark count, unit-correct label text in both units,
+degrees-mode quarter-turn counting ticks, and Reset restoring both controls.
+Full file: 36/36 passing, including every pre-existing test unmodified.
+
+**Rationale:**
+`260°` was chosen for the quarter-turn-ticks test (over the more obvious
+`200°`) specifically to stay clear of the terminal point's always-present
+coordinate label, mirroring the same reasoning already used in the unit
+test's three-way-priority suite.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Task 8)
+
+## [2026-08-02 21:00] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer diagram — standard-angle label collisions
+
+**Summary:**
+Fixed a real gap a PR review comment surfaced: standard-angle labels could
+collide with each OTHER, not just with the coordinate label or a counting
+tick. The 15°-apart neighbor pairs (30°/45°, 45°/60°, 120°/135°, 210°/225°,
+etc., and their radian equivalents) overlap once the label ring shrinks with
+`r` while label width stays fixed. Added a pairwise suppression pass over
+`standardItems`, walking `STANDARD_ANGLES`' own ascending order so of two
+colliding neighbours the smaller angle deterministically keeps its label —
+same "text drops, tick line survives" bargain used three times already in
+this file.
+
+**Bug Fix Context:**
+The review comment's specific example ("π/4 vs π/3 at default sizing") does
+not reproduce — verified directly against the real code before touching
+anything, no overlap exists at r = 1. But an exhaustive pairwise sweep across
+r ∈ [0.5, 1.5] × β ∈ [-360, 360] in both units found 1,168 real collision
+instances, all concentrated at r ∈ [0.5, 0.8] among the eight 15°-apart
+neighbor pairs — a gap the Task 4 domain-sweep test didn't catch because it
+only checked viewBox containment, never mutual overlap between labels. Fixed
+with a minimal extension of the existing suppression pattern rather than
+repositioning, consistent with the file's established approach. Added a
+concrete reproducer (r = 0.5, 45°/60°) plus a second domain-sweep test
+proving no two visible standard labels overlap anywhere in the swept domain.
+
+**References:**
+- PR: #30
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md

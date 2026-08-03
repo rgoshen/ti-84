@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import GraphResultExport from '@/components/export/GraphResultExport';
 import { explorerColors } from '@/scripts/graphing/theme';
 import {
@@ -27,6 +28,7 @@ import {
 import { buildCoordinateReadout } from '@/scripts/explorer/angle-coordinates';
 import { buildAngleDiagramSvg } from '@/scripts/explorer/angle-diagram';
 import { buildReadout } from '@/scripts/explorer/angle-readout';
+import type { AngleUnit } from '@/scripts/explorer/angle-standard';
 import { round4 } from '@/scripts/explorer/format';
 import {
   buildWaveSvg,
@@ -44,7 +46,14 @@ import {
 } from '@/scripts/export/model';
 
 /** Slider defaults, also the reset target. */
-const DEFAULTS = { theta: 0, r: 1, beta: 0, wave: 'none' as WaveMode };
+const DEFAULTS = {
+  theta: 0,
+  r: 1,
+  beta: 0,
+  wave: 'none' as WaveMode,
+  angleUnit: 'rad' as AngleUnit,
+  standardAngles: false,
+};
 
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
@@ -58,10 +67,14 @@ export default function AngleExplorer(): React.JSX.Element {
   const [r, setR] = useState(DEFAULTS.r);
   const [beta, setBeta] = useState(DEFAULTS.beta); // degrees
   const [wave, setWave] = useState<WaveMode>(DEFAULTS.wave);
+  const [angleUnit, setAngleUnit] = useState<AngleUnit>(DEFAULTS.angleUnit);
+  const [standardAngles, setStandardAngles] = useState(DEFAULTS.standardAngles);
 
   // Unique per mounted instance, so the wave radio group's ids never collide
   // if two AngleExplorer components ever land on the same page.
   const waveGroupId = useId();
+  // Unique per mounted instance, matching the wave group's rationale above.
+  const labelsGroupId = useId();
 
   const [dark, setDark] = useState(
     () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
@@ -125,6 +138,8 @@ export default function AngleExplorer(): React.JSX.Element {
     setR(DEFAULTS.r);
     setBeta(DEFAULTS.beta);
     setWave(DEFAULTS.wave);
+    setAngleUnit(DEFAULTS.angleUnit);
+    setStandardAngles(DEFAULTS.standardAngles);
     setEditing(null);
     setInputError(null);
   };
@@ -220,6 +235,8 @@ export default function AngleExplorer(): React.JSX.Element {
     const snapshotR = r;
     const snapshotBeta = beta;
     const snapshotWave = waveFn;
+    const snapshotAngleUnit = angleUnit;
+    const snapshotStandardAngles = standardAngles;
     const lightColors = explorerColors(false);
     const whole = Math.round(snapshotTheta);
     const integer = isIntegerDegrees(snapshotTheta);
@@ -242,6 +259,14 @@ export default function AngleExplorer(): React.JSX.Element {
             color: lightColors.curve,
           },
           { label: 'Angle measure', color: lightColors.arrow },
+          ...(snapshotStandardAngles
+            ? [
+                {
+                  label: 'Standard angles — multiples of 30° and 45°',
+                  color: lightColors.axis,
+                },
+              ]
+            : []),
           ...(snapshotWave
             ? [
                 {
@@ -268,6 +293,10 @@ export default function AngleExplorer(): React.JSX.Element {
             facts: [
               { label: 'Radius', value: String(snapshotR) },
               { label: 'Position β', value: `${snapshotBeta}°` },
+              {
+                label: 'Circle labels',
+                value: snapshotAngleUnit === 'deg' ? 'Degrees' : 'Radians',
+              },
               { label: 'Arc length s = r|θ|', value: arcValue },
               { label: 'Point (x, y)', value: snapshotCoords.pairText },
             ],
@@ -325,6 +354,8 @@ export default function AngleExplorer(): React.JSX.Element {
               tickText: '#334155',
               coordinateLabel: snapshotCoords.labelText,
               projection: snapshotWave,
+              angleUnit: snapshotAngleUnit,
+              showStandardAngles: snapshotStandardAngles,
             },
           )}</svg>`;
 
@@ -404,6 +435,36 @@ export default function AngleExplorer(): React.JSX.Element {
           </p>
         </div>
         <div className="space-y-3 rounded-lg border p-3">
+          <p className="text-sm font-medium" id={`${labelsGroupId}-labels-group-label`}>
+            Circle labels
+          </p>
+          <RadioGroup
+            aria-labelledby={`${labelsGroupId}-labels-group-label`}
+            value={angleUnit}
+            onValueChange={(v) => setAngleUnit(v as AngleUnit)}
+          >
+            {(
+              [
+                { value: 'deg' as const, label: 'Degrees' },
+                { value: 'rad' as const, label: 'Radians' },
+              ]
+            ).map((o) => (
+              <div key={o.value} className="flex items-center gap-2">
+                <RadioGroupItem id={`${labelsGroupId}-unit-${o.value}`} value={o.value} />
+                <Label htmlFor={`${labelsGroupId}-unit-${o.value}`}>{o.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${labelsGroupId}-standard-angles`}
+              checked={standardAngles}
+              onCheckedChange={(checked) => setStandardAngles(checked === true)}
+            />
+            <Label htmlFor={`${labelsGroupId}-standard-angles`}>Show standard angles</Label>
+          </div>
+        </div>
+        <div className="space-y-3 rounded-lg border p-3">
           <p className="text-sm font-medium">Convert</p>
           {(
             [
@@ -471,7 +532,9 @@ export default function AngleExplorer(): React.JSX.Element {
           viewBox={`0 0 ${VIEW} ${VIEW}`}
           className="h-auto w-full"
           role="img"
-          aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}.`}
+          aria-label={`Angle of ${round4(theta)} degrees swept on a circle of radius ${round4(r)}. Circle labels in ${
+            angleUnit === 'deg' ? 'degrees' : 'radians'
+          }${standardAngles ? ', showing standard angles' : ''}.`}
           dangerouslySetInnerHTML={{
             __html: buildAngleDiagramSvg({
               theta,
@@ -481,6 +544,8 @@ export default function AngleExplorer(): React.JSX.Element {
               tickText,
               coordinateLabel: coords.labelText,
               projection: waveFn,
+              angleUnit,
+              showStandardAngles: standardAngles,
             }),
           }}
         />

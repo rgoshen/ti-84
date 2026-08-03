@@ -7,6 +7,9 @@
  * backwards from every textbook.
  */
 
+import { degreesToRadians } from './angle';
+import type { AngleUnit } from './angle-standard';
+
 export interface Point {
   x: number;
   y: number;
@@ -65,6 +68,36 @@ export function tickAngles(thetaRad: number): number[] {
   const whole = Math.floor(Math.abs(thetaRad));
   const count = Math.max(1, whole);
   return Array.from({ length: count }, (_, i) => dir * (i + 1));
+}
+
+/** One counting tick: its angular position (radians) and display text. */
+export interface CountingTick {
+  radians: number;
+  text: string;
+}
+
+/**
+ * Counting ticks toward θ, in the requested unit.
+ *
+ * Radians mode is `tickAngles` unchanged — whole radians, always at least
+ * one. Degrees mode counts quarter turns instead (`90°`, `180°`, `270°`),
+ * the round unit a student counts degrees in, with the same always-emit-one
+ * floor: a scale that vanishes at small θ reads as a bug, in either unit.
+ */
+export function countingTicks(thetaDeg: number, unit: AngleUnit): CountingTick[] {
+  if (unit === 'rad') {
+    return tickAngles(degreesToRadians(thetaDeg)).map((n) => ({
+      radians: n,
+      text: `${n} rad`,
+    }));
+  }
+  const dir = thetaDeg < 0 ? -1 : 1;
+  const whole = Math.floor(Math.abs(thetaDeg) / 90);
+  const count = Math.max(1, whole);
+  return Array.from({ length: count }, (_, i) => {
+    const deg = dir * (i + 1) * 90;
+    return { radians: degreesToRadians(deg), text: `${deg}°` };
+  });
 }
 
 /** How far behind the tip the arrowhead's base sits, in radians. */
