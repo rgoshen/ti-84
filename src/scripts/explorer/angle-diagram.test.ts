@@ -322,3 +322,187 @@ describe('buildAngleDiagramSvg — projection leg', () => {
     expect(legLength(buildAngleDiagramSvg({ ...base, theta: 90, projection: 'cos' }))).toBeCloseTo(0, 6);
   });
 });
+
+describe('buildAngleDiagramSvg — angle units', () => {
+  it('draws radian counting ticks by default, unchanged from before', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30 });
+    expect(svg).toContain('1 rad');
+  });
+
+  it('draws quarter-turn counting ticks in degrees mode', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 260, angleUnit: 'deg' });
+    expect(svg).toContain('90°');
+    expect(svg).toContain('180°');
+    expect(svg).not.toContain('1 rad');
+  });
+});
+
+describe('buildAngleDiagramSvg — standard angles', () => {
+  it("draws nothing when off, leaving today's markup untouched", () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30 });
+    expect(svg).not.toContain('data-role="standard-angle"');
+  });
+
+  it('draws all sixteen marks when on', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30, showStandardAngles: true });
+    expect((svg.match(/data-role="standard-angle"/g) ?? []).length).toBe(16);
+  });
+
+  it('labels in degrees when angleUnit is deg', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 0,
+      showStandardAngles: true,
+      angleUnit: 'deg',
+    });
+    expect(svg).toContain('30°');
+    expect(svg).toContain('330°');
+  });
+
+  it('labels in radians when angleUnit is rad', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 0,
+      showStandardAngles: true,
+      angleUnit: 'rad',
+    });
+    expect(svg).toContain('π/6');
+    expect(svg).toContain('11π/6');
+  });
+
+  it('rotates the ring with β', () => {
+    const atZero = buildAngleDiagramSvg({ ...base, theta: 0, beta: 0, showStandardAngles: true });
+    const rotated = buildAngleDiagramSvg({ ...base, theta: 0, beta: 45, showStandardAngles: true });
+    expect(rotated).not.toBe(atZero);
+  });
+
+  it('is independent of θ — the ring itself never changes with the sweep', () => {
+    const marksOnly = (svg: string) =>
+      [...svg.matchAll(/<g data-role="standard-angle">.*?<\/g>/g)].join('');
+    const at0 = buildAngleDiagramSvg({ ...base, theta: 0, showStandardAngles: true });
+    const at200 = buildAngleDiagramSvg({ ...base, theta: 200, showStandardAngles: true });
+    expect(marksOnly(at0)).toBe(marksOnly(at200));
+  });
+});
+
+describe('buildAngleDiagramSvg — three-way label priority', () => {
+  it('drops the duplicate counting-tick text where it exactly matches a standard mark (degrees mode)', () => {
+    // At θ = 260° the quarter-turn counting ticks land at 90° and 180° — two of
+    // the sixteen standard angles. Both systems would print the identical text
+    // "90°" / "180°" at the identical position; only the standard mark's copy
+    // should survive.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 260,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+    });
+    expect([...svg.matchAll(/>90°</g)]).toHaveLength(1);
+    expect([...svg.matchAll(/>180°</g)]).toHaveLength(1);
+  });
+
+  it('keeps the counting-tick LINE even though its duplicate text is dropped', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 260,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+    });
+    expect((svg.match(/data-role="radian-tick"/g) ?? []).length).toBe(2);
+  });
+
+  it('drops the counting-tick text on a near-miss too (radians mode: 1 rad vs π/3)', () => {
+    // 1 rad = 57.3°, 2.7° from the 60° standard mark — the same near-miss band
+    // the original coordinate-label suppression test already exercises.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 60,
+      angleUnit: 'rad',
+      showStandardAngles: true,
+    });
+    expect(svg).toContain('π/3'); // the standard label survives
+    expect(svg).not.toContain('1 rad'); // the counting tick's text yields
+  });
+
+  it('a standard-angle label yields to the coordinate label (priority 1 beats priority 2)', () => {
+    // At θ = 30° the terminal dot — and the coordinate label anchored to it —
+    // sits at exactly the same angle as the 30° standard mark, only ~5px of
+    // radius apart. The coordinate label always wins.
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 30,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+      coordinateLabel: '(√3/2, 1/2)',
+    });
+    expect(svg).toContain('(√3/2, 1/2)');
+    expect([...svg.matchAll(/>30°</g)]).toHaveLength(0);
+  });
+
+  it('keeps the standard-angle tick LINE even though its label yields to the coordinate label', () => {
+    const svg = buildAngleDiagramSvg({
+      ...base,
+      theta: 30,
+      angleUnit: 'deg',
+      showStandardAngles: true,
+      coordinateLabel: '(√3/2, 1/2)',
+    });
+    expect((svg.match(/data-role="standard-angle"/g) ?? []).length).toBe(16);
+  });
+
+  it('never suppresses a standard label with no real collision', () => {
+    // Sanity check: with no coordinate label and no counting-tick overlap, all
+    // sixteen standard labels render.
+    const svg = buildAngleDiagramSvg({ ...base, theta: 0, showStandardAngles: true });
+    const texts = [...svg.matchAll(/<g data-role="standard-angle">.*?<text[^>]*>([^<]*)</g)].map(
+      (m) => m[1],
+    );
+    expect(texts).toHaveLength(16);
+  });
+});
+
+describe('buildAngleDiagramSvg — standard-angle labels stay inside the frame', () => {
+  const view = 320;
+
+  // Standard marks are independent of θ (see the previous describe block), so
+  // the domain that matters is r × β, not r × θ — sweeping θ here would only
+  // repeat the same sixteen positions. β rotates the whole ring, so sweeping it
+  // is equivalent to checking every possible orientation of the ring.
+  it('never leaves the viewBox across r ∈ [0.5, 1.5] × β ∈ [-360, 360], in either unit', () => {
+    for (const angleUnit of ['deg', 'rad'] as const) {
+      for (let r = 0.5; r <= 1.5001; r += 0.1) {
+        for (let beta = -360; beta <= 360; beta += 30) {
+          const roundedR = Number(r.toFixed(1));
+          const svg = buildAngleDiagramSvg({
+            ...base,
+            r: roundedR,
+            theta: 0,
+            beta,
+            angleUnit,
+            showStandardAngles: true,
+          });
+          const texts = [
+            ...svg.matchAll(
+              /<g data-role="standard-angle">.*?<text[^>]*x="([-\d.]+)"[^>]*y="([-\d.]+)"[^>]*>([^<]*)</g,
+            ),
+          ];
+          for (const [, xStr, yStr, label] of texts) {
+            const x = Number(xStr);
+            const y = Number(yStr);
+            const halfWidth = labelWidth(label!, 9) / 2;
+            expect(
+              x - halfWidth,
+              `left overflow "${label}" r=${roundedR} β=${beta} unit=${angleUnit}`,
+            ).toBeGreaterThanOrEqual(0);
+            expect(
+              x + halfWidth,
+              `right overflow "${label}" r=${roundedR} β=${beta} unit=${angleUnit}`,
+            ).toBeLessThanOrEqual(view);
+            expect(y, `top overflow "${label}"`).toBeGreaterThanOrEqual(0);
+            expect(y, `bottom overflow "${label}"`).toBeLessThanOrEqual(view);
+          }
+        }
+      }
+    }
+  });
+});

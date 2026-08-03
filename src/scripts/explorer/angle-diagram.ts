@@ -16,9 +16,14 @@ import { degreesToRadians } from '@/scripts/explorer/angle';
 import {
   arcPath,
   arrowheadPoints,
+  countingTicks,
   polarToCartesian,
-  tickAngles,
 } from '@/scripts/explorer/angle-render';
+import {
+  STANDARD_ANGLES,
+  standardAngleLabel,
+  type AngleUnit,
+} from '@/scripts/explorer/angle-standard';
 import type { WaveFn } from './angle-wave';
 
 export interface AngleDiagramOptions {
@@ -53,6 +58,15 @@ export interface AngleDiagramOptions {
    * height, in the same colour, which is what carries the link instead.
    */
   projection?: WaveFn;
+  /**
+   * Unit for every ANGLE label on the figure — the counting ticks and the
+   * standard-angle ring. Defaults to `'rad'`, today's only behaviour. Named
+   * `angleUnit` rather than `unit` because `unit` already means "pixels per
+   * unit radius" on this interface.
+   */
+  angleUnit?: AngleUnit;
+  /** Draw the static sixteen-mark standard-angle ring. Defaults to `false`. */
+  showStandardAngles?: boolean;
 }
 
 /**
@@ -199,6 +213,8 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const unit = opts.unit ?? 88;
   const measureR = opts.measureR ?? 0.3;
   const c = view / 2;
+  const angleUnit: AngleUnit = opts.angleUnit ?? 'rad';
+  const showStandardAngles = opts.showStandardAngles ?? false;
 
   const thetaRad = degreesToRadians(theta);
   const betaRad = degreesToRadians(beta);
@@ -215,24 +231,70 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     ? coordinateLabelLayout(c, r * unit, endRad, view, opts.coordinateLabel!)
     : null;
 
-  const ticks = tickAngles(thetaRad)
-    .map((a) => {
-      const inner = polarToCartesian(c, c, r * unit, betaRad + a);
-      const outer = polarToCartesian(c, c, (r + 0.1) * unit, betaRad + a);
-      const label = polarToCartesian(c, c, (r + 0.22) * unit, betaRad + a);
+  // The standard-angle ring: sixteen static marks, independent of θ, rotating
+  // with β like everything else. Priority 2 in the suppression order — a
+  // label yields only to the coordinate label (priority 1). The counting-tick
+  // interaction (priority 3) is layered in below.
+  const standardItems = (showStandardAngles ? STANDARD_ANGLES : []).map((deg) => {
+    const angle = betaRad + degreesToRadians(deg);
+    const raw = polarToCartesian(c, c, (r + 0.22) * unit, angle);
+    const text = standardAngleLabel(deg, angleUnit);
+    // Degree-mode labels ("180°", "270°") are wider than the short radian-mode
+    // axis labels ("0", "π") this ring's radius was originally sized against —
+    // at the maximum radius they can run past the viewBox edge on an
+    // axis-aligned mark. Clamp into the frame the same way the coordinate
+    // label already does, rather than growing the ring's radius for everyone.
+    const halfWidth = labelWidth(text, TICK_FONT_SIZE) / 2;
+    const halfHeight = labelHalfHeight(TICK_FONT_SIZE);
+    const label = {
+      x: Math.min(Math.max(raw.x, LABEL_MARGIN + halfWidth), view - LABEL_MARGIN - halfWidth),
+      y: Math.min(Math.max(raw.y, LABEL_MARGIN + halfHeight), view - LABEL_MARGIN - halfHeight),
+    };
+    const box = centredBox(label.x, label.y, text, TICK_FONT_SIZE);
+    const suppressed =
+      coordinateLayout !== null && boxesOverlap(box, coordinateLayout.box);
+    return { angle, label, text, box, suppressed };
+  });
+
+  const standardMarkup = standardItems
+    .map((item) => {
+      const inner = polarToCartesian(c, c, r * unit, item.angle);
+      const outer = polarToCartesian(c, c, (r + 0.08) * unit, item.angle);
+      return (
+        `<g data-role="standard-angle">` +
+        `<line x1="${inner.x}" y1="${inner.y}" x2="${outer.x}" y2="${outer.y}" stroke="${colors.axis}" stroke-width="1.5" />` +
+        (item.suppressed
+          ? ''
+          : `<text x="${item.label.x}" y="${item.label.y}" fill="${tickText}" font-size="${TICK_FONT_SIZE}" font-weight="600" text-anchor="middle" dominant-baseline="middle">${item.text}</text>`) +
+        `</g>`
+      );
+    })
+    .join('');
+
+  const activeStandardBoxes = standardItems
+    .filter((item) => !item.suppressed)
+    .map((item) => item.box);
+
+  const ticks = countingTicks(theta, angleUnit)
+    .map((tick) => {
+      const angle = betaRad + tick.radians;
+      const inner = polarToCartesian(c, c, r * unit, angle);
+      const outer = polarToCartesian(c, c, (r + 0.1) * unit, angle);
+      const label = polarToCartesian(c, c, (r + 0.22) * unit, angle);
 
       // Near θ ≈ a rad the tick label and the coordinate readout are drawn a few
       // pixels apart on the same circle, and neither can move outward to escape:
       // at the maximum radius the tick label already sits within ~9px of the
       // viewBox edge. Drop the text for the duration of the overlap and keep the
-      // tick line, so the radian position stays marked even while unnamed.
-      const text = `${a} rad`;
+      // tick line, so the radian position stays marked even while unnamed. The
+      // same rule now also applies against any un-suppressed standard-angle
+      // label — in degrees mode a quarter-turn tick and a standard mark can
+      // land on the exact same spot with the exact same text.
+      const text = tick.text;
+      const box = centredBox(label.x, label.y, text, TICK_FONT_SIZE);
       const hidden =
-        coordinateLayout !== null &&
-        boxesOverlap(
-          centredBox(label.x, label.y, text, TICK_FONT_SIZE),
-          coordinateLayout.box,
-        );
+        (coordinateLayout !== null && boxesOverlap(box, coordinateLayout.box)) ||
+        activeStandardBoxes.some((standardBox) => boxesOverlap(box, standardBox));
 
       return (
         `<g data-role="radian-tick">` +
@@ -295,7 +357,9 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
     `<circle cx="${c}" cy="${c}" r="${unit}" fill="none" stroke="${colors.axis}" stroke-width="1" stroke-dasharray="3 3" />` +
     // The adjustable circle.
     `<circle cx="${c}" cy="${c}" r="${r * unit}" fill="none" stroke="${colors.ghost}" stroke-width="1.5" />` +
-    // Whole-radian ticks, scaling with r.
+    // Standard-angle reference ring — static, independent of θ.
+    standardMarkup +
+    // Counting ticks toward θ: whole radians, or quarter turns in degrees mode.
     ticks +
     // Small angle-measure arc with its direction arrowhead.
     measureMarkup +

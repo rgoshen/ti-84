@@ -4542,3 +4542,40 @@ wraps it rather than replacing it, so this is purely additive.
 **References:**
 - TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
 - Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+
+## [2026-08-02 19:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer diagram — standard-angle ring + three-way label priority
+
+**Summary:**
+`buildAngleDiagramSvg` gains `angleUnit` and `showStandardAngles`. Counting
+ticks now route through `countingTicks` (degrees mode marks quarter turns
+instead of whole radians). When `showStandardAngles` is on, all sixteen
+30°/45°-multiple marks draw as a static ring at the same label radius as the
+counting ticks, rotating with β. Label crowding resolves via a total priority
+order — coordinate label > standard-angle label > counting-tick text — only
+text is ever dropped, tick lines always survive. A domain-sweep test over
+r ∈ [0.5, 1.5] × β ∈ [-360, 360] in both units proves no standard label
+leaves the 320×320 viewBox.
+
+**Rationale:**
+Implemented Tasks 3 and 4 from the plan as one commit: while drawing the
+ring, the counting-tick-vs-standard-label collision was wired in at the same
+time as the coordinate-label collision, so splitting them into separate
+commits would have left the first with dead, untested suppression code.
+
+The domain-sweep test caught a real gap the design review's manual geometry
+check missed: degree-mode axis labels ("180°", "270°", 4 characters) are
+much wider than the radian-mode axis labels ("0", "π", 1 character) the
+ring's 0.22-unit label radius was originally verified against by hand. At
+r = 1.5 and certain β, "180°" ran ~1.4px past the left edge. Fixed with a
+clamp on the label's rendered (x, y) into the frame — the same pattern the
+coordinate label already uses — rather than shrinking font size globally.
+Defaults (`angleUnit: 'rad'`, `showStandardAngles: false`) still reproduce
+today's output exactly; the full 433-test unit suite passes unmodified.
+
+**References:**
+- TODO.md: [2026-08-02] Feature: Angle Explorer Standard Angles & Circle Label Units
+- Spec: docs/superpowers/specs/2026-08-02-angle-standard-angles-design.md
+- Plan: docs/superpowers/plans/2026-08-02-angle-standard-angles.md (Tasks 3-4)
