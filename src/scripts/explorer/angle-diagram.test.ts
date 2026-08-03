@@ -531,12 +531,14 @@ describe('buildAngleDiagramSvg — tangent segment', () => {
     expect(tangentSegmentLength(at(0.5))).toBeCloseTo(tangentSegmentLength(at(1.5)), 4);
   });
 
-  it('places the segment endpoint at sec(θ)·unit when θ is obtuse, testing the sign-flip branch', () => {
-    // At θ = -135°, β = 0, r = 1: cos(θ) = cos(-135°) = -√2/2, so sec(θ) ≈ -1.4142.
-    // The endpoint E should sit at signed distance sec(θ)·88 ≈ -124.45 along the terminal ray,
-    // which places it on the opposite side of the origin from the standard acute-angle case.
-    // This test verifies the sign-flip construction by computing the expected coordinates
-    // and checking that the segment's (x2, y2) match to within rounding tolerance.
+  it('places the segment endpoint at tan(θ)·unit off the tangent point when θ is obtuse, testing the sign-flip branch', () => {
+    // At θ = -135°, β = 0, r = 1: tan(-135°) = 1, well under capMax (≈1.4637 at the
+    // default view/unit) — this angle is intentionally chosen to stay UNCLAMPED, so
+    // the expected endpoint is the plain, unclamped construction: T = (unit, 0) offset
+    // by tan(θ)·unit in the direction perpendicular to the initial side (angle β + 90°),
+    // matching the source's capMax/cappedTan construction in angle-diagram.ts without
+    // that clamp ever engaging. This verifies the sign-flip specifically: at an obtuse
+    // angle the endpoint lands on the opposite side of T from the standard acute case.
     const svg = buildAngleDiagramSvg({ ...base, theta: -135, beta: 0, r: 1, projection: 'tan' });
     const seg = readTangentSegment(svg)!;
 
@@ -546,16 +548,15 @@ describe('buildAngleDiagramSvg — tangent segment', () => {
     const unit = 88;
     const thetaRad = (theta * Math.PI) / 180;
     const betaRad = (beta * Math.PI) / 180;
-    const endRad = betaRad + thetaRad;
 
-    // Compute the expected endpoint under the sign-flip branch
-    const secTheta = 1 / Math.cos(thetaRad);
-    const rawDist = secTheta * unit;
+    const rawTan = Math.tan(thetaRad);
     const maxDist = c - 4; // LABEL_MARGIN = 4
-    const dist = Math.abs(rawDist) > maxDist ? Math.sign(rawDist) * maxDist : rawDist;
+    const capMax = Math.sqrt(maxDist ** 2 - unit ** 2) / unit;
+    expect(Math.abs(rawTan)).toBeLessThan(capMax); // sanity: confirms this case stays unclamped
 
-    const expectedX2 = c + dist * Math.cos(endRad);
-    const expectedY2 = c - dist * Math.sin(endRad);
+    const perpRad = betaRad + Math.PI / 2;
+    const expectedX2 = c + unit * Math.cos(betaRad) + rawTan * unit * Math.cos(perpRad);
+    const expectedY2 = c - unit * Math.sin(betaRad) - rawTan * unit * Math.sin(perpRad);
 
     expect(seg.x2).toBeCloseTo(expectedX2, 2);
     expect(seg.y2).toBeCloseTo(expectedY2, 2);

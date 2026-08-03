@@ -4907,3 +4907,50 @@ construction. No code changed.
 **References:**
 - Plan: docs/superpowers/plans/2026-08-02-angle-wave-tangent.md
 - Final review: parked finding, angle-diagram.ts comment cleanup
+
+## [2026-08-03 07:26] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — PR review response
+
+**Summary:**
+Applied four of six PR review findings after verifying each against the actual
+current code:
+1. `angles.astro` — "the highlighted leg or segment inside the circle" was
+   imprecise for tan (a tangent segment is not inside the circle, it's tangent
+   to it); reworded to distinguish the sin/cos leg from the tan segment.
+2. Spec doc — added the missing `text` fence-language identifier to two prose
+   code blocks (Markdownlint MD040).
+3. `angle-diagram.ts` — guarded `capMax`'s `sqrt(maxDist² − unit²)` against a
+   negative radicand (`Math.max(0, …)`) for a hypothetical `unit ≥ maxDist`,
+   not reachable via either current call site but a latent NaN risk on the
+   public `AngleDiagramOptions` surface.
+4. `angle-diagram.test.ts` — the θ = -135° sign-flip test still derived its
+   expected value from the retired `secTheta`/`rawDist` formula; rederived via
+   the current `capMax`/`cappedTan`-consistent perpendicular-offset formula,
+   with an explicit sanity check that this angle stays below the clamp
+   threshold (so the test still verifies the sign-flip independently, not
+   tautologically against the source's own clamp branch).
+
+**Rationale:**
+Two other findings were skipped after verification, not blindly applied:
+- A finding against the PLAN document's Task 6 code sample was pointing at a
+  historical pre-fix snippet — the actual shipped code already implements the
+  requested `|tan θ|`-based clamp (this branch's prior fix-wave commit).
+  Editing the plan's illustrative code retroactively would misrepresent what
+  the fix-loop actually changed.
+- A concern about e2e race conditions (immediate `getAttribute` after
+  `fill`/`press`) was tested empirically (20+ repeated runs, zero flakiness)
+  and found consistent with 15+ other pre-existing tests in the same files
+  using the identical pattern; singling out the 3 new tests for extra waits
+  would be an inconsistent, non-minimal deviation with no demonstrated
+  failure to justify it.
+
+**Tests:**
+`npx astro check` 0 errors; `npm test` 490/490 (unchanged count — no new
+tests, fix 4 only revised an existing test's derivation);
+`npx playwright test tests/e2e/angle.spec.ts tests/e2e/angle-export.spec.ts`
+48/48.
+
+**References:**
+- PR #31 review response

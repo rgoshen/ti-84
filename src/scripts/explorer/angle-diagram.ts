@@ -365,7 +365,12 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
       const tangentPoint = polarToCartesian(c, c, unit, betaRad);
       const rawTan = Math.tan(thetaRad);
       const maxDist = c - LABEL_MARGIN;
-      const capMax = Math.sqrt(maxDist ** 2 - unit ** 2) / unit;
+      // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
+      // radicand would go negative and sqrt would silently emit NaN into the
+      // markup. Not reachable via either the live figure or the export (both
+      // use the defaults, unit=88 well under maxDist=156), but the option is
+      // public on AngleDiagramOptions, so the guard costs nothing to keep.
+      const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
       const cappedTan = Math.abs(rawTan) > capMax ? Math.sign(rawTan) * capMax : rawTan;
       const lineEnd = polarToCartesian(
         tangentPoint.x,

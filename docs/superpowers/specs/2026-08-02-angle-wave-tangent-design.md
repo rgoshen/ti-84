@@ -144,7 +144,7 @@ the box edge would assert a value that was clipped away.
 existing spell-it-out rationale (a screen reader pronounces "tan" as the English word)
 applies equally.
 
-```
+```text
 Tangent curve traced from 0 to 90 degrees. tangent of theta is undefined.
 ```
 
@@ -177,7 +177,7 @@ Sign rule: positive in Q1 and Q3, negative in Q2 and Q4.
 `xLatex`/`yLatex`. Keeping them in one builder is what stops the strip's number and the
 coordinate box's numbers from disagreeing.
 
-```
+```text
 tan θ = y/x = (r sin θ)/(r cos θ) = √3/3 ≈ 0.5774
 tan θ = y/x = (r sin θ)/(r cos θ) = 1                    (θ = 45°, exact → "=")
 tan θ = y/x = (r sin θ)/(r cos θ)  —  undefined          (θ = ±90°, ±270°)
