@@ -16,6 +16,7 @@ import { formatDegrees } from './angle-parse';
 import { round4 } from './format';
 import {
   exactCoordinates,
+  exactTangent,
   formatExactLatex,
   formatExactSpoken,
   formatExactText,
@@ -28,6 +29,10 @@ export interface CoordinateReadout {
   /** `x = r\cos\theta = 1.2 \times \frac{\sqrt{3}}{2} \approx 1.0392`. KaTeX source. */
   xLatex: string;
   yLatex: string;
+  /** `tan θ = y/x = (r sin θ)/(r cos θ) = …` — no `r ×` prefix, because r
+   *  cancels out of the ratio; showing the cancellation IS the point. */
+  tanLatex: string;
+  tanText: string;
   /** Screen-reader prose. No latex markup. */
   spoken: string;
   /** Narrow pair for the SVG label: `(√3/2, 1/2)` or `(1.04, 0.60)`. */
@@ -97,6 +102,31 @@ function equation(parts: EquationParts): string {
   return `${prefix}${exactPart}${relation}${decimal}`;
 }
 
+/**
+ * The tan θ worked equation: `tan θ = y/x = (r sin θ)/(r cos θ) = …`. Unlike
+ * {@link equation}, there is no `r ×` prefix — r cancels out of the ratio, so
+ * substituting it on both sides of the fraction would be noise. The literal
+ * `(r sin θ)/(r cos θ)` step is what makes the cancellation visible; the
+ * value that follows never depends on r.
+ */
+function tanEquation(
+  exact: ExactValue | 'undefined' | null,
+  value: number,
+  degreeLabel: string,
+  alphabet: 'latex' | 'text',
+): string {
+  const latex = alphabet === 'latex';
+  const chain = latex
+    ? '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta}'
+    : 'tan θ = y/x = (r sin θ)/(r cos θ)';
+
+  if (exact === 'undefined') {
+    return `${chain}${latex ? '\\text{ is undefined}' : ' is undefined'}`;
+  }
+
+  return `${chain} = ${equation({ exact, value, r: 1, fnLatex: '\\tan', fnText: 'tan', degreeLabel, alphabet })}`;
+}
+
 /** The same equation as prose, for the live region. */
 function spokenEquation(exact: ExactValue | null, value: number, r: number): string {
   const decimal = round4(value);
@@ -125,6 +155,11 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
   const y = r * Math.sin(rad);
   const exact = exactCoordinates(theta);
   const degreeLabel = formatDegrees(theta);
+
+  const exactTan = exactTangent(theta);
+  const tanValue = Math.tan(rad);
+  const tanLatex = tanEquation(exactTan, tanValue, degreeLabel, 'latex');
+  const tanText = tanEquation(exactTan, tanValue, degreeLabel, 'text');
 
   const cos = { exact: exact?.x ?? null, value: x, r, fnLatex: '\\cos', fnText: 'cos', degreeLabel };
   const sin = { exact: exact?.y ?? null, value: y, r, fnLatex: '\\sin', fnText: 'sin', degreeLabel };
@@ -159,6 +194,8 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
     tripleLatex: `${degreeLabel}^\\circ \\quad ${radianLatex} \\quad ${pairLatex}`,
     xLatex,
     yLatex,
+    tanLatex,
+    tanText,
     xText,
     yText,
     labelText,

@@ -147,3 +147,55 @@ describe('buildCoordinateReadout — spoken', () => {
     );
   });
 });
+
+describe('buildCoordinateReadout — tan', () => {
+  it('shows the r cancelling out of the ratio, exact and irrational', () => {
+    const out = buildCoordinateReadout(30, 1.2);
+    expect(out.tanLatex).toBe(
+      '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta} = ' +
+        '\\frac{\\sqrt{3}}{3} \\approx 0.5774',
+    );
+    expect(out.tanText).toBe(
+      'tan θ = y/x = (r sin θ)/(r cos θ) = √3/3 ≈ 0.5774',
+    );
+  });
+
+  it('is identical for every r — the whole point of the cancellation', () => {
+    expect(buildCoordinateReadout(30, 0.5).tanLatex).toBe(
+      buildCoordinateReadout(30, 1.5).tanLatex,
+    );
+  });
+
+  it('uses = for an exact rational value', () => {
+    const out = buildCoordinateReadout(45, 1);
+    expect(out.tanLatex).toBe(
+      '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta} = 1',
+    );
+    expect(out.tanLatex).not.toContain('\\approx');
+  });
+
+  it('states 0 once rather than "0 = 0"', () => {
+    expect(buildCoordinateReadout(0, 1).tanLatex).toBe(
+      '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta} = 0',
+    );
+  });
+
+  it('reads as undefined at 90° and 270°, in both alphabets', () => {
+    const at90 = buildCoordinateReadout(90, 1);
+    expect(at90.tanLatex).toBe(
+      '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta}\\text{ is undefined}',
+    );
+    expect(at90.tanText).toBe(
+      'tan θ = y/x = (r sin θ)/(r cos θ) is undefined',
+    );
+    expect(buildCoordinateReadout(270, 1).tanText).toContain('is undefined');
+  });
+
+  it('falls back to a named tangent when no exact form exists', () => {
+    const out = buildCoordinateReadout(37, 1);
+    expect(out.tanLatex).toBe(
+      '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta} = ' +
+        '\\tan 37^\\circ \\approx 0.7536',
+    );
+  });
+});

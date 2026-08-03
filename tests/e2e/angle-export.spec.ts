@@ -103,3 +103,27 @@ test('omits the wave section when no wave is selected', async ({ page }) => {
     expect(text).not.toContain('Traced');
   });
 });
+
+test('carries the tangent wave into the exported artifact, including the undefined case', async ({
+  page,
+}) => {
+  await goto(page);
+  await page.getByRole('radio', { name: 'tan θ' }).check();
+  await deg(page).fill('45');
+
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.evaluate((node) => node.textContent);
+    expect(text).toContain('Wave');
+    expect(text).toContain('tan θ = y/x');
+    expect(text).toContain('Traced');
+    expect(text).toContain('0° to 45°');
+  });
+
+  await deg(page).fill('90');
+  await downloadExport(page, 'PNG', async (artifact) => {
+    const text = await artifact.evaluate((node) => node.textContent);
+    expect(text).toContain('Wave');
+    expect(text).toContain('tan θ = y/x');
+    expect(text).toContain('undefined');
+  });
+});

@@ -35,6 +35,7 @@ import {
   waveSpoken,
   waveValue,
   WAVE_HEIGHT,
+  WAVE_SPOKEN_FN_NAME,
   WAVE_WIDTH,
   type WaveFn,
   type WaveMode,
@@ -114,8 +115,9 @@ export default function AngleExplorer(): React.JSX.Element {
       triple: renderMathHtml(coords.tripleLatex) ?? '',
       x: renderMathHtml(coords.xLatex) ?? '',
       y: renderMathHtml(coords.yLatex) ?? '',
+      tan: renderMathHtml(coords.tanLatex) ?? '',
     }),
-    [coords.tripleLatex, coords.xLatex, coords.yLatex],
+    [coords.tripleLatex, coords.xLatex, coords.yLatex, coords.tanLatex],
   );
 
   // `undefined` rather than 'none' is what both builders expect for "draw neither".
@@ -244,6 +246,9 @@ export default function AngleExplorer(): React.JSX.Element {
     const turnText = integer ? formatFractionText(turnFraction(whole)) : '—';
     const arcValue = round4(arcLength(snapshotR, degreesToRadians(snapshotTheta)));
     const snapshotCoords = buildCoordinateReadout(snapshotTheta, snapshotR);
+    const waveNumericValue = snapshotWave
+      ? waveValue(snapshotWave, snapshotTheta, snapshotR)
+      : null;
 
     return {
       model: {
@@ -273,7 +278,9 @@ export default function AngleExplorer(): React.JSX.Element {
                   label:
                     snapshotWave === 'sin'
                       ? 'sin θ — height is the y-coordinate'
-                      : 'cos θ — height is the x-coordinate',
+                      : snapshotWave === 'cos'
+                        ? 'cos θ — height is the x-coordinate'
+                        : 'tan θ — height is the tangent segment',
                   color: lightColors.wave,
                 },
               ]
@@ -309,11 +316,16 @@ export default function AngleExplorer(): React.JSX.Element {
                   facts: [
                     {
                       label: 'Function',
-                      value: snapshotWave === 'sin' ? 'y = r·sin θ' : 'y = r·cos θ',
+                      value:
+                        snapshotWave === 'sin'
+                          ? 'y = r·sin θ'
+                          : snapshotWave === 'cos'
+                            ? 'y = r·cos θ'
+                            : 'tan θ = y/x',
                     },
                     {
                       label: 'Value',
-                      value: round4(waveValue(snapshotWave, snapshotTheta, snapshotR)),
+                      value: waveNumericValue === null ? 'undefined' : round4(waveNumericValue),
                     },
                     { label: 'Traced', value: `0° to ${formatDegrees(snapshotTheta)}°` },
                   ],
@@ -422,6 +434,7 @@ export default function AngleExplorer(): React.JSX.Element {
                 { value: 'none' as const, label: 'none' },
                 { value: 'sin' as const, label: 'sin θ' },
                 { value: 'cos' as const, label: 'cos θ' },
+                { value: 'tan' as const, label: 'tan θ' },
               ]
             ).map((o) => (
               <div key={o.value} className="flex items-center gap-2">
@@ -557,7 +570,7 @@ export default function AngleExplorer(): React.JSX.Element {
               viewBox={`0 0 ${WAVE_WIDTH} ${WAVE_HEIGHT}`}
               className="h-auto w-full"
               role="img"
-              aria-label={`Graph of ${waveFn === 'sin' ? 'sine' : 'cosine'} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
+              aria-label={`Graph of ${WAVE_SPOKEN_FN_NAME[waveFn]} traced from 0 to ${formatDegrees(theta)} degrees, on an axis from negative 2 pi to 2 pi.`}
               dangerouslySetInnerHTML={{
                 __html: buildWaveSvg({
                   fn: waveFn,
@@ -577,7 +590,8 @@ export default function AngleExplorer(): React.JSX.Element {
               aria-hidden="true"
               className="mt-2 text-center text-sm text-muted-foreground"
               dangerouslySetInnerHTML={{
-                __html: waveFn === 'sin' ? coordHtml.y : coordHtml.x,
+                __html:
+                  waveFn === 'sin' ? coordHtml.y : waveFn === 'cos' ? coordHtml.x : coordHtml.tan,
               }}
             />
           </div>

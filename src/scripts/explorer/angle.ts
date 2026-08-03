@@ -65,6 +65,13 @@ export function isIntegerDegrees(deg: number): boolean {
   return Math.abs(deg - Math.round(deg)) < DEG_EPS;
 }
 
+/** How close to an odd multiple of 90° still counts as tan's asymptote —
+ *  looser than DEG_EPS because a hand-typed decimal (e.g. 89.9999999°) is
+ *  functionally undefined even though it is not exactly 90. */
+export function isTangentUndefined(deg: number): boolean {
+  return Math.abs((Math.abs(deg) % 180) - 90) < 1e-6;
+}
+
 /** KaTeX for an exact π-multiple: `0`, `\pi`, `2\pi`, `\frac{\pi}{6}`, `-\frac{2\pi}{3}`. */
 export function formatPiLatex(f: Fraction): string {
   if (f.n === 0) return '0';

@@ -1030,3 +1030,48 @@ and a **Show standard angles** toggle that draws the full sixteen-mark reference
   docs/superpowers/specs/2026-07-29-angle-wave-projection-design.md
 
 **Status:** Spec approved on `feature/angle-standard-angles`; implementation plan pending.
+
+## [2026-08-02] Feature: Angle Explorer Tangent Wave
+
+**Objective:**
+Add `tan θ` as a fourth option in the Angle Explorer's `Wave` selector, keeping `none`,
+`sin θ`, and `cos θ` unchanged. Reverses the `tan θ` exclusion recorded in the 2026-07-29
+wave-projection design.
+
+**Approach:**
+- Per-function y-domain: ±4 for tan, ±1.5 for sin/cos, derived from `fn` inside the builder
+  so a caller cannot pair the wrong domain with a function.
+- Dashed vertical asymptotes at ±π/2 and ±3π/2; the traced path breaks at each one, with the
+  break point computed exactly at `atan(domain)` rather than interpolated.
+- `waveValue` returns `number | null` so the compiler forces every call site to handle the
+  undefined value at ±90°/±270°.
+- Circle highlights the tangent segment on the unit circle at x = 1, whose length is exactly
+  `tan θ` — preserving the leg-equals-plotted-height invariant sin/cos already carry.
+- Caption shows the full cancellation chain `tan θ = y/x = (r sin θ)/(r cos θ) = …`, which
+  explains why the radius slider does not move the tan curve.
+- Widen `ExactValue.denominator` to `1 | 2 | 3` so `√3/3` has an exact form; the three
+  formatters already interpolate the value generically and need no change.
+
+**Tests:**
+- Unit: `exactTangent` cross-checked against `Math.tan` at all sixteen chart angles;
+  `exactCoordinates` proven never to emit denominator 3; r-cancellation asserted
+  (`waveValue('tan', θ, 0.5) === waveValue('tan', θ, 1.5)`); no subpath spans an asymptote;
+  subpath endpoints land on the domain edge; tangent segment length `=== |tan θ| · unit` for
+  any β and any r.
+- E2E: dragging the radius leaves tan's `d` unchanged but changes sin's; 90° shows undefined
+  with no marker; sweeping past 90° yields multiple `M` commands; reset clears the strip;
+  export carries the tan wave.
+
+**Risks & Tradeoffs:**
+- Switching sin ↔ tan rescales the box, so equal pixel heights mean different values.
+- The radius slider looks inert while tan is selected — correct, but needs a browser check
+  that the caption actually explains it.
+- Widening `denominator` touches a type on the coordinate path; mitigated by a sweep test.
+- A clamped tangent segment near 90° could be misread as a real value.
+
+**References:**
+- Spec: `docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md`
+- Plan: `docs/superpowers/plans/2026-08-02-angle-wave-tangent.md`
+
+**Status:** Implemented on `feature/angle-wave-tangent`, all 9 plan tasks complete and reviewed;
+final whole-branch review's 8 fixes applied (see SUMMARY.md, 2026-08-02 22:50) — ready for merge.

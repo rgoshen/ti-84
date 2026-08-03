@@ -337,29 +337,76 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const initialDot = polarToCartesian(c, c, r * unit, betaRad);
   const terminalDot = polarToCartesian(c, c, r * unit, endRad);
 
-  const projectionMarkup =
-    opts.projection === undefined
-      ? ''
-      : (() => {
-          // The foot of the perpendicular from the terminal point onto the initial
-          // side, expressed in the β-rotated frame. Positioned through betaRad like
-          // every other element, so the leg rotates with the rigid body — and its
-          // length is therefore r|sin θ| (sin) or r|cos θ| (cos) for ANY β, which is
-          // what makes it equal to the wave's plotted height.
-          const foot = polarToCartesian(c, c, r * Math.cos(thetaRad) * unit, betaRad);
-          const from = opts.projection === 'sin' ? terminalDot : { x: c, y: c };
-          // stroke-linecap="round": a zero-length line (sin 0° / cos 90°) is
-          // deliberately drawn rather than omitted — a missing element would read
-          // as "no projection selected" rather than "the value is zero" — but
-          // "butt" (the SVG default) paints nothing for a zero-length line. Only
-          // "round" (or "square") gives it any visible extent, so the zero value
-          // renders honestly instead of silently as nothing.
-          return (
-            `<line data-role="projection-leg" x1="${from.x}" y1="${from.y}" ` +
-            `x2="${foot.x}" y2="${foot.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
-            `stroke-linecap="round" />`
-          );
-        })();
+  const projectionMarkup = (() => {
+    if (opts.projection === undefined) return '';
+
+    if (opts.projection === 'tan') {
+      // T sits on the UNIT circle (not r·unit) at angle β — the point where
+      // the initial side crosses it, and the fixed anchor of the tangent
+      // line. E is placed as an offset from T, perpendicular to OT (angle
+      // β + 90°), scaled by the tangent value itself — the standard
+      // "extend the terminal side until it meets the tangent line"
+      // construction, decomposed so E stays ON the tangent line even when
+      // clamped. Because T is independent of r and the offset direction is
+      // independent of r, segment length is exactly |tan θ|·unit for any
+      // r — the cancellation, geometrically.
+      //
+      // Clamped by capping the tangent VALUE (not the ray distance from the
+      // origin, which would pull E off the tangent line as it shrinks): by
+      // the right triangle O-T-E (OT = unit, right angle at T),
+      // OE² = unit² + TE², so capping TE at sqrt(maxDist² − unit²) caps OE
+      // at exactly maxDist — the viewBox's inscribed-circle radius, bounded
+      // the same way in every direction regardless of β. One consequence:
+      // once the clamp engages near an asymptote, the dashed
+      // tangent-extension below is no longer collinear with the terminal
+      // side — E has left the ray to stay on the tangent line instead.
+      // No endpoint dot is ever drawn at E, clamped or not, so a clamped
+      // segment never asserts a value it was truncated out of.
+      const tangentPoint = polarToCartesian(c, c, unit, betaRad);
+      const rawTan = Math.tan(thetaRad);
+      const maxDist = c - LABEL_MARGIN;
+      // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
+      // radicand would go negative and sqrt would silently emit NaN into the
+      // markup. Not reachable via either the live figure or the export (both
+      // use the defaults, unit=88 well under maxDist=156), but the option is
+      // public on AngleDiagramOptions, so the guard costs nothing to keep.
+      const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
+      const cappedTan = Math.abs(rawTan) > capMax ? Math.sign(rawTan) * capMax : rawTan;
+      const lineEnd = polarToCartesian(
+        tangentPoint.x,
+        tangentPoint.y,
+        cappedTan * unit,
+        betaRad + Math.PI / 2,
+      );
+      return (
+        `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
+        `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
+        `stroke-dasharray="3 3" />` +
+        `<line data-role="tangent-segment" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
+        `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+        `stroke-linecap="round" />`
+      );
+    }
+
+    // The foot of the perpendicular from the terminal point onto the initial
+    // side, expressed in the β-rotated frame. Positioned through betaRad like
+    // every other element, so the leg rotates with the rigid body — and its
+    // length is therefore r|sin θ| (sin) or r|cos θ| (cos) for ANY β, which is
+    // what makes it equal to the wave's plotted height.
+    const foot = polarToCartesian(c, c, r * Math.cos(thetaRad) * unit, betaRad);
+    const from = opts.projection === 'sin' ? terminalDot : { x: c, y: c };
+    // stroke-linecap="round": a zero-length line (sin 0° / cos 90°) is
+    // deliberately drawn rather than omitted — a missing element would read
+    // as "no projection selected" rather than "the value is zero" — but
+    // "butt" (the SVG default) paints nothing for a zero-length line. Only
+    // "round" (or "square") gives it any visible extent, so the zero value
+    // renders honestly instead of silently as nothing.
+    return (
+      `<line data-role="projection-leg" x1="${from.x}" y1="${from.y}" ` +
+      `x2="${foot.x}" y2="${foot.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+      `stroke-linecap="round" />`
+    );
+  })();
 
   // tickText, not the terminal-side red: #e24b4a clears only 3.93:1 against
   // white, below the 4.5:1 floor for text. Weight and size carry the emphasis

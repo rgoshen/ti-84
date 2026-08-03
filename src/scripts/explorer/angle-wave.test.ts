@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 
 import {
   AMP_MAX,
+  TAN_MAX,
   WAVE_HEIGHT,
   WAVE_WIDTH,
   buildWaveSvg,
+  waveAsymptoteRadians,
+  waveDomain,
   waveScales,
   waveTickLabel,
   waveTickRadians,
@@ -66,8 +69,8 @@ describe('waveValue', () => {
 
   it('is odd in θ for sin and even in θ for cos', () => {
     for (const theta of [17, 45, 90, 137, 210, 359]) {
-      expect(waveValue('sin', -theta, 1)).toBeCloseTo(-waveValue('sin', theta, 1), 12);
-      expect(waveValue('cos', -theta, 1)).toBeCloseTo(waveValue('cos', theta, 1), 12);
+      expect(waveValue('sin', -theta, 1)!).toBeCloseTo(-waveValue('sin', theta, 1)!, 12);
+      expect(waveValue('cos', -theta, 1)!).toBeCloseTo(waveValue('cos', theta, 1)!, 12);
     }
   });
 });
@@ -138,7 +141,7 @@ describe('wavePath', () => {
     const v = vertices(wavePath('sin', 137, 1, s));
     expect(v[0]!.x).toBeCloseTo(s.xFor(0), 6);
     expect(v.at(-1)!.x).toBeCloseTo(s.xFor(degreesToRadians(137)), 6);
-    expect(v.at(-1)!.y).toBeCloseTo(s.yFor(waveValue('sin', 137, 1)), 6);
+    expect(v.at(-1)!.y).toBeCloseTo(s.yFor(waveValue('sin', 137, 1)!), 6);
   });
 
   it('grows rightward for positive θ and leftward for negative θ', () => {
@@ -181,6 +184,90 @@ describe('wavePath', () => {
         expect(v.y).toBeGreaterThanOrEqual(0);
         expect(v.y).toBeLessThanOrEqual(WAVE_HEIGHT);
       }
+    }
+  });
+});
+
+describe('wavePath — tan', () => {
+  // tan needs its own domain-matched scale; the default waveScales() is
+  // still ±1.5 and would clip every tan sample well before the real edge.
+  const tanScale = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+
+  it('draws one subpath for a sweep that never reaches the visible edge', () => {
+    const path = wavePath('tan', 45, 1, tanScale);
+    expect((path.match(/M/g) ?? []).length).toBe(1);
+  });
+
+  it('breaks into multiple subpaths once the sweep crosses an asymptote', () => {
+    const path = wavePath('tan', 120, 1, tanScale);
+    expect((path.match(/M/g) ?? []).length).toBeGreaterThan(1);
+  });
+
+  it('never lets one subpath span an asymptote', () => {
+    // Every asymptote (odd multiple of 90°) must fall strictly BETWEEN two
+    // subpaths, never inside the degree range one subpath covers.
+    for (const path of [
+      wavePath('tan', 180, 1, tanScale),
+      wavePath('tan', 400, 1, tanScale),
+      wavePath('tan', -260, 1, tanScale),
+    ]) {
+      for (const subpath of path.split(' M ').map((s, i) => (i === 0 ? s : `M ${s}`))) {
+        const xs = [...subpath.matchAll(/[ML] ([-\d.e]+) /g)].map((m) => Number(m[1]));
+        for (const asymptoteRad of waveAsymptoteRadians()) {
+          const asymptoteX = tanScale.xFor(asymptoteRad);
+          const allBefore = xs.every((x) => x < asymptoteX);
+          const allAfter = xs.every((x) => x > asymptoteX);
+          expect(allBefore || allAfter, `subpath straddles an asymptote: ${subpath}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('breaks at the exact angle where |tan θ| = TAN_MAX, not an interpolated guess', () => {
+    const edgeDeg = (Math.atan(TAN_MAX) * 180) / Math.PI;
+    const path = wavePath('tan', 120, 1, tanScale);
+    const firstSubpath = path.split(' M ')[0]!;
+    const lastPoint = [...firstSubpath.matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)].at(-1)!;
+    expect(Number(lastPoint[1])).toBeCloseTo(tanScale.xFor(degreesToRadians(edgeDeg)), 4);
+    expect(Number(lastPoint[2])).toBeCloseTo(tanScale.yFor(TAN_MAX), 4);
+  });
+
+  it('snaps the final vertex to θ exactly when θ is inside the visible domain', () => {
+    const v = [...wavePath('tan', 30, 1, tanScale).matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)].at(-1)!;
+    expect(Number(v[1])).toBeCloseTo(tanScale.xFor(degreesToRadians(30)), 6);
+    expect(Number(v[2])).toBeCloseTo(tanScale.yFor(waveValue('tan', 30, 1)!), 6);
+  });
+
+  it('traces leftward for a negative sweep, mirroring sin/cos', () => {
+    const xs = [...wavePath('tan', -45, 1, tanScale).matchAll(/[ML] ([-\d.e]+) /g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(xs.at(-1)!).toBeLessThan(xs[0]!);
+  });
+
+  it('is independent of r, matching waveValue', () => {
+    expect(wavePath('tan', 45, 0.5, tanScale)).toBe(wavePath('tan', 45, 1.5, tanScale));
+  });
+
+  it('keeps every vertex inside the viewBox across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 13) {
+      if (Math.abs(theta) < 1e-9) continue;
+      for (const v of [...wavePath('tan', theta, 1, tanScale).matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)]) {
+        const x = Number(v[1]);
+        const y = Number(v[2]);
+        expect(x, `x out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+        expect(x, `x out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_WIDTH);
+        expect(y, `y out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+        expect(y, `y out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_HEIGHT);
+      }
+    }
+  });
+
+  it('emits no NaN or undefined across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 9) {
+      const path = wavePath('tan', theta, 1, tanScale);
+      expect(path).not.toContain('NaN');
+      expect(path).not.toContain('undefined');
     }
   });
 });
@@ -282,6 +369,158 @@ describe('buildWaveSvg', () => {
           expect(svg).not.toContain('NaN');
           expect(svg).not.toContain('undefined');
         }
+      }
+    }
+  });
+});
+
+describe('waveDomain', () => {
+  it('is ±1.5 for sin and cos, ±4 for tan', () => {
+    expect(waveDomain('sin')).toBe(AMP_MAX);
+    expect(waveDomain('cos')).toBe(AMP_MAX);
+    expect(waveDomain('tan')).toBe(TAN_MAX);
+  });
+});
+
+describe('waveScales — custom domain', () => {
+  it('rescales the y-axis to the given domain, leaving existing calls untouched', () => {
+    const narrow = waveScales(WAVE_WIDTH, WAVE_HEIGHT); // default domain, AMP_MAX
+    const wide = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    expect(narrow.yFor(0)).toBeCloseTo(wide.yFor(0), 6); // zero stays at the same pixel
+    expect(wide.yFor(TAN_MAX)).toBeCloseTo(narrow.yFor(AMP_MAX), 6); // both land on the top edge
+    expect(wide.yFor(1)).toBeGreaterThan(narrow.yFor(1)); // same value, smaller fraction of a wider box
+  });
+});
+
+describe('waveValue — tan', () => {
+  it('is independent of r — the radius cancels out of the ratio', () => {
+    for (const theta of [10, 30, 45, 60, 80, -50, 200]) {
+      const a = waveValue('tan', theta, 0.5);
+      const b = waveValue('tan', theta, 1.5);
+      expect(a).not.toBeNull();
+      expect(a).toBeCloseTo(b!, 12);
+    }
+  });
+
+  it('matches Math.tan away from the asymptotes', () => {
+    expect(waveValue('tan', 45, 1)).toBeCloseTo(1, 10);
+    expect(waveValue('tan', 0, 1)).toBeCloseTo(0, 10);
+    expect(waveValue('tan', 30, 1)).toBeCloseTo(Math.tan(Math.PI / 6), 10);
+  });
+
+  it('is null at every odd multiple of 90°, positive or negative', () => {
+    for (const theta of [90, -90, 270, -270]) {
+      expect(waveValue('tan', theta, 1)).toBeNull();
+    }
+  });
+
+  it('is not null anywhere else, including close neighbours of an asymptote', () => {
+    expect(waveValue('tan', 89, 1)).not.toBeNull();
+    expect(waveValue('tan', 91, 1)).not.toBeNull();
+    expect(waveValue('tan', 180, 1)).not.toBeNull();
+  });
+});
+
+describe('waveAsymptoteRadians', () => {
+  it('returns the four odd π/2 multiples in ascending order', () => {
+    expect(waveAsymptoteRadians()).toEqual([
+      -3 * (Math.PI / 2),
+      -1 * (Math.PI / 2),
+      1 * (Math.PI / 2),
+      3 * (Math.PI / 2),
+    ]);
+  });
+
+  it('lands exactly on members of waveTickRadians — the asymptotes are real gridlines', () => {
+    const tickRadians = waveTickRadians().map((t) => t.radians);
+    for (const asymptote of waveAsymptoteRadians()) {
+      expect(tickRadians.some((r) => Math.abs(r - asymptote) < 1e-12)).toBe(true);
+    }
+  });
+});
+
+describe('waveSpoken — tan', () => {
+  it('calls it a curve, not a wave, and reports the value', () => {
+    expect(waveSpoken('tan', 45, 1)).toBe(
+      'Tangent curve traced from 0 to 45 degrees. tangent of theta is 1.',
+    );
+  });
+
+  it('reports undefined at an asymptote', () => {
+    expect(waveSpoken('tan', 90, 1)).toBe(
+      'Tangent curve traced from 0 to 90 degrees. tangent of theta is undefined.',
+    );
+  });
+
+  it('is independent of r', () => {
+    expect(waveSpoken('tan', 30, 0.5)).toBe(waveSpoken('tan', 30, 1.5));
+  });
+});
+
+describe('buildWaveSvg — tan', () => {
+  const tanBase = { ...waveBase, fn: 'tan' as const };
+
+  it('draws four dashed asymptote lines, and none for sin/cos', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    expect([...svg.matchAll(/data-role="wave-asymptote"/g)]).toHaveLength(4);
+    expect(buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 })).not.toContain(
+      'data-role="wave-asymptote"',
+    );
+  });
+
+  it('rescales the box to ±TAN_MAX — a value of 1 sits on the dashed unit reference', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 }); // tan 45° = 1
+    const markerY = Number(svg.match(/data-role="wave-marker"[^>]*cy="([-\d.]+)"/)![1]);
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    expect(markerY).toBeCloseTo(s.yFor(1), 4);
+  });
+
+  it('suppresses the marker and drop-line at an asymptote', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 90 });
+    expect(svg).not.toContain('data-role="wave-marker"');
+    expect(svg).not.toContain('data-role="wave-drop"');
+  });
+
+  it('suppresses the marker once the value leaves the visible domain, short of the true asymptote', () => {
+    // tan(80°) ≈ 5.67 > TAN_MAX(4) — a real, finite value, but off-screen.
+    const svg = buildWaveSvg({ ...tanBase, theta: 80 });
+    expect(svg).not.toContain('data-role="wave-marker"');
+  });
+
+  it('still draws the marker for sin/cos everywhere, unaffected by the new domain check', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 90 });
+    expect(svg).toContain('data-role="wave-marker"');
+  });
+
+  it('draws the curve in one or more subpaths without NaN across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 11) {
+      if (Math.abs(theta) < 1e-9) continue;
+      const svg = buildWaveSvg({ ...tanBase, theta });
+      expect(svg).not.toContain('NaN');
+      expect(svg).not.toContain('undefined');
+    }
+  });
+
+  it('suppresses the solid gridline at each asymptote so the dashed line reads as dashed, but keeps the tick label', () => {
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, TAN_MAX);
+    for (const k of [-6, -2, 2, 6]) {
+      const radians = (k * Math.PI) / 4;
+      const x = s.xFor(radians);
+      const label = waveTickLabel(k);
+      expect(svg).not.toContain(`<line x1="${x}" y1=`);
+      expect(svg).toContain(`>${label}</text>`);
+    }
+  });
+
+  it('leaves the gridline at those same x-positions unchanged for sin/cos, which never suppress it', () => {
+    const s = waveScales(WAVE_WIDTH, WAVE_HEIGHT, AMP_MAX);
+    for (const fn of ['sin', 'cos'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 45 });
+      for (const k of [-6, -2, 2, 6]) {
+        const radians = (k * Math.PI) / 4;
+        const x = s.xFor(radians);
+        expect(svg).toContain(`<line x1="${x}" y1=`);
       }
     }
   });

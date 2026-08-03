@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 
 import {
   exactCoordinates,
+  exactTangent,
   exactToNumber,
   formatExactLatex,
   formatExactSpoken,
   formatExactText,
+  type ExactValue,
 } from './unit-circle';
 
 /** The 16 angles the reference chart labels. */
@@ -104,5 +106,78 @@ describe('formatExactSpoken', () => {
       'negative square root of 2 over 2',
     );
     expect(formatExactSpoken({ sign: -1, radicand: 1, denominator: 1 })).toBe('negative 1');
+  });
+});
+
+describe('exactTangent', () => {
+  it('agrees with Math.tan at every chart angle away from the asymptotes', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 90 || deg === 270) continue;
+      const v = exactTangent(deg);
+      expect(v, `no exact tangent for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(Math.tan((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 90° and 270°, and at their normalized equivalents', () => {
+    for (const deg of [90, 270, -90, -270, 450]) {
+      expect(exactTangent(deg)).toBe('undefined');
+    }
+  });
+
+  it('renders √3/3 at 30° and 150°, with the correct sign', () => {
+    expect(exactTangent(30)).toEqual({ sign: 1, radicand: 3, denominator: 3 });
+    expect(exactTangent(150)).toEqual({ sign: -1, radicand: 3, denominator: 3 });
+  });
+
+  it('is 0 at 0° and 180°, and exactly √3 at 60°', () => {
+    expect(exactTangent(0)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
+    expect(exactTangent(180)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
+    expect(exactTangent(60)).toEqual({ sign: 1, radicand: 3, denominator: 1 });
+  });
+
+  it('is positive in Q1/Q3 and negative in Q2/Q4', () => {
+    expect(exactToNumber(exactTangent(210) as ExactValue)).toBeGreaterThan(0); // Q3
+    expect(exactToNumber(exactTangent(300) as ExactValue)).toBeLessThan(0); // Q4
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactTangent(37)).toBeNull();
+    expect(exactTangent(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° and negative angles onto the same value', () => {
+    expect(exactTangent(390)).toEqual(exactTangent(30));
+    expect(exactTangent(-330)).toEqual(exactTangent(30));
+  });
+
+  it('is undefined for a hand-typed near-90° decimal, not merely off-chart null', () => {
+    // A value like 89.9999999° is not an integer degree, so the isIntegerDegrees
+    // gate alone would fall through to null ("no exact form") — but this angle
+    // is functionally the asymptote, and reporting a bogus huge tangent instead
+    // of "undefined" is the exact regression this closes.
+    expect(exactTangent(89.9999999)).toBe('undefined');
+    expect(exactTangent(-89.9999995)).toBe('undefined');
+  });
+});
+
+describe('exactCoordinates — never needs a denominator of 3', () => {
+  it('proves the ExactValue.denominator widening is non-invasive for x/y', () => {
+    for (const deg of CHART_ANGLES) {
+      const point = exactCoordinates(deg)!;
+      expect(point.x.denominator).not.toBe(3);
+      expect(point.y.denominator).not.toBe(3);
+    }
+  });
+});
+
+describe('formatters — denominator 3', () => {
+  const rootThirdOverThree = { sign: 1 as const, radicand: 3 as const, denominator: 3 as const };
+
+  it('renders √3/3 across all three formatters with no formatter changes needed', () => {
+    expect(formatExactLatex(rootThirdOverThree)).toBe('\\frac{\\sqrt{3}}{3}');
+    expect(formatExactText(rootThirdOverThree)).toBe('√3/3');
+    expect(formatExactSpoken(rootThirdOverThree)).toBe('square root of 3 over 3');
   });
 });

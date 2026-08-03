@@ -12,10 +12,10 @@
  * artifact draw through one builder and cannot drift.
  */
 import type { ExplorerColors } from '@/scripts/graphing/theme';
-import { degreesToRadians, formatPiText, reduceFraction } from './angle';
+import { degreesToRadians, formatPiText, isTangentUndefined, reduceFraction } from './angle';
 
 /** Which coordinate of the terminal point the strip plots. */
-export type WaveFn = 'sin' | 'cos';
+export type WaveFn = 'sin' | 'cos' | 'tan';
 
 /** The selector's full state. `none` draws no strip at all. */
 export type WaveMode = 'none' | WaveFn;
@@ -32,6 +32,16 @@ export const WAVE_HEIGHT = 176;
  * out the one thing the radius slider exists to show.
  */
 export const AMP_MAX = 1.5;
+/** y-domain half-height for tan, in units. atan(4) ≈ 76°, so only the last 14°
+ *  before each asymptote is off-screen — atan(1.5) ≈ 56° would hide 34°. */
+export const TAN_MAX = 4;
+
+/** Per-function y-domain half-height. sin/cos share AMP_MAX; tan gets its own,
+ *  wider domain because it is unbounded and AMP_MAX would hide a third of
+ *  every quarter-sweep. */
+export function waveDomain(fn: WaveFn): number {
+  return fn === 'tan' ? TAN_MAX : AMP_MAX;
+}
 
 /** Padding inside the viewBox. `bottom` reserves both staggered label baselines. */
 const PAD = { left: 8, right: 8, top: 12, bottom: 34 } as const;
@@ -55,6 +65,7 @@ export interface WaveScales {
 export function waveScales(
   width: number = WAVE_WIDTH,
   height: number = WAVE_HEIGHT,
+  domain: number = AMP_MAX,
 ): WaveScales {
   const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
@@ -62,7 +73,7 @@ export function waveScales(
     xFor: (radians) => PAD.left + ((radians + X_SPAN / 2) / X_SPAN) * plotW,
     // SVG y grows downward, so the domain is inverted here — the same flip
     // `angle-render.ts` applies by negating its sine.
-    yFor: (value) => PAD.top + ((AMP_MAX - value) / (2 * AMP_MAX)) * plotH,
+    yFor: (value) => PAD.top + ((domain - value) / (2 * domain)) * plotH,
   };
 }
 
@@ -85,10 +96,24 @@ export function waveTickLabel(k: number): string {
   return formatPiText(reduceFraction(k, 4));
 }
 
-/** The plotted value: the terminal point's y (sin) or x (cos), scaled by r. */
-export function waveValue(fn: WaveFn, theta: number, r: number): number {
+/** The plotted value: the terminal point's y (sin), x (cos), or ratio (tan),
+ *  scaled by r for sin/cos. tan is NOT scaled by r — tan θ = (r sin θ)/(r cos θ)
+ *  and r cancels, so the radius slider cannot move this curve. `null` marks
+ *  the asymptotes, where tan is undefined. */
+export function waveValue(fn: WaveFn, theta: number, r: number): number | null {
   const rad = degreesToRadians(theta);
-  return fn === 'sin' ? r * Math.sin(rad) : r * Math.cos(rad);
+  if (fn === 'sin') return r * Math.sin(rad);
+  if (fn === 'cos') return r * Math.cos(rad);
+  // θ arrives from a degree slider (or a parsed, already-rounded field), so a
+  // tolerance-checked degree comparison is exact and honest here — unlike
+  // testing Math.tan's magnitude, which never actually reaches Infinity.
+  if (isTangentUndefined(theta)) return null;
+  return Math.tan(rad);
+}
+
+/** The four vertical asymptotes tan is undefined at, within [-2π, 2π]. */
+export function waveAsymptoteRadians(): number[] {
+  return [-3, -1, 1, 3].map((k) => (k * Math.PI) / 2);
 }
 
 /** Below this, a sweep is nothing rather than a degenerate path. Mirrors `arcPath`. */
@@ -96,6 +121,70 @@ const ZERO_DEG = 1e-9;
 
 /** Sampling interval along θ, in degrees. 360° yields 181 vertices. */
 const STEP_DEG = 2;
+
+/** Sampling interval for tan, in degrees. Tighter than sin/cos's 2° because
+ *  the curve steepens sharply near each asymptote, where 2° steps facet visibly. */
+const TAN_STEP_DEG = 1;
+
+/**
+ * The tangent curve traced from 0 to θ, as one or more SVG subpaths.
+ *
+ * tan is periodic every 180° and unbounded within each period, so unlike
+ * sin/cos this cannot be one polyline: it is built from the VISIBLE
+ * sub-intervals — the portion of each 180°-period branch where |tan θ| stays
+ * inside TAN_MAX — intersected with [0, θ]. Each sub-interval becomes its own
+ * `M …` subpath, so no subpath ever crosses an asymptote. Break points are the
+ * exact angle where |tan θ| = TAN_MAX (± k·180°), computed directly rather
+ * than interpolated between samples — tan's curvature near the asymptote makes
+ * a straight chord between 1° samples measurably wrong there.
+ *
+ * The final vertex of the LAST subpath falls out of the same clamp that
+ * produces every other subpath's edge: `Math.min(hi, center + edge)` is θ
+ * itself whenever θ is the binding constraint (θ inside the visible domain),
+ * and the branch's true edge otherwise — so "snap to θ" and "stop at the
+ * domain edge" are the same rule, not two.
+ */
+function tanPath(theta: number, dir: 1 | -1, scales: WaveScales): string {
+  const edgeDeg = (Math.atan(waveDomain('tan')) * 180) / Math.PI;
+  const lo = Math.min(0, theta);
+  const hi = Math.max(0, theta);
+
+  const intervals: Array<[number, number]> = [];
+  const kMin = Math.floor((lo - edgeDeg) / 180) - 1;
+  const kMax = Math.ceil((hi + edgeDeg) / 180) + 1;
+  for (let k = kMin; k <= kMax; k++) {
+    const center = k * 180;
+    const segLo = Math.max(lo, center - edgeDeg);
+    const segHi = Math.min(hi, center + edgeDeg);
+    if (segHi - segLo > 1e-6) intervals.push([segLo, segHi]);
+  }
+
+  // Intervals are produced in ascending order (k ascending ⇒ centre
+  // ascending), which is the sweep order for a positive θ. A negative θ
+  // sweeps from 0 DOWN to θ, so both the interval order and each interval's
+  // internal sample order must reverse.
+  const ordered = dir === 1 ? intervals : [...intervals].reverse();
+
+  return ordered
+    .map(([a, b]) => {
+      const n = Math.ceil((b - a) / TAN_STEP_DEG);
+      const points: string[] = [];
+      for (let i = 0; i <= n; i++) {
+        const deg =
+          dir === 1
+            ? i === n
+              ? b
+              : a + i * TAN_STEP_DEG
+            : i === n
+              ? a
+              : b - i * TAN_STEP_DEG;
+        const rad = degreesToRadians(deg);
+        points.push(`${scales.xFor(rad)} ${scales.yFor(Math.tan(rad))}`);
+      }
+      return `M ${points[0]}${points.slice(1).map((p) => ` L ${p}`).join('')}`;
+    })
+    .join(' ');
+}
 
 /**
  * The curve traced from 0 out to θ, as an SVG path.
@@ -119,13 +208,18 @@ export function wavePath(
   if (Math.abs(theta) < ZERO_DEG) return '';
 
   const dir = theta < 0 ? -1 : 1;
+
+  if (fn === 'tan') return tanPath(theta, dir, scales);
+
   const steps = Math.ceil(Math.abs(theta) / STEP_DEG);
   const points: string[] = [];
 
   for (let i = 0; i <= steps; i++) {
     const at = i === steps ? theta : dir * i * STEP_DEG;
     const x = scales.xFor(degreesToRadians(at));
-    const y = scales.yFor(waveValue(fn, at, r));
+    // Safe: the tan branch above already returned via tanPath, so waveValue
+    // can only be 'sin' or 'cos' here, which never return null.
+    const y = scales.yFor(waveValue(fn, at, r)!);
     points.push(`${x} ${y}`);
   }
 
@@ -135,20 +229,23 @@ export function wavePath(
 /** Whole-degree display, matching what the Degrees field shows. */
 const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1e4);
 
+const WAVE_DISPLAY_NAME: Record<WaveFn, string> = { sin: 'Sine', cos: 'Cosine', tan: 'Tangent' };
+export const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
+
 /**
  * The strip as prose, for the existing debounced live region. Both KaTeX boxes
  * are `aria-hidden`, so this is the only channel a screen-reader user has.
+ *
+ * tan is called a "curve", not a "wave" — it is periodic but not a sinusoid —
+ * and reports "undefined" at the asymptotes rather than a bogus huge number.
  */
 export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
-  const name = fn === 'sin' ? 'Sine' : 'Cosine';
-  // Spelled out, not the abbreviation: a screen reader pronounces "sin" as the
-  // English word "sin" (as in wrongdoing), not the trig function, and mangles
-  // "cos" too.
-  const spokenName = fn === 'sin' ? 'sine' : 'cosine';
-  const value = Math.round(waveValue(fn, theta, r) * 1e4) / 1e4;
+  const noun = fn === 'tan' ? 'curve' : 'wave';
+  const value = waveValue(fn, theta, r);
+  const valueText = value === null ? 'undefined' : String(Math.round(value * 1e4) / 1e4);
   return (
-    `${name} wave traced from 0 to ${degreeText(theta)} degrees. ` +
-    `${spokenName} of theta is ${value}.`
+    `${WAVE_DISPLAY_NAME[fn]} ${noun} traced from 0 to ${degreeText(theta)} degrees. ` +
+    `${WAVE_SPOKEN_FN_NAME[fn]} of theta is ${valueText}.`
   );
 }
 
@@ -190,10 +287,11 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
   const { fn, theta, r, colors, tickText } = opts;
   const width = opts.width ?? WAVE_WIDTH;
   const height = opts.height ?? WAVE_HEIGHT;
-  const s = waveScales(width, height);
+  const domain = waveDomain(fn);
+  const s = waveScales(width, height, domain);
 
-  const top = s.yFor(AMP_MAX);
-  const bottom = s.yFor(-AMP_MAX);
+  const top = s.yFor(domain);
+  const bottom = s.yFor(-domain);
   const zeroY = s.yFor(0);
 
   // Full-height gridlines rather than short ticks at the axis: the label sits at
@@ -206,12 +304,17 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       const even = k % 2 === 0;
       const labelY =
         height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
-      // The π/2 multiples (even k) hold the primary baseline; odd π/4 multiples
-      // drop to the second, doubling each label's horizontal room.
+      // At tan's asymptotes, this solid gridline would sit directly under
+      // the dashed asymptote line (drawn separately, below) — a same-colour
+      // opaque line fills in the dash gaps, so the asymptote never actually
+      // reads as dashed. Suppress just the gridline here; the label stays.
+      const isAsymptote = fn === 'tan' && (k === -6 || k === -2 || k === 2 || k === 6);
       return (
         `<g data-role="wave-tick">` +
-        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
-        `stroke="${colors.axis}" stroke-width="${even ? 0.75 : 0.5}" />` +
+        (isAsymptote
+          ? ''
+          : `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom + TICK_OVERSHOOT}" ` +
+            `stroke="${colors.axis}" stroke-width="${even ? 0.75 : 0.5}" />`) +
         `<text x="${x}" y="${labelY}" fill="${tickText}" font-size="${TICK_FONT_SIZE}" ` +
         `text-anchor="middle" dominant-baseline="middle">${label}</text>` +
         `</g>`
@@ -230,6 +333,21 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     )
     .join('');
 
+  // Dashed verticals at tan's four asymptotes, spanning the plot area like the
+  // π/4 gridlines. Absent for sin/cos, which have no asymptote to mark.
+  const asymptotes =
+    fn === 'tan'
+      ? waveAsymptoteRadians()
+          .map((rad) => {
+            const x = s.xFor(rad);
+            return (
+              `<line data-role="wave-asymptote" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" ` +
+              `stroke="${colors.axis}" stroke-width="1" stroke-dasharray="2 4" />`
+            );
+          })
+          .join('')
+      : '';
+
   const path = wavePath(fn, theta, r, s);
   const curve =
     path !== ''
@@ -237,23 +355,32 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
         `stroke-width="2.5" stroke-linejoin="round" />`
       : '';
 
+  // The marker/drop-line pair is suppressed whenever the value is null (the
+  // exact asymptote) OR simply outside the visible domain (a real but
+  // off-screen tan value) — a marker pinned to the box edge would assert a
+  // value that was clipped away. For sin/cos this check never fires: their
+  // values never exceed AMP_MAX, so the marker still draws unconditionally,
+  // matching today's behaviour exactly.
+  const value = waveValue(fn, theta, r);
+  const showMarker = value !== null && Math.abs(value) <= domain;
   const markerX = s.xFor(degreesToRadians(theta));
-  const markerY = s.yFor(waveValue(fn, theta, r));
+  const markerMarkup = showMarker
+    ? `<line data-role="wave-drop" x1="${markerX}" y1="${zeroY}" x2="${markerX}" y2="${s.yFor(value)}" ` +
+      `stroke="${colors.wave}" stroke-width="1" stroke-dasharray="2 2" />` +
+      `<circle data-role="wave-marker" cx="${markerX}" cy="${s.yFor(value)}" r="${MARKER_R}" ` +
+      `fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    : '';
 
   return (
     ticks +
     unitRefs +
+    asymptotes +
     // Zero axis and the x = 0 vertical, matching the polar figure's reference axes.
     `<line x1="${s.xFor(-X_SPAN / 2)}" y1="${zeroY}" x2="${s.xFor(X_SPAN / 2)}" y2="${zeroY}" ` +
     `stroke="${colors.axis}" stroke-width="1" />` +
     `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +
     `stroke="${colors.axis}" stroke-width="1" />` +
     curve +
-    `<line data-role="wave-drop" x1="${markerX}" y1="${zeroY}" x2="${markerX}" y2="${markerY}" ` +
-    `stroke="${colors.wave}" stroke-width="1" stroke-dasharray="2 2" />` +
-    // Drawn unconditionally, unlike the curve: at θ = 0 the marker is the only
-    // thing that distinguishes cos (at r) from sin (at 0).
-    `<circle data-role="wave-marker" cx="${markerX}" cy="${markerY}" r="${MARKER_R}" ` +
-    `fill="${colors.point}" stroke="${colors.pointStroke}" />`
+    markerMarkup
   );
 }
