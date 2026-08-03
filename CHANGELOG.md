@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.11.0](https://github.com/rgoshen/ti-84/compare/v0.10.0...v0.11.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **explorer:** address PR review findings on tan wave feature ([e48c7da](https://github.com/rgoshen/ti-84/commit/e48c7dae2083b52866c341947ead7bb1142a0eab))
+* **explorer:** resolve whole-branch review findings for tan wave feature ([3a525b6](https://github.com/rgoshen/ti-84/commit/3a525b6a6b674c8bcec7f13a67fd5caf16ad5f0d))
+
+
+### Features
+
+* **explorer:** add exactTangent alongside exactCoordinates ([e216351](https://github.com/rgoshen/ti-84/commit/e216351303cfa450bb26912379b299fb4bfc398c))
+* **explorer:** add tan's y-domain, nullable waveValue, and asymptote positions ([ccbbefe](https://github.com/rgoshen/ti-84/commit/ccbbefe3ca4f788f85b35bded28c27a078302fc4))
+* **explorer:** add the tan coordinate readout with visible r-cancellation ([0a794d3](https://github.com/rgoshen/ti-84/commit/0a794d3bdacda94165b5075a422c1cae2099ce20))
+* **explorer:** draw a clamped tangent segment in the angle diagram ([eb03d5a](https://github.com/rgoshen/ti-84/commit/eb03d5a3211f038dd5145bdd2d591f7445effa6c))
+* **explorer:** rescale buildWaveSvg per function and draw tan's asymptotes ([d67df56](https://github.com/rgoshen/ti-84/commit/d67df561681eee33c0c71f23e9e4964a66a3de06))
+* **explorer:** trace the tan curve as exact-break subpaths ([ed772fb](https://github.com/rgoshen/ti-84/commit/ed772fbf8fa2e67e0603bb400e33d61ab81841c6))
+* **explorer:** wire tan θ into the Angle Explorer UI and export ([5174bdc](https://github.com/rgoshen/ti-84/commit/5174bdcf81d2668cceaa71e8c264b51e9216a703))
+
 # [0.10.0](https://github.com/rgoshen/ti-84/compare/v0.9.0...v0.10.0) (2026-08-03)
 
 
