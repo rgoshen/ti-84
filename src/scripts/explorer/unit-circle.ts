@@ -12,7 +12,7 @@
  *
  * Pure and DOM-free so it unit-tests in the node environment, like `angle.ts`.
  */
-import { isIntegerDegrees, isTangentUndefined } from './angle';
+import { isCotangentUndefined, isIntegerDegrees, isTangentUndefined } from './angle';
 
 /**
  * An exact unit-circle coordinate: `(sign · numerator · √radicand) / denominator`.
@@ -160,6 +160,75 @@ export function exactTangent(deg: number): ExactValue | 'undefined' | null {
   if (base === undefined) return null;
   if (base === 'undefined') return base;
   return flip ? negate(base) : base;
+}
+
+/** Greatest common divisor (Euclid), for reducing {@link reciprocal}'s result. */
+function gcd(a: number, b: number): number {
+  let x = a;
+  let y = b;
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x;
+}
+
+/**
+ * `1/v`, reduced: `1/(sign·numerator·√radicand/denominator) =
+ * sign·denominator·√radicand/(numerator·radicand)`. The radicand itself never
+ * moves — only the coefficient and denominator are reduced against each other.
+ *
+ * Callers must exclude `v.sign === 0` — zero has no reciprocal. Each of
+ * `exactSecant`/`exactCosecant`/`exactCotangent` names its own pole before
+ * calling this, so a zero sign never actually reaches here.
+ */
+function reciprocal(v: ExactValue): ExactValue {
+  const numerator = v.denominator;
+  const denominator = v.numerator * v.radicand;
+  const g = gcd(numerator, denominator);
+  return {
+    sign: v.sign,
+    numerator: (numerator / g) as 1 | 2,
+    radicand: v.radicand,
+    denominator: (denominator / g) as 1 | 2 | 3,
+  };
+}
+
+/**
+ * The exact sec θ, `'undefined'` at cos's zeros (tan's own asymptotes), or
+ * `null` when no exact form exists. Derived from {@link exactCoordinates}
+ * rather than a hand-written table, so it inherits x's quadrant sign for free.
+ */
+export function exactSecant(deg: number): ExactValue | 'undefined' | null {
+  if (isTangentUndefined(deg)) return 'undefined';
+  const p = exactCoordinates(deg);
+  return p === null ? null : reciprocal(p.x);
+}
+
+/**
+ * The exact csc θ, `'undefined'` at sin's zeros, or `null` when no exact form
+ * exists. Derived from {@link exactCoordinates} so it inherits y's quadrant
+ * sign for free.
+ */
+export function exactCosecant(deg: number): ExactValue | 'undefined' | null {
+  if (isCotangentUndefined(deg)) return 'undefined';
+  const p = exactCoordinates(deg);
+  return p === null ? null : reciprocal(p.y);
+}
+
+/**
+ * The exact cot θ, `'undefined'` at sin's zeros, `ZERO` at tan's own
+ * asymptotes (tan's pole is cot's zero), or `null` when no exact form exists.
+ * Derived from {@link exactTangent} so it inherits tan's quadrant sign for
+ * free — the one case a hand-written table is likely to get wrong, since Q3
+ * has cos and sin both negative (sec, csc negative) while cot stays positive.
+ */
+export function exactCotangent(deg: number): ExactValue | 'undefined' | null {
+  if (isCotangentUndefined(deg)) return 'undefined';
+  if (isTangentUndefined(deg)) return ZERO;
+  const t = exactTangent(deg);
+  return t === null || t === 'undefined' ? t : reciprocal(t);
 }
 
 /** KaTeX source: `0`, `1`, `-1`, `2`, `\frac{1}{2}`, `-\frac{\sqrt{3}}{2}`, `\frac{2\sqrt{3}}{3}`. */

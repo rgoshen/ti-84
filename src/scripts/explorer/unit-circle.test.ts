@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import {
   exactCoordinates,
+  exactCosecant,
+  exactCotangent,
+  exactSecant,
   exactTangent,
   exactToNumber,
   formatExactLatex,
@@ -167,6 +170,154 @@ describe('exactTangent', () => {
     // of "undefined" is the exact regression this closes.
     expect(exactTangent(89.9999999)).toBe('undefined');
     expect(exactTangent(-89.9999995)).toBe('undefined');
+  });
+});
+
+describe('exactSecant', () => {
+  it('agrees with 1/Math.cos at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 90 || deg === 270) continue;
+      const v = exactSecant(deg);
+      expect(v, `no exact secant for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.cos((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 90° and 270°, and at their normalized equivalents', () => {
+    for (const deg of [90, 270, -90, 450]) {
+      expect(exactSecant(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 1 at 0°, the fixed point of the reciprocal', () => {
+    expect(exactSecant(0)).toEqual({ sign: 1, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('renders 2√3/3 at 30° and exactly 2 at 60°', () => {
+    expect(exactSecant(30)).toEqual({ sign: 1, numerator: 2, radicand: 3, denominator: 3 });
+    expect(exactSecant(60)).toEqual({ sign: 1, numerator: 2, radicand: 1, denominator: 1 });
+  });
+
+  it('is negative in Q3, following cos', () => {
+    expect(exactToNumber(exactSecant(210) as ExactValue)).toBeLessThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactSecant(37)).toBeNull();
+    expect(exactSecant(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactSecant(390)).toEqual(exactSecant(30));
+  });
+
+  it('is undefined for a hand-typed near-90° decimal, not merely off-chart null', () => {
+    expect(exactSecant(89.9999999)).toBe('undefined');
+  });
+});
+
+describe('exactCosecant', () => {
+  it('agrees with 1/Math.sin at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 0 || deg === 180) continue;
+      const v = exactCosecant(deg);
+      expect(v, `no exact cosecant for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.sin((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 0° and 180°, and at their normalized equivalents', () => {
+    for (const deg of [0, 180, 360, -180]) {
+      expect(exactCosecant(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 1 at 90°, the fixed point of the reciprocal', () => {
+    expect(exactCosecant(90)).toEqual({ sign: 1, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('renders √2 at 45°', () => {
+    expect(exactCosecant(45)).toEqual({ sign: 1, numerator: 1, radicand: 2, denominator: 1 });
+  });
+
+  it('is negative in Q3, following sin', () => {
+    expect(exactToNumber(exactCosecant(210) as ExactValue)).toBeLessThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactCosecant(37)).toBeNull();
+    expect(exactCosecant(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactCosecant(390)).toEqual(exactCosecant(30));
+  });
+
+  it('is undefined for a hand-typed near-0° decimal, not merely off-chart null', () => {
+    expect(exactCosecant(0.0000001)).toBe('undefined');
+  });
+});
+
+describe('exactCotangent', () => {
+  it('agrees with 1/Math.tan at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 0 || deg === 180) continue;
+      const v = exactCotangent(deg);
+      expect(v, `no exact cotangent for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.tan((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 0° and 180°, and at their normalized equivalents', () => {
+    for (const deg of [0, 180, 360, -180]) {
+      expect(exactCotangent(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 0 at 90° and 270°, tan\'s pole becoming cot\'s zero', () => {
+    expect(exactCotangent(90)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactCotangent(270)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('is positive in Q3, following tan', () => {
+    expect(exactToNumber(exactCotangent(210) as ExactValue)).toBeGreaterThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactCotangent(37)).toBeNull();
+    expect(exactCotangent(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactCotangent(390)).toEqual(exactCotangent(30));
+  });
+
+  it('is undefined for a hand-typed near-0° decimal, not merely off-chart null', () => {
+    expect(exactCotangent(0.0000001)).toBe('undefined');
+  });
+});
+
+describe('reciprocal field-union sweep', () => {
+  it('keeps numerator, radicand, and denominator inside their unions for every chart angle', () => {
+    const assertInUnion = (v: ExactValue | 'undefined' | null, label: string) => {
+      if (v === null || v === 'undefined') return;
+      expect([1, 2], label).toContain(v.numerator);
+      expect([1, 2, 3], label).toContain(v.radicand);
+      expect([1, 2, 3], label).toContain(v.denominator);
+    };
+
+    for (const deg of CHART_ANGLES) {
+      const point = exactCoordinates(deg);
+      assertInUnion(point?.x ?? null, `x at ${deg}°`);
+      assertInUnion(point?.y ?? null, `y at ${deg}°`);
+      assertInUnion(exactTangent(deg), `tan at ${deg}°`);
+      assertInUnion(exactSecant(deg), `sec at ${deg}°`);
+      assertInUnion(exactCosecant(deg), `csc at ${deg}°`);
+      assertInUnion(exactCotangent(deg), `cot at ${deg}°`);
+    }
   });
 });
 
