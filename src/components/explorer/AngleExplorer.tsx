@@ -56,6 +56,22 @@ const DEFAULTS = {
   standardAngles: false,
 };
 
+/** Export legend copy for the selected wave, keyed so a new `WaveFn` member is
+ *  a compile error here rather than a silent fallback to tan's row. */
+const WAVE_LEGEND: Record<WaveFn, string> = {
+  sin: 'sin θ — height is the y-coordinate',
+  cos: 'cos θ — height is the x-coordinate',
+  tan: 'tan θ — height is the tangent segment; dashed verticals mark its asymptotes',
+};
+
+/** Export "Function" fact copy for the selected wave, same exhaustiveness
+ *  rationale as `WAVE_LEGEND`. */
+const WAVE_FUNCTION_FACT: Record<WaveFn, string> = {
+  sin: 'y = r·sin θ',
+  cos: 'y = r·cos θ',
+  tan: 'tan θ = y/x',
+};
+
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
  *  Mathematica cannot reflow. The pixels-per-unit and measure-arc radius that
@@ -119,6 +135,15 @@ export default function AngleExplorer(): React.JSX.Element {
     }),
     [coords.tripleLatex, coords.xLatex, coords.yLatex, coords.tanLatex],
   );
+  // The wave caption keyed by function, so a new `WaveFn` member is a compile
+  // error here too. `waveLatex` (a table owned by angle-coordinates.ts) is a
+  // later task's widening; this reuses coordHtml's existing fields exhaustively
+  // rather than inventing one early.
+  const waveCaptionHtml: Record<WaveFn, string> = {
+    sin: coordHtml.y,
+    cos: coordHtml.x,
+    tan: coordHtml.tan,
+  };
 
   // `undefined` rather than 'none' is what both builders expect for "draw neither".
   const waveFn: WaveFn | undefined = wave === 'none' ? undefined : wave;
@@ -275,12 +300,7 @@ export default function AngleExplorer(): React.JSX.Element {
           ...(snapshotWave
             ? [
                 {
-                  label:
-                    snapshotWave === 'sin'
-                      ? 'sin θ — height is the y-coordinate'
-                      : snapshotWave === 'cos'
-                        ? 'cos θ — height is the x-coordinate'
-                        : 'tan θ — height is the tangent segment; dashed verticals mark its asymptotes',
+                  label: WAVE_LEGEND[snapshotWave],
                   color: lightColors.wave,
                 },
               ]
@@ -316,12 +336,7 @@ export default function AngleExplorer(): React.JSX.Element {
                   facts: [
                     {
                       label: 'Function',
-                      value:
-                        snapshotWave === 'sin'
-                          ? 'y = r·sin θ'
-                          : snapshotWave === 'cos'
-                            ? 'y = r·cos θ'
-                            : 'tan θ = y/x',
+                      value: WAVE_FUNCTION_FACT[snapshotWave],
                     },
                     {
                       label: 'Value',
@@ -590,8 +605,7 @@ export default function AngleExplorer(): React.JSX.Element {
               aria-hidden="true"
               className="mt-2 text-center text-sm text-muted-foreground"
               dangerouslySetInnerHTML={{
-                __html:
-                  waveFn === 'sin' ? coordHtml.y : waveFn === 'cos' ? coordHtml.x : coordHtml.tan,
+                __html: waveCaptionHtml[waveFn],
               }}
             />
           </div>

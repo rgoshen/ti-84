@@ -26,6 +26,11 @@ import {
 } from '@/scripts/explorer/angle-standard';
 import type { WaveFn } from './angle-wave';
 
+/** The `WaveFn`s with a pole construction — currently only tan. Written as
+ *  `Extract<WaveFn, 'tan'>` rather than a literal `'tan'` alias so widening
+ *  `WaveFn`'s pole members later widens this type at the same time. */
+type PoleFn = Extract<WaveFn, 'tan'>;
+
 export interface AngleDiagramOptions {
   /** Swept angle, in degrees. */
   theta: number;
@@ -340,52 +345,60 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const projectionMarkup = (() => {
     if (opts.projection === undefined) return '';
 
+    // T sits on the UNIT circle (not r·unit) at angle β — the point where the
+    // initial side crosses it, and the fixed anchor of the tangent line. E is
+    // placed as an offset from T, perpendicular to OT (angle β + 90°), scaled
+    // by the tangent value itself — the standard "extend the terminal side
+    // until it meets the tangent line" construction, decomposed so E stays ON
+    // the tangent line even when clamped. Because T is independent of r and
+    // the offset direction is independent of r, segment length is exactly
+    // |tan θ|·unit for any r — the cancellation, geometrically.
+    //
+    // Clamped by capping the tangent VALUE (not the ray distance from the
+    // origin, which would pull E off the tangent line as it shrinks): by the
+    // right triangle O-T-E (OT = unit, right angle at T),
+    // OE² = unit² + TE², so capping TE at sqrt(maxDist² − unit²) caps OE at
+    // exactly maxDist — the viewBox's inscribed-circle radius, bounded the
+    // same way in every direction regardless of β. One consequence: once the
+    // clamp engages near an asymptote, the dashed tangent-extension below is
+    // no longer collinear with the terminal side — E has left the ray to
+    // stay on the tangent line instead. No endpoint dot is ever drawn at E,
+    // clamped or not, so a clamped segment never asserts a value it was
+    // truncated out of.
+    const poleMark: Record<PoleFn, { solid: string; dashed: string }> = {
+      tan: (() => {
+        const tangentPoint = polarToCartesian(c, c, unit, betaRad);
+        const rawTan = Math.tan(thetaRad);
+        const maxDist = c - LABEL_MARGIN;
+        // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
+        // radicand would go negative and sqrt would silently emit NaN into the
+        // markup. Not reachable via either the live figure or the export (both
+        // use the defaults, unit=88 well under maxDist=156), but the option is
+        // public on AngleDiagramOptions, so the guard costs nothing to keep.
+        const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
+        const cap = (v: number): number => (Math.abs(v) > capMax ? Math.sign(v) * capMax : v);
+        const lineEnd = polarToCartesian(
+          tangentPoint.x,
+          tangentPoint.y,
+          cap(rawTan) * unit,
+          betaRad + Math.PI / 2,
+        );
+        return {
+          dashed:
+            `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
+            `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
+            `stroke-dasharray="3 3" />`,
+          solid:
+            `<line data-role="tangent-segment" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
+            `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+            `stroke-linecap="round" />`,
+        };
+      })(),
+    };
+
     if (opts.projection === 'tan') {
-      // T sits on the UNIT circle (not r·unit) at angle β — the point where
-      // the initial side crosses it, and the fixed anchor of the tangent
-      // line. E is placed as an offset from T, perpendicular to OT (angle
-      // β + 90°), scaled by the tangent value itself — the standard
-      // "extend the terminal side until it meets the tangent line"
-      // construction, decomposed so E stays ON the tangent line even when
-      // clamped. Because T is independent of r and the offset direction is
-      // independent of r, segment length is exactly |tan θ|·unit for any
-      // r — the cancellation, geometrically.
-      //
-      // Clamped by capping the tangent VALUE (not the ray distance from the
-      // origin, which would pull E off the tangent line as it shrinks): by
-      // the right triangle O-T-E (OT = unit, right angle at T),
-      // OE² = unit² + TE², so capping TE at sqrt(maxDist² − unit²) caps OE
-      // at exactly maxDist — the viewBox's inscribed-circle radius, bounded
-      // the same way in every direction regardless of β. One consequence:
-      // once the clamp engages near an asymptote, the dashed
-      // tangent-extension below is no longer collinear with the terminal
-      // side — E has left the ray to stay on the tangent line instead.
-      // No endpoint dot is ever drawn at E, clamped or not, so a clamped
-      // segment never asserts a value it was truncated out of.
-      const tangentPoint = polarToCartesian(c, c, unit, betaRad);
-      const rawTan = Math.tan(thetaRad);
-      const maxDist = c - LABEL_MARGIN;
-      // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
-      // radicand would go negative and sqrt would silently emit NaN into the
-      // markup. Not reachable via either the live figure or the export (both
-      // use the defaults, unit=88 well under maxDist=156), but the option is
-      // public on AngleDiagramOptions, so the guard costs nothing to keep.
-      const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
-      const cappedTan = Math.abs(rawTan) > capMax ? Math.sign(rawTan) * capMax : rawTan;
-      const lineEnd = polarToCartesian(
-        tangentPoint.x,
-        tangentPoint.y,
-        cappedTan * unit,
-        betaRad + Math.PI / 2,
-      );
-      return (
-        `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
-        `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
-        `stroke-dasharray="3 3" />` +
-        `<line data-role="tangent-segment" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
-        `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
-        `stroke-linecap="round" />`
-      );
+      const mark = poleMark[opts.projection];
+      return mark.dashed + mark.solid;
     }
 
     // The foot of the perpendicular from the terminal point onto the initial

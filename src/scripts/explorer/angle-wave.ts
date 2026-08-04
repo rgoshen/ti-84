@@ -370,6 +370,7 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
   // Full-height gridlines rather than short ticks at the axis: the label sits at
   // the bottom of the box, and a line spanning the plot is what ties the two
   // together without ambiguity about which tick a label belongs to.
+  const asymptoteTicks = new Set(waveAsymptoteTicks(fn));
   const ticks = waveTickRadians()
     .map(({ k, radians }) => {
       const x = s.xFor(radians);
@@ -377,12 +378,12 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       const even = k % 2 === 0;
       const labelY =
         height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
-      // At tan's asymptotes, a solid gridline would sit directly under the
-      // dashed asymptote line (drawn separately, below), filling its gaps and
+      // At an asymptote, a solid gridline would sit directly under the dashed
+      // asymptote line (drawn separately, below), filling its gaps and
       // diluting the dash. Now that the two differ in colour that is worse, not
       // neutral: slate showing through red's gaps interleaves two colours along
       // one line. Suppress just the gridline here; the label stays.
-      const isAsymptote = fn === 'tan' && (k === -6 || k === -2 || k === 2 || k === 6);
+      const isAsymptote = asymptoteTicks.has(k);
       return (
         `<g data-role="wave-tick">` +
         (isAsymptote
@@ -407,25 +408,23 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     )
     .join('');
 
-  // Dashed verticals at tan's four asymptotes. Deliberately NOT styled like the
-  // π/4 gridlines they sit among: slate at 33% ink coverage put less colour on
-  // screen than the solid gridline beside it, so the asymptote read as a gap in
-  // the grid. This is `wall` at `dashedLine`'s weight and dash — the same mark
-  // render.ts:169 draws the Function Explorer's vertical asymptotes with, so
-  // "red dashed vertical" means one thing across the whole app. Absent for
-  // sin/cos, which have no asymptote to mark.
-  const asymptotes =
-    fn === 'tan'
-      ? waveAsymptoteRadians(fn)
-          .map((rad) => {
-            const x = s.xFor(rad);
-            return (
-              `<line data-role="wave-asymptote" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" ` +
-              `stroke="${colors.wall}" stroke-width="1.5" stroke-dasharray="6 6" />`
-            );
-          })
-          .join('')
-      : '';
+  // Dashed verticals at the function's asymptotes. Deliberately NOT styled like
+  // the π/4 gridlines they sit among: slate at 33% ink coverage put less colour
+  // on screen than the solid gridline beside it, so the asymptote read as a gap
+  // in the grid. This is `wall` at `dashedLine`'s weight and dash — the same
+  // mark render.ts:169 draws the Function Explorer's vertical asymptotes with,
+  // so "red dashed vertical" means one thing across the whole app.
+  // `waveAsymptoteRadians` returns `[]` for sin/cos, which have no asymptote to
+  // mark, so this needs no per-function guard.
+  const asymptotes = waveAsymptoteRadians(fn)
+    .map((rad) => {
+      const x = s.xFor(rad);
+      return (
+        `<line data-role="wave-asymptote" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" ` +
+        `stroke="${colors.wall}" stroke-width="1.5" stroke-dasharray="6 6" />`
+      );
+    })
+    .join('');
 
   const path = wavePath(fn, theta, r, s);
   const curve =
@@ -450,6 +449,15 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       `fill="${colors.point}" stroke="${colors.pointStroke}" />`
     : '';
 
+  // Same collision the gridline guard above resolves, at tick 0: a solid
+  // y-axis would sit under a dashed asymptote there. Inert for sin/cos/tan
+  // today — none has a pole at tick 0 — but csc/cot will, so this must already
+  // be in place rather than added alongside them.
+  const yAxis = asymptoteTicks.has(0)
+    ? ''
+    : `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +
+      `stroke="${colors.axis}" stroke-width="1" />`;
+
   return (
     ticks +
     unitRefs +
@@ -457,8 +465,7 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     // Zero axis and the x = 0 vertical, matching the polar figure's reference axes.
     `<line x1="${s.xFor(-X_SPAN / 2)}" y1="${zeroY}" x2="${s.xFor(X_SPAN / 2)}" y2="${zeroY}" ` +
     `stroke="${colors.axis}" stroke-width="1" />` +
-    `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +
-    `stroke="${colors.axis}" stroke-width="1" />` +
+    yAxis +
     curve +
     markerMarkup
   );
