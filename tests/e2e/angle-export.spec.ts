@@ -127,3 +127,41 @@ test('carries the tangent wave into the exported artifact, including the undefin
     expect(text).toContain('undefined');
   });
 });
+
+// The three reciprocal functions, mirroring the tangent test above exactly:
+// a defined case (Wave section, Function fact, Traced) then the undefined
+// case at the function's own pole. sec dies where tan does (cos = 0, 90°);
+// csc and cot die where sin = 0 — their pole is the page's default angle
+// (0°), so the test still drives there explicitly rather than relying on
+// never having moved the slider, keeping all three cases identical in shape.
+const RECIPROCAL_WAVES = [
+  { name: 'secant', fn: 'sec θ', fact: 'sec θ = r/x = 1/cos θ', poleDeg: 90 },
+  { name: 'cosecant', fn: 'csc θ', fact: 'csc θ = r/y = 1/sin θ', poleDeg: 0 },
+  { name: 'cotangent', fn: 'cot θ', fact: 'cot θ = x/y = cos θ/sin θ', poleDeg: 0 },
+] as const;
+
+for (const { name, fn, fact, poleDeg } of RECIPROCAL_WAVES) {
+  test(`carries the ${name} wave into the exported artifact, including the undefined case`, async ({
+    page,
+  }) => {
+    await goto(page);
+    await page.getByRole('radio', { name: fn }).check();
+    await deg(page).fill('45');
+
+    await downloadExport(page, 'PNG', async (artifact) => {
+      const text = await artifact.evaluate((node) => node.textContent);
+      expect(text).toContain('Wave');
+      expect(text).toContain(fact);
+      expect(text).toContain('Traced');
+      expect(text).toContain('0° to 45°');
+    });
+
+    await deg(page).fill(String(poleDeg));
+    await downloadExport(page, 'PNG', async (artifact) => {
+      const text = await artifact.evaluate((node) => node.textContent);
+      expect(text).toContain('Wave');
+      expect(text).toContain(fact);
+      expect(text).toContain('undefined');
+    });
+  });
+}
