@@ -1123,3 +1123,64 @@ than as a wall.
 **References:**
 - Plan: `docs/superpowers/plans/2026-08-03-angle-wave-asymptote-legibility.md`
 - Follows: 2026-08-02 Feature: Angle Explorer Tangent Wave (PR #31, v0.11.0)
+
+## [2026-08-03] Feature: Angle Explorer Reciprocal Waves (sec, csc, cot)
+
+**Objective:**
+Add the three reciprocal trigonometric functions to the Angle Explorer's `Wave` selector at full
+parity with `tan θ` — traced curve, vertical asymptotes, unit-circle construction, exact values,
+r-cancellation caption, export, and screen-reader prose. None of the three exist in the codebase
+today.
+
+**Approach:**
+- Collapse the six scattered `fn === 'tan'` identity tests in `angle-wave.ts` into one
+  `Record<WaveFn, WaveSpec>`; generalise `tanPath` into `branchPath`, driven by a branch centre
+  (`0°` or `90°`) and a visible half-width (`atan(4)` or `acos(¼)`). Rename `TAN_MAX` → `POLE_MAX`.
+- Make `waveAsymptoteRadians` take a **required** `fn` argument and add a `waveAsymptoteTicks`
+  sibling, so the gridline guard and the asymptote drawing read from one list instead of two
+  independent hardcodings.
+- Convert the three tan-as-`else` ternary chains in `AngleExplorer.tsx` (legend row, Function fact,
+  caption) into exhaustive `Record<WaveFn, …>` maps **before** widening the union, so a new
+  function is a compile error rather than a silent mislabel.
+- Unit circle: the full classical construction. `sec θ = O→T` (the hypotenuse of tan's existing
+  right triangle), and on the tangent line at the quarter turn, `cot θ = B→C`, `csc θ = O→C`.
+  Reuses the existing `capMax` clamp unchanged — it was derived precisely to bound `OT`.
+- Widen `ExactValue` with a required `numerator: 1 | 2` (for `2` and `2√3/3`), then derive the
+  three new exact functions through one `reciprocal()` helper rather than hand-writing quadrant
+  sign tables.
+- Handle two collisions tangent never hit: csc/cot's asymptote at radians 0 lands on the solid
+  y-axis the strip already draws, and their ±2π asymptotes sit on the plot edges.
+
+**Tests:**
+- Unit: cross-family pole confusion (`csc` null at 0° where `sec` is 1, and the converse);
+  quadrant signs (`sec 210° < 0`, `csc 210° < 0`, **`cot 210° > 0`** — the assertion that catches a
+  hand-written sign table); asymptote positions cross-checked against the definition rather than
+  the literal list; no subpath spans an asymptote; the y-axis is suppressed at tick 0 with a
+  positive control proving `sin` still draws its own; field-union sweep over 16 angles × 6
+  functions; r-independence in `waveValue`, `wavePath`, caption, and diagram segment length.
+- Existing tan blocks in `angle-diagram.test.ts` and `angle-coordinates.test.ts` must stay green
+  **verbatim** — that is the proof the generalisation did not move tangent.
+- e2e: sec reveals 4 asymptotes, csc and cot reveal 5; csc/cot read undefined at the default 0°
+  with asymptotes still drawn; the keyboard test is rewritten to walk all seven options in DOM
+  order.
+- Manual: both themes, six-point checklist in the plan.
+
+**Risks & Tradeoffs:**
+- The selector's arrow-key order changes to `none→sin→csc→cos→sec→tan→cot`, since Radix roving
+  focus follows DOM order. Accepted — the keyboard test needed updating for the new options
+  regardless, and the paired two-column layout is what keeps six functions legible in the sidebar.
+- `ExactValue` is shared with the coordinate readout and the SVG point label. Mitigated by making
+  the new field required (every construction site becomes a compile error until reviewed) and by
+  holding all three formatters to byte-identical output at `numerator: 1`.
+- csc and cot land on their undefined case by default, since θ starts at 0. Accepted deliberately:
+  the asymptotes still draw, so the first thing on screen is where the function breaks.
+- The circle mark at a pole draws in an arbitrary direction (`1/Math.tan(0)` is `+Infinity`).
+  tan has this today at 90°; no endpoint dot is drawn, so no specific value is asserted.
+
+**Status:** 📋 Planned. Spec and plan written, branch created. No implementation yet.
+
+**References:**
+- Spec: `docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md`
+- Plan: `docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md`
+- Extends: 2026-08-02 Feature: Angle Explorer Tangent Wave (PR #31, v0.11.0)
+- Follows: 2026-08-03 Fix: Tangent Wave Asymptote Legibility (PR #32, v0.11.1)

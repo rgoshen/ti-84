@@ -5053,3 +5053,65 @@ sin/cos negative case).
 **References:**
 - TODO.md: 2026-08-03 Fix: Tangent Wave Asymptote Legibility
 - Spec: docs/superpowers/specs/2026-07-27-angle-explorer-design.md
+
+## [2026-08-03 20:05] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — reciprocal waves (sec, csc, cot)
+
+**Summary:**
+Design spec and TDD implementation plan for adding `sec θ`, `csc θ`, and
+`cot θ` to the Angle Explorer's wave strip at full parity with `tan θ`.
+Documentation only — no source or test files change in this commit.
+Adds `docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md`
+(objective, verified-before-designing table, the branch/asymptote math,
+9 requirements, 10 decisions with rejected alternatives, per-file
+architecture, testing strategy, risks) and
+`docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md` (10 TDD
+tasks with a dependency graph and per-task test lists).
+
+**Rationale:**
+The three reciprocal functions do not exist anywhere in the codebase, and
+adding them is not simply "tan with different numbers" — two facts drive
+the whole design. First, csc and cot break where sin = 0, giving them
+**five** asymptotes in view (0, ±π, ±2π) rather than tan's four, and one
+of those lands exactly on the solid y-axis the strip already draws at
+radians 0 — reproducing the ink-interleaving defect commit 31c8126 fixed
+for gridlines. Second, `ExactValue` is `{sign, radicand, denominator}`
+with no numerator coefficient, so sec and csc's chart values (`2`,
+`2√3/3`) are unrepresentable.
+
+The task order is deliberately front-loaded with two behaviour-preserving
+refactors. `AngleExplorer.tsx` currently selects wave copy through three
+ternary chains that use **tan as the `else` branch**, so widening `WaveFn`
+without touching them would ship `sec` labelled "tan θ — height is the
+tangent segment" with a green build. Converting those to exhaustive
+`Record<WaveFn, …>` maps first turns that class of bug into a compile
+error. Likewise `tanPath` already implements the general branch-interval
+algorithm all four pole functions need, so generalising it before the
+union grows keeps the new work to three table rows.
+
+Exact values are derived through one `reciprocal()` helper rather than
+three hand-written first-quadrant tables: derivation inherits the quadrant
+sign rules from `exactCoordinates` and `exactTangent`, which are already
+tested, and avoids three fresh chances to get Q3 wrong — where cos and sin
+are both negative, so sec and csc are negative but cot is positive.
+
+Alternatives considered and rejected are recorded in the spec's Decisions
+table, notably: reusing each reciprocal's existing mark in the circle
+(rejected — at θ = 60°, sec θ = 2 while the highlighted cos leg is 0.5,
+breaking the leg-equals-height invariant); decimals instead of exact
+values for sec/csc (rejected — abandons the reference chart this module
+mirrors); and nudging θ off the asymptote when csc/cot is selected at the
+default 0° (rejected — inverts the stated contract that θ is the single
+source of truth everything derives from).
+
+**Tests:**
+None — documentation-only commit. Baseline confirmed unchanged before
+branching: `npm test` 492/492 passing, working tree clean.
+
+**References:**
+- TODO.md: 2026-08-03 Feature: Angle Explorer Reciprocal Waves (sec, csc, cot)
+- Spec: docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md
+- Extends: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
