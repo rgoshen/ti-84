@@ -12,10 +12,18 @@
  * artifact draw through one builder and cannot drift.
  */
 import type { ExplorerColors } from '@/scripts/graphing/theme';
-import { degreesToRadians, formatPiText, isTangentUndefined, reduceFraction } from './angle';
+import {
+  degreesToRadians,
+  formatPiText,
+  isCotangentUndefined,
+  isTangentUndefined,
+  reduceFraction,
+} from './angle';
 
-/** Which coordinate of the terminal point the strip plots. */
-export type WaveFn = 'sin' | 'cos' | 'tan';
+/** Which coordinate of the terminal point the strip plots. sec/csc/cot are the
+ *  three reciprocals, sharing tan's pole geometry (sec) or breaking where sin
+ *  is zero instead (csc, cot). */
+export type WaveFn = 'sin' | 'cos' | 'tan' | 'sec' | 'csc' | 'cot';
 
 /** The selector's full state. `none` draws no strip at all. */
 export type WaveMode = 'none' | WaveFn;
@@ -32,7 +40,9 @@ export const WAVE_HEIGHT = 176;
  * out the one thing the radius slider exists to show.
  */
 export const AMP_MAX = 1.5;
-/** y-domain half-height for a pole function (currently only tan), in units.
+/** y-domain half-height for a pole function — tan, sec, csc, and cot all share
+ *  it, per the "Decisions" table: switching between them would otherwise
+ *  rescale the box, making two curves that share a shape look unrelated.
  *  atan(4) ≈ 76°, so only the last 14° before each asymptote is off-screen —
  *  atan(1.5) ≈ 56° would hide 34°. */
 export const POLE_MAX = 4;
@@ -102,6 +112,45 @@ const WAVE_SPEC: Record<WaveFn, WaveSpec> = {
       centerDeg: 0,
       edgeDeg: (Math.atan(POLE_MAX) * 180) / Math.PI,
       ticks: [-6, -2, 2, 6],
+    },
+  },
+  sec: {
+    domain: POLE_MAX,
+    evaluate: (theta) => 1 / Math.cos(degreesToRadians(theta)),
+    // sec dies exactly where tan does — cos = 0 — so it shares tan's predicate.
+    isUndefined: isTangentUndefined,
+    stepDeg: POLE_STEP_DEG,
+    noun: 'curve',
+    branches: {
+      centerDeg: 0,
+      edgeDeg: (Math.acos(1 / POLE_MAX) * 180) / Math.PI,
+      ticks: [-6, -2, 2, 6],
+    },
+  },
+  csc: {
+    domain: POLE_MAX,
+    evaluate: (theta) => 1 / Math.sin(degreesToRadians(theta)),
+    // csc and cot both die where sin = 0, not where cos = 0 — the fact that
+    // drives this whole feature. Branches are centred on 90° rather than 0°.
+    isUndefined: isCotangentUndefined,
+    stepDeg: POLE_STEP_DEG,
+    noun: 'curve',
+    branches: {
+      centerDeg: 90,
+      edgeDeg: (Math.acos(1 / POLE_MAX) * 180) / Math.PI,
+      ticks: [-8, -4, 0, 4, 8],
+    },
+  },
+  cot: {
+    domain: POLE_MAX,
+    evaluate: (theta) => 1 / Math.tan(degreesToRadians(theta)),
+    isUndefined: isCotangentUndefined,
+    stepDeg: POLE_STEP_DEG,
+    noun: 'curve',
+    branches: {
+      centerDeg: 90,
+      edgeDeg: (Math.atan(POLE_MAX) * 180) / Math.PI,
+      ticks: [-8, -4, 0, 4, 8],
     },
   },
 };
@@ -302,8 +351,22 @@ export function wavePath(
 /** Whole-degree display, matching what the Degrees field shows. */
 const degreeText = (theta: number): string => String(Math.round(theta * 1e4) / 1e4);
 
-const WAVE_DISPLAY_NAME: Record<WaveFn, string> = { sin: 'Sine', cos: 'Cosine', tan: 'Tangent' };
-export const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: 'cosine', tan: 'tangent' };
+const WAVE_DISPLAY_NAME: Record<WaveFn, string> = {
+  sin: 'Sine',
+  cos: 'Cosine',
+  tan: 'Tangent',
+  sec: 'Secant',
+  csc: 'Cosecant',
+  cot: 'Cotangent',
+};
+export const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = {
+  sin: 'sine',
+  cos: 'cosine',
+  tan: 'tangent',
+  sec: 'secant',
+  csc: 'cosecant',
+  cot: 'cotangent',
+};
 
 /**
  * The strip as prose, for the existing debounced live region. Both KaTeX boxes

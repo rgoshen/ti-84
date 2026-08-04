@@ -570,3 +570,267 @@ describe('buildWaveSvg — tan', () => {
     }
   });
 });
+
+describe('waveAsymptoteTicks — sec/csc/cot', () => {
+  it("returns sec's four tick indices, matching tan — both die where cos = 0", () => {
+    expect(waveAsymptoteTicks('sec')).toEqual([-6, -2, 2, 6]);
+  });
+
+  it('returns csc and cot\'s five tick indices — the extra one at tick 0, where sin = 0', () => {
+    expect(waveAsymptoteTicks('csc')).toEqual([-8, -4, 0, 4, 8]);
+    expect(waveAsymptoteTicks('cot')).toEqual([-8, -4, 0, 4, 8]);
+  });
+});
+
+describe('waveAsymptoteRadians — every pole function', () => {
+  const tickRadians = waveTickRadians().map((t) => t.radians);
+  const poleFns = ['tan', 'sec', 'csc', 'cot'] as const;
+
+  it('lands exactly on members of waveTickRadians, for every pole function', () => {
+    for (const fn of poleFns) {
+      for (const asymptote of waveAsymptoteRadians(fn)) {
+        expect(tickRadians.some((r) => Math.abs(r - asymptote) < 1e-12)).toBe(true);
+      }
+    }
+  });
+
+  it('is where the definition itself blows up, independent of the literal tick list', () => {
+    // sec dies where cos = 0; csc and cot both die where sin = 0. Cross-checking
+    // against the raw reciprocal, not the tick table, is what would catch a
+    // hand-typed tick list that simply copied the wrong four/five numbers.
+    for (const fn of ['sec', 'csc', 'cot'] as const) {
+      for (const asymptote of waveAsymptoteRadians(fn)) {
+        const magnitude =
+          fn === 'sec' ? Math.abs(1 / Math.cos(asymptote)) : Math.abs(1 / Math.sin(asymptote));
+        expect(magnitude).toBeGreaterThan(1e12);
+      }
+    }
+  });
+});
+
+describe('waveValue — cross-family pole confusion', () => {
+  it('sec and csc break at different angles, never both and never neither', () => {
+    expect(waveValue('csc', 0, 1)).toBeNull();
+    expect(waveValue('sec', 0, 1)).toBeCloseTo(1, 12);
+    expect(waveValue('sec', 90, 1)).toBeNull();
+    expect(waveValue('csc', 90, 1)).toBeCloseTo(1, 12);
+  });
+});
+
+describe('waveValue — sec/csc/cot', () => {
+  it('matches 1/cos, 1/sin, 1/tan away from the poles', () => {
+    for (const theta of [10, 30, 45, 60, 80, -50, 200]) {
+      expect(waveValue('sec', theta, 1)).toBeCloseTo(1 / Math.cos(degreesToRadians(theta)), 10);
+      expect(waveValue('csc', theta, 1)).toBeCloseTo(1 / Math.sin(degreesToRadians(theta)), 10);
+      expect(waveValue('cot', theta, 1)).toBeCloseTo(1 / Math.tan(degreesToRadians(theta)), 10);
+    }
+  });
+
+  it('never has magnitude below 1 wherever sec or csc is defined', () => {
+    for (let theta = -360; theta <= 360; theta += 5) {
+      const sec = waveValue('sec', theta, 1);
+      const csc = waveValue('csc', theta, 1);
+      if (sec !== null) expect(Math.abs(sec)).toBeGreaterThanOrEqual(1 - 1e-9);
+      if (csc !== null) expect(Math.abs(csc)).toBeGreaterThanOrEqual(1 - 1e-9);
+    }
+  });
+
+  it('is independent of r for all three — the radius cancels out of the ratio', () => {
+    for (const theta of [10, 30, 45, 60, 80, -50, 200]) {
+      for (const fn of ['sec', 'csc', 'cot'] as const) {
+        const a = waveValue(fn, theta, 0.5);
+        const b = waveValue(fn, theta, 1.5);
+        expect(a).not.toBeNull();
+        expect(a).toBeCloseTo(b!, 12);
+      }
+    }
+  });
+
+  it('is null exactly at its own poles', () => {
+    for (const theta of [90, -90, 270, -270]) {
+      expect(waveValue('sec', theta, 1)).toBeNull();
+    }
+    for (const theta of [0, 180, -180, 360]) {
+      expect(waveValue('csc', theta, 1)).toBeNull();
+      expect(waveValue('cot', theta, 1)).toBeNull();
+    }
+  });
+});
+
+describe('wavePath — sec/csc/cot', () => {
+  const poleScale = waveScales(WAVE_WIDTH, WAVE_HEIGHT, POLE_MAX);
+
+  it('never lets one subpath span an asymptote', () => {
+    for (const fn of ['sec', 'csc', 'cot'] as const) {
+      for (const theta of [190, 400, -260]) {
+        const path = wavePath(fn, theta, 1, poleScale);
+        for (const subpath of path.split(' M ').map((s, i) => (i === 0 ? s : `M ${s}`))) {
+          const xs = [...subpath.matchAll(/[ML] ([-\d.e]+) /g)].map((m) => Number(m[1]));
+          for (const asymptoteRad of waveAsymptoteRadians(fn)) {
+            const asymptoteX = poleScale.xFor(asymptoteRad);
+            const allBefore = xs.every((x) => x < asymptoteX);
+            const allAfter = xs.every((x) => x > asymptoteX);
+            expect(
+              allBefore || allAfter,
+              `${fn} subpath straddles an asymptote: ${subpath}`,
+            ).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it('draws nothing until θ passes the branch edge — cot (~14.04°) and csc (~14.48°), both centred on 90°', () => {
+    expect(wavePath('cot', 10, 1, poleScale)).toBe('');
+    expect(wavePath('cot', 20, 1, poleScale)).not.toBe('');
+    expect(wavePath('csc', 10, 1, poleScale)).toBe('');
+    expect(wavePath('csc', 20, 1, poleScale)).not.toBe('');
+  });
+
+  it('breaks at the exact edge angle, not an interpolated guess', () => {
+    const cotEdgeDeg = 90 - (Math.atan(POLE_MAX) * 180) / Math.PI;
+    const path = wavePath('cot', 30, 1, poleScale);
+    const firstPoint = [...path.matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g)][0]!;
+    expect(Number(firstPoint[1])).toBeCloseTo(poleScale.xFor(degreesToRadians(cotEdgeDeg)), 4);
+    expect(Number(firstPoint[2])).toBeCloseTo(poleScale.yFor(POLE_MAX), 4);
+  });
+
+  it('is independent of r, matching waveValue', () => {
+    for (const fn of ['sec', 'csc', 'cot'] as const) {
+      for (const theta of [30, 45, 60, 120, -50]) {
+        expect(wavePath(fn, theta, 0.5, poleScale)).toBe(wavePath(fn, theta, 1.5, poleScale));
+      }
+    }
+  });
+
+  it('keeps every vertex inside the viewBox across a full sweep', () => {
+    for (const fn of ['sec', 'csc', 'cot'] as const) {
+      for (let theta = -360; theta <= 360; theta += 13) {
+        if (Math.abs(theta) < 1e-9) continue;
+        for (const v of [
+          ...wavePath(fn, theta, 1, poleScale).matchAll(/[ML] ([-\d.e]+) ([-\d.e]+)/g),
+        ]) {
+          const x = Number(v[1]);
+          const y = Number(v[2]);
+          expect(x, `${fn} x out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+          expect(x, `${fn} x out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_WIDTH);
+          expect(y, `${fn} y out of range at θ=${theta}`).toBeGreaterThanOrEqual(0);
+          expect(y, `${fn} y out of range at θ=${theta}`).toBeLessThanOrEqual(WAVE_HEIGHT);
+        }
+      }
+    }
+  });
+
+  it('emits no NaN, Infinity, or undefined across a full sweep', () => {
+    for (let theta = -360; theta <= 360; theta += 9) {
+      for (const fn of ['sec', 'csc', 'cot'] as const) {
+        const path = wavePath(fn, theta, 1, poleScale);
+        expect(path).not.toContain('NaN');
+        expect(path).not.toContain('Infinity');
+        expect(path).not.toContain('undefined');
+      }
+    }
+  });
+});
+
+describe('waveDomain — sec/csc/cot', () => {
+  it('shares POLE_MAX with tan for all three reciprocals', () => {
+    expect(waveDomain('sec')).toBe(POLE_MAX);
+    expect(waveDomain('csc')).toBe(POLE_MAX);
+    expect(waveDomain('cot')).toBe(POLE_MAX);
+  });
+});
+
+describe('waveSpoken — sec/csc/cot', () => {
+  it('names each function and calls it a curve, mirroring tan', () => {
+    expect(waveSpoken('sec', 45, 1)).toContain('Secant curve traced from 0 to 45 degrees.');
+    expect(waveSpoken('sec', 45, 1)).toContain('secant of theta is');
+    expect(waveSpoken('csc', 45, 1)).toContain('Cosecant curve traced from 0 to 45 degrees.');
+    expect(waveSpoken('csc', 45, 1)).toContain('cosecant of theta is');
+    expect(waveSpoken('cot', 45, 1)).toContain('Cotangent curve traced from 0 to 45 degrees.');
+    expect(waveSpoken('cot', 45, 1)).toContain('cotangent of theta is');
+  });
+
+  it('reports undefined at its own pole', () => {
+    expect(waveSpoken('sec', 90, 1)).toContain('secant of theta is undefined.');
+    expect(waveSpoken('csc', 0, 1)).toContain('cosecant of theta is undefined.');
+    expect(waveSpoken('cot', 0, 1)).toContain('cotangent of theta is undefined.');
+  });
+});
+
+describe('buildWaveSvg — sec/csc/cot', () => {
+  it('sec draws four asymptotes, matching tan', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sec', theta: 45 });
+    expect([...svg.matchAll(/data-role="wave-asymptote"/g)]).toHaveLength(4);
+  });
+
+  it('csc and cot draw five — the extra one at tick 0', () => {
+    for (const fn of ['csc', 'cot'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 45 });
+      expect([...svg.matchAll(/data-role="wave-asymptote"/g)]).toHaveLength(5);
+    }
+  });
+
+  it('never draws an asymptote line outside [0, WAVE_WIDTH]', () => {
+    for (const fn of ['tan', 'sec', 'csc', 'cot'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 45 });
+      const xs = [
+        ...svg.matchAll(/<line data-role="wave-asymptote" x1="([-\d.]+)"/g),
+      ].map((m) => Number(m[1]));
+      expect(xs.length).toBeGreaterThan(0);
+      for (const x of xs) {
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x).toBeLessThanOrEqual(WAVE_WIDTH);
+      }
+    }
+  });
+
+  it('suppresses the marker at θ=0 for csc and cot, both undefined there', () => {
+    for (const fn of ['csc', 'cot'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 0 });
+      expect(svg).not.toContain('data-role="wave-marker"');
+    }
+  });
+
+  it('draws the marker for sec where its value is in range', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sec', theta: 45 }); // sec 45° = √2 ≈ 1.414, well inside ±4
+    expect(svg).toContain('data-role="wave-marker"');
+  });
+
+  it('emits no NaN across the whole domain', () => {
+    for (let theta = -360; theta <= 360; theta += 7) {
+      for (const fn of ['sec', 'csc', 'cot'] as const) {
+        const svg = buildWaveSvg({ ...waveBase, fn, theta });
+        expect(svg).not.toContain('NaN');
+        expect(svg).not.toContain('undefined');
+      }
+    }
+  });
+});
+
+describe('buildWaveSvg — y-axis suppression fires for csc/cot at tick 0', () => {
+  // top and x0 are both independent of the per-function y-domain: yFor(domain)
+  // always lands on PAD.top and xFor(0) always lands on the centre column, for
+  // any domain — see waveScales. So the default AMP_MAX scale is a valid probe
+  // for every function's own line, without rebuilding a per-fn scale.
+  const s = waveScales();
+  const x0 = s.xFor(0);
+  const top = s.yFor(AMP_MAX);
+
+  it('suppresses the solid y-axis for csc and cot, which have a pole at tick 0', () => {
+    for (const fn of ['csc', 'cot'] as const) {
+      const svg = buildWaveSvg({ ...waveBase, fn, theta: 45 });
+      expect(svg).not.toContain(`<line x1="${x0}" y1="${top}"`);
+    }
+  });
+
+  it('positive control: sin still draws its y-axis', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 });
+    expect(svg).toContain(`<line x1="${x0}" y1="${top}"`);
+  });
+
+  it('leaves tan unaffected — it has no pole at tick 0', () => {
+    const svg = buildWaveSvg({ ...waveBase, fn: 'tan', theta: 45 });
+    expect(svg).toContain(`<line x1="${x0}" y1="${top}"`);
+  });
+});

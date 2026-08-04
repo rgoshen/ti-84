@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { buildCoordinateReadout } from './angle-coordinates';
+import type { WaveFn } from './angle-wave';
+import { renderMathHtml } from '@/scripts/katex-html';
 
 describe('buildCoordinateReadout — worked equations', () => {
   it('drops the "1 ×" prefix on the unit circle, where it is only noise', () => {
@@ -297,5 +299,45 @@ describe('buildCoordinateReadout — sec/csc/cot', () => {
       '\\cot\\theta = \\frac{x}{y} = \\frac{r\\cos\\theta}{r\\sin\\theta} = ' +
         '\\frac{\\cos\\theta}{\\sin\\theta} = 0',
     );
+  });
+});
+
+describe('buildCoordinateReadout — waveLatex/waveText', () => {
+  // The regression test for "a new function silently renders as tan": each
+  // key must point at ITS OWN equation, at the layer where the wave strip's
+  // caption now looks it up, not at whatever the component's old ternary
+  // chain happened to fall through to.
+  it('maps each wave function to its own equation, in both alphabets', () => {
+    const out = buildCoordinateReadout(30, 1.2);
+    expect(out.waveLatex.sin).toBe(out.yLatex);
+    expect(out.waveLatex.cos).toBe(out.xLatex);
+    expect(out.waveLatex.tan).toBe(out.tanLatex);
+    expect(out.waveLatex.sec).toBe(out.secLatex);
+    expect(out.waveLatex.csc).toBe(out.cscLatex);
+    expect(out.waveLatex.cot).toBe(out.cotLatex);
+
+    expect(out.waveText.sin).toBe(out.yText);
+    expect(out.waveText.cos).toBe(out.xText);
+    expect(out.waveText.tan).toBe(out.tanText);
+    expect(out.waveText.sec).toBe(out.secText);
+    expect(out.waveText.csc).toBe(out.cscText);
+    expect(out.waveText.cot).toBe(out.cotText);
+  });
+
+  it('holds at an undefined angle too, where the equation states "is undefined"', () => {
+    const out = buildCoordinateReadout(0, 1);
+    expect(out.waveLatex.csc).toBe(out.cscLatex);
+    expect(out.waveLatex.cot).toBe(out.cotLatex);
+    expect(out.waveText.csc).toBe(out.cscText);
+    expect(out.waveText.cot).toBe(out.cotText);
+  });
+
+  it('renders every waveLatex and waveText value through KaTeX without returning null, pinning \\sec/\\csc/\\cot support', () => {
+    const out = buildCoordinateReadout(30, 1);
+    const fns: WaveFn[] = ['sin', 'cos', 'tan', 'sec', 'csc', 'cot'];
+    for (const fn of fns) {
+      expect(renderMathHtml(out.waveLatex[fn])).not.toBeNull();
+      expect(renderMathHtml(out.waveText[fn])).not.toBeNull();
+    }
   });
 });

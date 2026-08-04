@@ -14,6 +14,7 @@
 import { degreesToRadians, formatPiLatex, piMultiple } from './angle';
 import { formatDegrees } from './angle-parse';
 import { round4 } from './format';
+import type { WaveFn } from './angle-wave';
 import {
   exactCoordinates,
   exactCosecant,
@@ -45,6 +46,12 @@ export interface CoordinateReadout {
   /** `cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ = …`. Same r-cancellation. */
   cotLatex: string;
   cotText: string;
+  /** Maps each wave-strip function to the equation it should caption —
+   *  `sin` to `yLatex`, `cos` to `xLatex`, the four ratios to their own.
+   *  Keyed by `WaveFn` so a new function is a compile error here until this
+   *  table names its equation, rather than a silent fall-through to tan. */
+  waveLatex: Record<WaveFn, string>;
+  waveText: Record<WaveFn, string>;
   /** Screen-reader prose. No latex markup. */
   spoken: string;
   /** Narrow pair for the SVG label: `(√3/2, 1/2)` or `(1.04, 0.60)`. */
@@ -284,6 +291,8 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
     cotText,
     xText,
     yText,
+    waveLatex: { sin: yLatex, cos: xLatex, tan: tanLatex, sec: secLatex, csc: cscLatex, cot: cotLatex },
+    waveText: { sin: yText, cos: xText, tan: tanText, sec: secText, csc: cscText, cot: cotText },
     labelText,
     pairText: `(${round4(x)}, ${round4(y)})`,
     spoken:

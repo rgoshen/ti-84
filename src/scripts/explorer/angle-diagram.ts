@@ -26,10 +26,13 @@ import {
 } from '@/scripts/explorer/angle-standard';
 import type { WaveFn } from './angle-wave';
 
-/** The `WaveFn`s with a pole construction — currently only tan. Written as
- *  `Extract<WaveFn, 'tan'>` rather than a literal `'tan'` alias so widening
- *  `WaveFn`'s pole members later widens this type at the same time. */
-type PoleFn = Extract<WaveFn, 'tan'>;
+/** The `WaveFn`s with a pole construction: every ratio, i.e. everything but the
+ *  two sinusoids. Written as `Exclude<WaveFn, 'sin' | 'cos'>` rather than a
+ *  literal union so widening `WaveFn` with a new pole function widens this
+ *  type at the same time — `poleMark` below then fails to compile until it
+ *  grows a matching row, rather than silently leaving the new function
+ *  unhandled. */
+type PoleFn = Exclude<WaveFn, 'sin' | 'cos'>;
 
 export interface AngleDiagramOptions {
   /** Swept angle, in degrees. */
@@ -345,58 +348,110 @@ export function buildAngleDiagramSvg(opts: AngleDiagramOptions): string {
   const projectionMarkup = (() => {
     if (opts.projection === undefined) return '';
 
-    // T sits on the UNIT circle (not r·unit) at angle β — the point where the
-    // initial side crosses it, and the fixed anchor of the tangent line. E is
-    // placed as an offset from T, perpendicular to OT (angle β + 90°), scaled
-    // by the tangent value itself — the standard "extend the terminal side
-    // until it meets the tangent line" construction, decomposed so E stays ON
-    // the tangent line even when clamped. Because T is independent of r and
-    // the offset direction is independent of r, segment length is exactly
-    // |tan θ|·unit for any r — the cancellation, geometrically.
+    const maxDist = c - LABEL_MARGIN;
+    // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
+    // radicand would go negative and sqrt would silently emit NaN into the
+    // markup. Not reachable via either the live figure or the export (both
+    // use the defaults, unit=88 well under maxDist=156), but the option is
+    // public on AngleDiagramOptions, so the guard costs nothing to keep.
+    const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
+    const cap = (v: number): number => (Math.abs(v) > capMax ? Math.sign(v) * capMax : v);
+
+    // tangentPoint sits on the UNIT circle (not r·unit) at angle β — the point
+    // where the initial side crosses it, and the fixed anchor of the tangent
+    // line there. lineEnd is placed as an offset from tangentPoint,
+    // perpendicular to O-tangentPoint (angle β + 90°), scaled by the tangent
+    // value itself — the standard "extend the terminal side until it meets
+    // the tangent line" construction, decomposed so lineEnd stays ON the
+    // tangent line even when clamped. Because tangentPoint is independent of r
+    // and the offset direction is independent of r, segment length is exactly
+    // |tan θ|·unit (tan's own leg) or |sec θ|·unit (sec, the hypotenuse of the
+    // same right triangle O-tangentPoint-lineEnd) for any r — the
+    // cancellation, geometrically.
     //
     // Clamped by capping the tangent VALUE (not the ray distance from the
-    // origin, which would pull E off the tangent line as it shrinks): by the
-    // right triangle O-T-E (OT = unit, right angle at T),
-    // OE² = unit² + TE², so capping TE at sqrt(maxDist² − unit²) caps OE at
+    // origin, which would pull lineEnd off the tangent line as it shrinks): by
+    // the right triangle O-tangentPoint-lineEnd (O-tangentPoint = unit, right
+    // angle at tangentPoint), O-lineEnd² = unit² + tangentPoint-lineEnd², so
+    // capping tangentPoint-lineEnd at sqrt(maxDist² − unit²) caps O-lineEnd at
     // exactly maxDist — the viewBox's inscribed-circle radius, bounded the
-    // same way in every direction regardless of β. One consequence: once the
-    // clamp engages near an asymptote, the dashed tangent-extension below is
-    // no longer collinear with the terminal side — E has left the ray to
-    // stay on the tangent line instead. No endpoint dot is ever drawn at E,
-    // clamped or not, so a clamped segment never asserts a value it was
-    // truncated out of.
+    // same way in every direction regardless of β. sec needs no clamp of its
+    // own: O-lineEnd IS sec's segment, already bounded by this one. One
+    // consequence: once the clamp engages near an asymptote, the dashed
+    // tangent-extension below is no longer collinear with the terminal side —
+    // lineEnd has left the ray to stay on the tangent line instead. No
+    // endpoint dot is ever drawn at lineEnd, clamped or not, so a clamped
+    // segment never asserts a value it was truncated out of.
+    const tangentPoint = polarToCartesian(c, c, unit, betaRad);
+    const lineEnd = polarToCartesian(
+      tangentPoint.x,
+      tangentPoint.y,
+      cap(Math.tan(thetaRad)) * unit,
+      betaRad + Math.PI / 2,
+    );
+
+    // The B-side twin of the construction above: anchorB is (0, 1) rotated by
+    // β — the tangent line's anchor on the OTHER axis — and meetC is where the
+    // initial side extended meets THAT line, offset from anchorB along angle β
+    // by the cotangent value. O-anchorB-meetC is the same right triangle as
+    // O-tangentPoint-lineEnd (unit leg, right angle at the anchor), so the
+    // identical cap bounds O-meetC (csc) exactly as it bounds O-lineEnd (sec).
+    const anchorB = polarToCartesian(c, c, unit, betaRad + Math.PI / 2);
+    const meetC = polarToCartesian(
+      anchorB.x,
+      anchorB.y,
+      cap(1 / Math.tan(thetaRad)) * unit,
+      betaRad,
+    );
+
+    // Dashed guide differs by role, deliberately: for the LEG functions (tan,
+    // cot) it is the terminal ray extended, showing how the meet point is
+    // found; for the HYPOTENUSE functions (sec, csc) it is the leg, closing
+    // the right triangle and showing why the hypotenuse has that length.
     const poleMark: Record<PoleFn, { solid: string; dashed: string }> = {
-      tan: (() => {
-        const tangentPoint = polarToCartesian(c, c, unit, betaRad);
-        const rawTan = Math.tan(thetaRad);
-        const maxDist = c - LABEL_MARGIN;
-        // Math.max(0, ...): guards a caller-supplied unit ≥ maxDist, where the
-        // radicand would go negative and sqrt would silently emit NaN into the
-        // markup. Not reachable via either the live figure or the export (both
-        // use the defaults, unit=88 well under maxDist=156), but the option is
-        // public on AngleDiagramOptions, so the guard costs nothing to keep.
-        const capMax = Math.sqrt(Math.max(0, maxDist ** 2 - unit ** 2)) / unit;
-        const cap = (v: number): number => (Math.abs(v) > capMax ? Math.sign(v) * capMax : v);
-        const lineEnd = polarToCartesian(
-          tangentPoint.x,
-          tangentPoint.y,
-          cap(rawTan) * unit,
-          betaRad + Math.PI / 2,
-        );
-        return {
-          dashed:
-            `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
-            `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
-            `stroke-dasharray="3 3" />`,
-          solid:
-            `<line data-role="tangent-segment" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
-            `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
-            `stroke-linecap="round" />`,
-        };
-      })(),
+      tan: {
+        dashed:
+          `<line data-role="tangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
+          `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
+          `stroke-dasharray="3 3" />`,
+        solid:
+          `<line data-role="tangent-segment" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
+          `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+          `stroke-linecap="round" />`,
+      },
+      sec: {
+        dashed:
+          `<line data-role="secant-extension" x1="${tangentPoint.x}" y1="${tangentPoint.y}" ` +
+          `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="1" ` +
+          `stroke-dasharray="3 3" />`,
+        solid:
+          `<line data-role="secant-segment" x1="${c}" y1="${c}" ` +
+          `x2="${lineEnd.x}" y2="${lineEnd.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+          `stroke-linecap="round" />`,
+      },
+      csc: {
+        dashed:
+          `<line data-role="cosecant-extension" x1="${anchorB.x}" y1="${anchorB.y}" ` +
+          `x2="${meetC.x}" y2="${meetC.y}" stroke="${colors.wave}" stroke-width="1" ` +
+          `stroke-dasharray="3 3" />`,
+        solid:
+          `<line data-role="cosecant-segment" x1="${c}" y1="${c}" ` +
+          `x2="${meetC.x}" y2="${meetC.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+          `stroke-linecap="round" />`,
+      },
+      cot: {
+        dashed:
+          `<line data-role="cotangent-extension" x1="${terminalDot.x}" y1="${terminalDot.y}" ` +
+          `x2="${meetC.x}" y2="${meetC.y}" stroke="${colors.wave}" stroke-width="1" ` +
+          `stroke-dasharray="3 3" />`,
+        solid:
+          `<line data-role="cotangent-segment" x1="${anchorB.x}" y1="${anchorB.y}" ` +
+          `x2="${meetC.x}" y2="${meetC.y}" stroke="${colors.wave}" stroke-width="2.5" ` +
+          `stroke-linecap="round" />`,
+      },
     };
 
-    if (opts.projection === 'tan') {
+    if (opts.projection !== 'sin' && opts.projection !== 'cos') {
       const mark = poleMark[opts.projection];
       return mark.dashed + mark.solid;
     }
