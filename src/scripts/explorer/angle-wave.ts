@@ -304,10 +304,11 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
       const even = k % 2 === 0;
       const labelY =
         height - (even ? LABEL_BASELINE.primary : LABEL_BASELINE.secondary);
-      // At tan's asymptotes, this solid gridline would sit directly under
-      // the dashed asymptote line (drawn separately, below) — a same-colour
-      // opaque line fills in the dash gaps, so the asymptote never actually
-      // reads as dashed. Suppress just the gridline here; the label stays.
+      // At tan's asymptotes, a solid gridline would sit directly under the
+      // dashed asymptote line (drawn separately, below), filling its gaps and
+      // diluting the dash. Now that the two differ in colour that is worse, not
+      // neutral: slate showing through red's gaps interleaves two colours along
+      // one line. Suppress just the gridline here; the label stays.
       const isAsymptote = fn === 'tan' && (k === -6 || k === -2 || k === 2 || k === 6);
       return (
         `<g data-role="wave-tick">` +
@@ -333,8 +334,13 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     )
     .join('');
 
-  // Dashed verticals at tan's four asymptotes, spanning the plot area like the
-  // π/4 gridlines. Absent for sin/cos, which have no asymptote to mark.
+  // Dashed verticals at tan's four asymptotes. Deliberately NOT styled like the
+  // π/4 gridlines they sit among: slate at 33% ink coverage put less colour on
+  // screen than the solid gridline beside it, so the asymptote read as a gap in
+  // the grid. This is `wall` at `dashedLine`'s weight and dash — the same mark
+  // render.ts:169 draws the Function Explorer's vertical asymptotes with, so
+  // "red dashed vertical" means one thing across the whole app. Absent for
+  // sin/cos, which have no asymptote to mark.
   const asymptotes =
     fn === 'tan'
       ? waveAsymptoteRadians()
@@ -342,7 +348,7 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
             const x = s.xFor(rad);
             return (
               `<line data-role="wave-asymptote" x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" ` +
-              `stroke="${colors.axis}" stroke-width="1" stroke-dasharray="2 4" />`
+              `stroke="${colors.wall}" stroke-width="1.5" stroke-dasharray="6 6" />`
             );
           })
           .join('')

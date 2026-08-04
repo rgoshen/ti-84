@@ -280,7 +280,7 @@ export default function AngleExplorer(): React.JSX.Element {
                       ? 'sin θ — height is the y-coordinate'
                       : snapshotWave === 'cos'
                         ? 'cos θ — height is the x-coordinate'
-                        : 'tan θ — height is the tangent segment',
+                        : 'tan θ — height is the tangent segment; dashed verticals mark its asymptotes',
                   color: lightColors.wave,
                 },
               ]

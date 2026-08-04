@@ -524,4 +524,37 @@ describe('buildWaveSvg — tan', () => {
       }
     }
   });
+
+  it('draws the asymptotes in the wall colour, not the gridline slate', () => {
+    // The mark that means "vertical asymptote" everywhere else in the app —
+    // render.ts:169 draws the Function Explorer's walls exactly this way.
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    const lines = [...svg.matchAll(/<line data-role="wave-asymptote"[^>]*>/g)].map((m) => m[0]);
+
+    expect(lines).toHaveLength(4);
+    for (const line of lines) {
+      expect(line).toContain(`stroke="${colors.wall}"`);
+      expect(line).not.toContain(`stroke="${colors.axis}"`);
+    }
+  });
+
+  it('strokes the asymptotes heavier than the gridlines they sit among', () => {
+    // The original defect: slate at stroke-width 1 with a "2 4" dash is only
+    // 33% ink — LESS than the solid 0.75 gridline beside it — so the asymptote
+    // read as a missing gridline rather than as a wall. Compare against a real
+    // gridline rather than asserting a literal, so the relationship is what
+    // is pinned down.
+    const svg = buildWaveSvg({ ...tanBase, theta: 45 });
+    const widthOf = (markup: string): number => Number(markup.match(/stroke-width="([\d.]+)"/)![1]);
+    // k = -8 (-2π) is even and not an asymptote, so its solid gridline survives.
+    const gridline = svg.match(/<g data-role="wave-tick"><line[^>]*>/)![0];
+    const lines = [...svg.matchAll(/<line data-role="wave-asymptote"[^>]*>/g)].map((m) => m[0]);
+
+    for (const line of lines) {
+      expect(widthOf(line)).toBeGreaterThan(widthOf(gridline));
+      // 1.5 is render.ts:123's dashedLine width — the cross-explorer wall value.
+      expect(line).toContain('stroke-width="1.5"');
+      expect(line).toContain('stroke-dasharray="6 6"');
+    }
+  });
 });

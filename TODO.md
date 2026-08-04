@@ -1075,3 +1075,51 @@ wave-projection design.
 
 **Status:** Implemented on `feature/angle-wave-tangent`, all 9 plan tasks complete and reviewed;
 final whole-branch review's 8 fixes applied (see SUMMARY.md, 2026-08-02 22:50) — ready for merge.
+
+## [2026-08-03] Fix: Tangent Wave Asymptote Legibility
+
+**Objective:**
+Make the tangent wave's four vertical asymptotes visually read as asymptotes. They are already
+drawn and covered by both a unit test and `tests/e2e/angle.spec.ts:416` — but they are stroked in
+`colors.axis`, the same slate as all seventeen π/4 gridlines, at `stroke-width="1"` with
+`stroke-dasharray="2 4"`. That dash is 33% ink coverage against the gridlines' *solid* 0.75, so
+each asymptote renders fainter than an ordinary gridline and reads as a gap in the grid rather
+than as a wall.
+
+**Approach:**
+- Change three attribute values in `buildWaveSvg`'s `asymptotes` block: `colors.axis` → `colors.wall`,
+  `stroke-width` `1` → `1.5`, `stroke-dasharray` `2 4` → `6 6`. These are exactly the values
+  `dashedLine` uses at `render.ts:169` to draw the Function Explorer's vertical asymptotes, so
+  "red dashed vertical" means one thing across the app.
+- Reuse the existing `ExplorerColors.wall` slot — already documented as *"Vertical asymptote guide
+  (drawn dashed)"* and already contrast-verified in `theme.test.ts`. No new palette entry.
+- Keep the asymptote-gridline suppression; only its comment's rationale changes, since the
+  old same-colour argument no longer holds once the two differ in hue.
+- No signature change and no plumbing: both `buildWaveSvg` call sites (live component and export
+  snapshot) already pass a full `ExplorerColors`.
+
+**Tests:**
+- Unit: the four asymptote lines are stroked in `colors.wall` and not `colors.axis` (the assertion
+  that would have caught the original defect); their `stroke-width` is greater than a real
+  gridline's, compared against extracted markup rather than a literal; dasharray is `6 6`.
+  Expectations derive from `explorerColors(...)`, never hard-coded hex, so a palette change cannot
+  silently desynchronise the test from the theme.
+- Pre-existing tests that must stay green untouched: the count-of-4 test, the gridline-suppression
+  test, the marker-suppression tests, and the sin/cos negative case.
+- Manual: both themes in the browser — `wall` is `#e24b4a` light, `#f87171` dark.
+
+**Risks & Tradeoffs:**
+- Red now means "terminal side" in the polar figure and "asymptote" in the wave strip. Accepted:
+  the mark type disambiguates (thick solid ray vs. dashed vertical), and red-dashed-vertical is
+  already the app-wide asymptote idiom.
+- The export legend gains no asymptote row, so the red dashed lines are unlabelled in the PNG.
+  Accepted deliberately: a row would put a second red swatch beside the existing "Terminal side"
+  entry, and the legend already omits gridlines, unit references and the marker.
+- Styling is not encoded in the e2e layer, so a future palette regression is caught by the unit
+  suite only. Acceptable — stroke styling is a pure-string-builder concern.
+
+**Status:** ✅ Complete. Two new unit tests added to `angle-wave.test.ts` (wall colour assertion + heavy stroke assertion); asymptote block restyled to use `colors.wall`, `stroke-width="1.5"`, `stroke-dasharray="6 6"`; gridline-suppression comment updated to explain the new legibility rationale. Full suite green (492 Vitest, 0 type errors, all existing tests including pre-existing tan and gridline-suppression tests remain green).
+
+**References:**
+- Plan: `docs/superpowers/plans/2026-08-03-angle-wave-asymptote-legibility.md`
+- Follows: 2026-08-02 Feature: Angle Explorer Tangent Wave (PR #31, v0.11.0)

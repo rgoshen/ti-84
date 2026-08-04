@@ -4954,3 +4954,102 @@ tests, fix 4 only revised an existing test's derivation);
 
 **References:**
 - PR #31 review response
+
+## [2026-08-03 16:37] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — tangent wave asymptotes
+
+**Summary:**
+Added the TDD implementation plan for restyling the tangent wave's four vertical
+asymptotes to the app's established red-dashed asymptote idiom, plus the
+corresponding `TODO.md` feature entry. No source or test files changed in this
+commit — this is the plan only, written before any code per the project's
+plan-first discipline.
+
+**Rationale:**
+The reported symptom was "it didn't graph the asymptotes," but investigation
+showed the opposite: `buildWaveSvg` already emits four `data-role="wave-asymptote"`
+lines, and both a unit test and `tests/e2e/angle.spec.ts:416` assert all four reach
+the DOM. Both pass. Writing the plan around the true defect — legibility, not
+absence — keeps the fix to three attribute values instead of re-adding something
+that already exists.
+
+The plan reuses `ExplorerColors.wall` rather than adding a palette entry, because
+that slot is already documented as "Vertical asymptote guide (drawn dashed)" and
+already contrast-verified in `theme.test.ts`, and because `render.ts:169` already
+draws the Function Explorer's vertical asymptotes with exactly those values. Two
+alternatives were considered and declined: labelling each asymptote (the page copy
+already states that tangent breaks at its asymptotes), and adding an export-legend
+row (it would put a second red swatch beside the existing "Terminal side" entry,
+and the legend already omits gridlines, unit references and the marker).
+
+**Bug Fix Context:**
+Root cause is that the asymptotes are stroked in `colors.axis` — the same slate as
+all seventeen π/4 gridlines — at `stroke-width="1"` with `stroke-dasharray="2 4"`.
+That dash is 2px on, 4px off: 33% ink coverage, against the neighbouring even
+gridlines' *solid* 0.75. Identical colour at a third of the ink means each
+asymptote renders with less ink than an ordinary gridline, so it reads as "a
+gridline is missing here" rather than "tangent is undefined here." The existing
+tests could not catch this: `toHaveCount(4)` proves the nodes exist and says
+nothing about whether they are distinguishable from the grid.
+
+**Tests:**
+None run — documentation-only commit. The plan's own verification steps cover
+`npm test`, `npx astro check`, `npx playwright test tests/e2e/angle.spec.ts
+tests/e2e/angle-export.spec.ts`, a two-theme browser check, and a confirmation
+that `npm run test:e2e:visual` stays green (there is no Angle Explorer PNG
+baseline, so the Linux-only snapshot regeneration path is not involved).
+
+**References:**
+- TODO.md: 2026-08-03 Fix: Tangent Wave Asymptote Legibility
+- Plan: `docs/superpowers/plans/2026-08-03-angle-wave-asymptote-legibility.md`
+- Follows: PR #31 (tan θ wave), v0.11.0
+
+## [2026-08-03 16:49] Commit Summary
+
+**Change Type:** Fix
+**Scope:** Angle Explorer — tangent wave asymptotes
+
+**Summary:**
+Restyled the four vertical asymptotes in the tangent wave to use the app's
+established red-dashed asymptote idiom: changed `colors.axis` → `colors.wall`,
+`stroke-width` `1` → `1.5`, `stroke-dasharray` `2 4` → `6 6` in the `asymptotes`
+block of `buildWaveSvg`. Updated the gridline-suppression comment to reflect
+the new colour-separation legibility rationale. Added two new unit tests:
+one asserting the asymptotes are stroked in `colors.wall` and not `colors.axis`,
+and one asserting the stroke-width is heavier than the neighbouring gridlines'
+and the dasharray is `6 6`.
+
+**Rationale:**
+The asymptotes were already drawn and tested for presence (count-of-4, e2e),
+but they read as "a gridline is missing" instead of "tangent is undefined
+here." Root cause: they were stroked in `colors.axis` (the gridlines' own
+colour) at `stroke-width="1"` with `stroke-dasharray="2 4"` — 33% ink
+coverage against the neighbouring gridlines' solid 0.75, so the asymptote
+rendered fainter than the grid. This fix brings them into line with the
+Function Explorer's own vertical asymptotes, drawn via `dashedLine` at
+`render.ts:169` with exactly these values. No signature or call-site changes.
+
+**Bug Fix Context:**
+The root cause was that the asymptotes were stroked in the same colour as
+the gridlines (`colors.axis`) but at only 33% ink coverage (dash `2 4` on a
+`stroke-width` of `1`), whereas the adjacent gridlines are solid at
+`stroke-width` 0.75. The lower ink density meant the asymptote was visually
+fainter than the grid, so it read as a missing gridline rather than a
+vertical asymptote. The fix raises the stroke-width to 1.5 for better
+ink coverage and recolours to `colors.wall` (red) to provide colour
+separation and visual prominence, matching the Function Explorer's
+established mark for asymptotes.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/angle-wave.test.ts` — all 61 tests pass,
+including the 2 new ones (wall colour assertion, heavy stroke assertion) and
+all pre-existing tests (count-of-4, gridline-suppression, marker-suppression,
+sin/cos negative case).
+`npm test` — 492/492 Vitest tests pass.
+`npx astro check` — 0 errors, 0 warnings.
+
+**References:**
+- TODO.md: 2026-08-03 Fix: Tangent Wave Asymptote Legibility
+- Spec: docs/superpowers/specs/2026-07-27-angle-explorer-design.md
