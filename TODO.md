@@ -1177,7 +1177,15 @@ today.
 - The circle mark at a pole draws in an arbitrary direction (`1/Math.tan(0)` is `+Infinity`).
   tan has this today at 90°; no endpoint dot is drawn, so no specific value is asserted.
 
-**Status:** 📋 Planned. Spec and plan written, branch created. No implementation yet.
+**Status:** ✅ Complete. All 10 planned tasks landed as separate commits on
+`feature/angle-wave-reciprocals`, plus one addendum fixing the intro copy gap
+found during manual verification (mirroring PR #32's fix for tan). 579 unit
+tests pass (up from 492 baseline), 62 e2e tests pass (up from 48), `astro
+check` clean. Manually verified in-browser: asymptote counts and colours
+correct in both themes, curve breaks cleanly through every pole, radius
+slider confirmed inert on all three new curves, circle marks confirmed
+rigid-rotation invariant under the position slider, csc/cot correctly read
+undefined at the default 0° angle with asymptotes still drawn.
 
 **References:**
 - Spec: `docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md`
