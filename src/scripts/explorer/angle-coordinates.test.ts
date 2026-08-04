@@ -199,3 +199,103 @@ describe('buildCoordinateReadout — tan', () => {
     );
   });
 });
+
+describe('buildCoordinateReadout — sec/csc/cot', () => {
+  it('shows the r cancelling out of the ratio, exact and irrational, for sec', () => {
+    const out = buildCoordinateReadout(30, 1);
+    expect(out.secLatex).toBe(
+      '\\sec\\theta = \\frac{r}{x} = \\frac{r}{r\\cos\\theta} = \\frac{1}{\\cos\\theta} = ' +
+        '\\frac{2\\sqrt{3}}{3} \\approx 1.1547',
+    );
+    expect(out.secText).toBe(
+      'sec θ = r/x = r/(r cos θ) = 1/cos θ = 2√3/3 ≈ 1.1547',
+    );
+  });
+
+  it('shows the r cancelling out of the ratio, exact and rational, for csc', () => {
+    const out = buildCoordinateReadout(30, 1);
+    expect(out.cscLatex).toBe(
+      '\\csc\\theta = \\frac{r}{y} = \\frac{r}{r\\sin\\theta} = \\frac{1}{\\sin\\theta} = 2',
+    );
+    expect(out.cscText).toBe(
+      'csc θ = r/y = r/(r sin θ) = 1/sin θ = 2',
+    );
+    expect(out.cscLatex).not.toContain('\\approx');
+  });
+
+  it('shows the r cancelling out of the ratio, exact and irrational, for cot', () => {
+    const out = buildCoordinateReadout(30, 1);
+    expect(out.cotLatex).toBe(
+      '\\cot\\theta = \\frac{x}{y} = \\frac{r\\cos\\theta}{r\\sin\\theta} = ' +
+        '\\frac{\\cos\\theta}{\\sin\\theta} = \\sqrt{3} \\approx 1.7321',
+    );
+    expect(out.cotText).toBe(
+      'cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ = √3 ≈ 1.7321',
+    );
+  });
+
+  it('is identical for every r — the whole point of the cancellation', () => {
+    const at30half = buildCoordinateReadout(30, 0.5);
+    const at30r1p5 = buildCoordinateReadout(30, 1.5);
+    expect(at30half.secLatex).toBe(at30r1p5.secLatex);
+    expect(at30half.cscLatex).toBe(at30r1p5.cscLatex);
+    expect(at30half.cotLatex).toBe(at30r1p5.cotLatex);
+  });
+
+  it('uses = for an exact rational sec value, contrasted with sec 30°\'s ≈', () => {
+    const out = buildCoordinateReadout(60, 1);
+    expect(out.secLatex).toBe(
+      '\\sec\\theta = \\frac{r}{x} = \\frac{r}{r\\cos\\theta} = \\frac{1}{\\cos\\theta} = 2',
+    );
+    expect(out.secLatex).not.toContain('\\approx');
+    expect(buildCoordinateReadout(30, 1).secLatex).toContain('\\approx');
+  });
+
+  it('reads as undefined at sec\'s own pole, in both alphabets', () => {
+    const at90 = buildCoordinateReadout(90, 1);
+    expect(at90.secLatex).toBe(
+      '\\sec\\theta = \\frac{r}{x} = \\frac{r}{r\\cos\\theta} = ' +
+        '\\frac{1}{\\cos\\theta}\\text{ is undefined}',
+    );
+    expect(at90.secText).toBe(
+      'sec θ = r/x = r/(r cos θ) = 1/cos θ is undefined',
+    );
+  });
+
+  it('reads as undefined at csc and cot\'s own poles (0° and 180°), in both alphabets', () => {
+    const at0 = buildCoordinateReadout(0, 1);
+    expect(at0.cscLatex).toBe(
+      '\\csc\\theta = \\frac{r}{y} = \\frac{r}{r\\sin\\theta} = ' +
+        '\\frac{1}{\\sin\\theta}\\text{ is undefined}',
+    );
+    expect(at0.cscText).toBe(
+      'csc θ = r/y = r/(r sin θ) = 1/sin θ is undefined',
+    );
+    expect(at0.cotLatex).toBe(
+      '\\cot\\theta = \\frac{x}{y} = \\frac{r\\cos\\theta}{r\\sin\\theta} = ' +
+        '\\frac{\\cos\\theta}{\\sin\\theta}\\text{ is undefined}',
+    );
+    expect(at0.cotText).toBe(
+      'cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ is undefined',
+    );
+
+    const at180 = buildCoordinateReadout(180, 1);
+    expect(at180.cscText).toContain('is undefined');
+    expect(at180.cotText).toContain('is undefined');
+  });
+
+  it('falls back to a named secant when no exact form exists', () => {
+    const out = buildCoordinateReadout(37, 1);
+    expect(out.secLatex).toBe(
+      '\\sec\\theta = \\frac{r}{x} = \\frac{r}{r\\cos\\theta} = \\frac{1}{\\cos\\theta} = ' +
+        '\\sec 37^\\circ \\approx 1.2521',
+    );
+  });
+
+  it('states 0 once rather than "0 = 0" for cot at its own zero (90°)', () => {
+    expect(buildCoordinateReadout(90, 1).cotLatex).toBe(
+      '\\cot\\theta = \\frac{x}{y} = \\frac{r\\cos\\theta}{r\\sin\\theta} = ' +
+        '\\frac{\\cos\\theta}{\\sin\\theta} = 0',
+    );
+  });
+});
