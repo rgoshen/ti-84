@@ -32,15 +32,85 @@ export const WAVE_HEIGHT = 176;
  * out the one thing the radius slider exists to show.
  */
 export const AMP_MAX = 1.5;
-/** y-domain half-height for tan, in units. atan(4) ≈ 76°, so only the last 14°
- *  before each asymptote is off-screen — atan(1.5) ≈ 56° would hide 34°. */
-export const TAN_MAX = 4;
+/** y-domain half-height for a pole function (currently only tan), in units.
+ *  atan(4) ≈ 76°, so only the last 14° before each asymptote is off-screen —
+ *  atan(1.5) ≈ 56° would hide 34°. */
+export const POLE_MAX = 4;
+
+/** A traced curve's branch layout around its asymptotes — how `branchPath`
+ *  slices a periodic, unbounded function into the visible sub-intervals that
+ *  become separate SVG subpaths. */
+export interface WaveBranches {
+  /** Each branch is centred at `centerDeg + k * 180`. */
+  centerDeg: 0 | 90;
+  /** Half-width from a branch's centre to where the curve reaches `domain`. */
+  edgeDeg: number;
+  /** π/4 tick indices (see `waveTickRadians`) where the function is undefined,
+   *  ascending. */
+  ticks: readonly number[];
+}
+
+/** Everything that distinguishes one wave function's geometry from another's,
+ *  collected in one table so adding a function means adding a row rather than
+ *  finding every `fn === '…'` branch scattered across this module. */
+export interface WaveSpec {
+  domain: number;
+  evaluate(theta: number, r: number): number;
+  isUndefined(theta: number): boolean;
+  stepDeg: number;
+  noun: string;
+  /** `null` for a sinusoid: one polyline, no poles, no asymptote marks. */
+  branches: WaveBranches | null;
+}
+
+/** Sampling interval along θ, in degrees, for the two sinusoids. 360° yields
+ *  181 vertices. */
+const SINUSOID_STEP_DEG = 2;
+
+/** Sampling interval for a pole function, in degrees. Tighter than the
+ *  sinusoids' 2° because the curve steepens sharply near each asymptote,
+ *  where 2° steps facet visibly. */
+const POLE_STEP_DEG = 1;
+
+const WAVE_SPEC: Record<WaveFn, WaveSpec> = {
+  sin: {
+    domain: AMP_MAX,
+    evaluate: (theta, r) => r * Math.sin(degreesToRadians(theta)),
+    isUndefined: () => false,
+    stepDeg: SINUSOID_STEP_DEG,
+    noun: 'wave',
+    branches: null,
+  },
+  cos: {
+    domain: AMP_MAX,
+    evaluate: (theta, r) => r * Math.cos(degreesToRadians(theta)),
+    isUndefined: () => false,
+    stepDeg: SINUSOID_STEP_DEG,
+    noun: 'wave',
+    branches: null,
+  },
+  tan: {
+    domain: POLE_MAX,
+    evaluate: (theta) => Math.tan(degreesToRadians(theta)),
+    // θ arrives from a degree slider (or a parsed, already-rounded field), so
+    // a tolerance-checked degree comparison is exact and honest here — unlike
+    // testing Math.tan's magnitude, which never actually reaches Infinity.
+    isUndefined: isTangentUndefined,
+    stepDeg: POLE_STEP_DEG,
+    noun: 'curve',
+    branches: {
+      centerDeg: 0,
+      edgeDeg: (Math.atan(POLE_MAX) * 180) / Math.PI,
+      ticks: [-6, -2, 2, 6],
+    },
+  },
+};
 
 /** Per-function y-domain half-height. sin/cos share AMP_MAX; tan gets its own,
  *  wider domain because it is unbounded and AMP_MAX would hide a third of
  *  every quarter-sweep. */
 export function waveDomain(fn: WaveFn): number {
-  return fn === 'tan' ? TAN_MAX : AMP_MAX;
+  return WAVE_SPEC[fn].domain;
 }
 
 /** Padding inside the viewBox. `bottom` reserves both staggered label baselines. */
@@ -101,42 +171,37 @@ export function waveTickLabel(k: number): string {
  *  and r cancels, so the radius slider cannot move this curve. `null` marks
  *  the asymptotes, where tan is undefined. */
 export function waveValue(fn: WaveFn, theta: number, r: number): number | null {
-  const rad = degreesToRadians(theta);
-  if (fn === 'sin') return r * Math.sin(rad);
-  if (fn === 'cos') return r * Math.cos(rad);
-  // θ arrives from a degree slider (or a parsed, already-rounded field), so a
-  // tolerance-checked degree comparison is exact and honest here — unlike
-  // testing Math.tan's magnitude, which never actually reaches Infinity.
-  if (isTangentUndefined(theta)) return null;
-  return Math.tan(rad);
+  const spec = WAVE_SPEC[fn];
+  return spec.isUndefined(theta) ? null : spec.evaluate(theta, r);
 }
 
-/** The four vertical asymptotes tan is undefined at, within [-2π, 2π]. */
-export function waveAsymptoteRadians(): number[] {
-  return [-3, -1, 1, 3].map((k) => (k * Math.PI) / 2);
+/** The π/4 tick indices (see `waveTickRadians`) where `fn` is undefined,
+ *  ascending. `[]` for sin/cos, which have no poles. */
+export function waveAsymptoteTicks(fn: WaveFn): readonly number[] {
+  return WAVE_SPEC[fn].branches?.ticks ?? [];
+}
+
+/** The vertical asymptotes `fn` is undefined at, within [-2π, 2π]. `[]` for
+ *  sin/cos. */
+export function waveAsymptoteRadians(fn: WaveFn): number[] {
+  return waveAsymptoteTicks(fn).map((k) => (k * Math.PI) / 4);
 }
 
 /** Below this, a sweep is nothing rather than a degenerate path. Mirrors `arcPath`. */
 const ZERO_DEG = 1e-9;
 
-/** Sampling interval along θ, in degrees. 360° yields 181 vertices. */
-const STEP_DEG = 2;
-
-/** Sampling interval for tan, in degrees. Tighter than sin/cos's 2° because
- *  the curve steepens sharply near each asymptote, where 2° steps facet visibly. */
-const TAN_STEP_DEG = 1;
-
 /**
- * The tangent curve traced from 0 to θ, as one or more SVG subpaths.
+ * A pole function's curve traced from 0 to θ, as one or more SVG subpaths.
  *
- * tan is periodic every 180° and unbounded within each period, so unlike
- * sin/cos this cannot be one polyline: it is built from the VISIBLE
- * sub-intervals — the portion of each 180°-period branch where |tan θ| stays
- * inside TAN_MAX — intersected with [0, θ]. Each sub-interval becomes its own
+ * A pole function is periodic every 180° and unbounded within each period, so
+ * unlike sin/cos this cannot be one polyline: it is built from the VISIBLE
+ * sub-intervals — the portion of each branch where the curve stays inside
+ * `spec.domain` — intersected with [0, θ]. Each sub-interval becomes its own
  * `M …` subpath, so no subpath ever crosses an asymptote. Break points are the
- * exact angle where |tan θ| = TAN_MAX (± k·180°), computed directly rather
- * than interpolated between samples — tan's curvature near the asymptote makes
- * a straight chord between 1° samples measurably wrong there.
+ * exact angle where the curve reaches `spec.domain` (± each branch's centre),
+ * computed directly rather than interpolated between samples — the curvature
+ * near an asymptote makes a straight chord between samples measurably wrong
+ * there.
  *
  * The final vertex of the LAST subpath falls out of the same clamp that
  * produces every other subpath's edge: `Math.min(hi, center + edge)` is θ
@@ -144,16 +209,23 @@ const TAN_STEP_DEG = 1;
  * and the branch's true edge otherwise — so "snap to θ" and "stop at the
  * domain edge" are the same rule, not two.
  */
-function tanPath(theta: number, dir: 1 | -1, scales: WaveScales): string {
-  const edgeDeg = (Math.atan(waveDomain('tan')) * 180) / Math.PI;
+function branchPath(
+  spec: WaveSpec,
+  branches: WaveBranches,
+  theta: number,
+  r: number,
+  dir: 1 | -1,
+  scales: WaveScales,
+): string {
+  const { centerDeg, edgeDeg } = branches;
   const lo = Math.min(0, theta);
   const hi = Math.max(0, theta);
 
   const intervals: Array<[number, number]> = [];
-  const kMin = Math.floor((lo - edgeDeg) / 180) - 1;
-  const kMax = Math.ceil((hi + edgeDeg) / 180) + 1;
+  const kMin = Math.floor((lo - edgeDeg - centerDeg) / 180) - 1;
+  const kMax = Math.ceil((hi + edgeDeg - centerDeg) / 180) + 1;
   for (let k = kMin; k <= kMax; k++) {
-    const center = k * 180;
+    const center = centerDeg + k * 180;
     const segLo = Math.max(lo, center - edgeDeg);
     const segHi = Math.min(hi, center + edgeDeg);
     if (segHi - segLo > 1e-6) intervals.push([segLo, segHi]);
@@ -167,19 +239,20 @@ function tanPath(theta: number, dir: 1 | -1, scales: WaveScales): string {
 
   return ordered
     .map(([a, b]) => {
-      const n = Math.ceil((b - a) / TAN_STEP_DEG);
+      const n = Math.ceil((b - a) / spec.stepDeg);
       const points: string[] = [];
       for (let i = 0; i <= n; i++) {
         const deg =
           dir === 1
             ? i === n
               ? b
-              : a + i * TAN_STEP_DEG
+              : a + i * spec.stepDeg
             : i === n
               ? a
-              : b - i * TAN_STEP_DEG;
-        const rad = degreesToRadians(deg);
-        points.push(`${scales.xFor(rad)} ${scales.yFor(Math.tan(rad))}`);
+              : b - i * spec.stepDeg;
+        points.push(
+          `${scales.xFor(degreesToRadians(deg))} ${scales.yFor(spec.evaluate(deg, r))}`,
+        );
       }
       return `M ${points[0]}${points.slice(1).map((p) => ` L ${p}`).join('')}`;
     })
@@ -208,18 +281,18 @@ export function wavePath(
   if (Math.abs(theta) < ZERO_DEG) return '';
 
   const dir = theta < 0 ? -1 : 1;
+  const spec = WAVE_SPEC[fn];
+  const { branches } = spec;
 
-  if (fn === 'tan') return tanPath(theta, dir, scales);
+  if (branches !== null) return branchPath(spec, branches, theta, r, dir, scales);
 
-  const steps = Math.ceil(Math.abs(theta) / STEP_DEG);
+  const steps = Math.ceil(Math.abs(theta) / spec.stepDeg);
   const points: string[] = [];
 
   for (let i = 0; i <= steps; i++) {
-    const at = i === steps ? theta : dir * i * STEP_DEG;
+    const at = i === steps ? theta : dir * i * spec.stepDeg;
     const x = scales.xFor(degreesToRadians(at));
-    // Safe: the tan branch above already returned via tanPath, so waveValue
-    // can only be 'sin' or 'cos' here, which never return null.
-    const y = scales.yFor(waveValue(fn, at, r)!);
+    const y = scales.yFor(spec.evaluate(at, r));
     points.push(`${x} ${y}`);
   }
 
@@ -240,7 +313,7 @@ export const WAVE_SPOKEN_FN_NAME: Record<WaveFn, string> = { sin: 'sine', cos: '
  * and reports "undefined" at the asymptotes rather than a bogus huge number.
  */
 export function waveSpoken(fn: WaveFn, theta: number, r: number): string {
-  const noun = fn === 'tan' ? 'curve' : 'wave';
+  const noun = WAVE_SPEC[fn].noun;
   const value = waveValue(fn, theta, r);
   const valueText = value === null ? 'undefined' : String(Math.round(value * 1e4) / 1e4);
   return (
@@ -343,7 +416,7 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
   // sin/cos, which have no asymptote to mark.
   const asymptotes =
     fn === 'tan'
-      ? waveAsymptoteRadians()
+      ? waveAsymptoteRadians(fn)
           .map((rad) => {
             const x = s.xFor(rad);
             return (
