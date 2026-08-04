@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+# [0.12.0](https://github.com/rgoshen/ti-84/compare/v0.11.1...v0.12.0) (2026-08-04)
+
+
+### Bug Fixes
+
+* **explorer:** address PR [#33](https://github.com/rgoshen/ti-84/issues/33) review findings ([9737323](https://github.com/rgoshen/ti-84/commit/9737323565928c704a1097d467ba0045a5bba192))
+
+
+### Features
+
+* **explorer:** add isCotangentUndefined for the sine-zero poles ([66bae63](https://github.com/rgoshen/ti-84/commit/66bae63ba42fed948f5bda417812cc91a291b4cc))
+* **explorer:** add the sec/csc/cot coordinate readouts ([3562963](https://github.com/rgoshen/ti-84/commit/35629636f18ecd477b1c6feed311613d905e4f8c))
+* **explorer:** derive exactSecant/exactCosecant/exactCotangent by reciprocal ([4263d1f](https://github.com/rgoshen/ti-84/commit/4263d1f913470b07d232d6ac2640f276cfae2d54))
+* **explorer:** offer sec/csc/cot in the wave selector ([03399fb](https://github.com/rgoshen/ti-84/commit/03399fbebc0990d92dca32bc4686bae08957e812))
+* **explorer:** trace sec/csc/cot in the strip and draw their constructions ([0d32c3a](https://github.com/rgoshen/ti-84/commit/0d32c3a6d2764a9134a6b367639a1f8baad29368))
+* **explorer:** widen ExactValue with a numerator coefficient ([bedf583](https://github.com/rgoshen/ti-84/commit/bedf583487faff4c401ae2f416d02ae95c9d5613))
+
 ## [0.11.1](https://github.com/rgoshen/ti-84/compare/v0.11.0...v0.11.1) (2026-08-04)
 
 
