@@ -72,6 +72,17 @@ export function isTangentUndefined(deg: number): boolean {
   return Math.abs((Math.abs(deg) % 180) - 90) < 1e-6;
 }
 
+/** How close to a multiple of 180° still counts as cot/csc's asymptote — the
+ *  deliberate sibling of {@link isTangentUndefined}: tan and sec die where
+ *  cos = 0 (odd multiples of 90°); cot and csc die where sin = 0 (multiples
+ *  of 180°). The modulo test must be two-sided — `179.9999999 % 180` is
+ *  `179.9999999`, not `~0` — so a hand-typed decimal just under the next
+ *  multiple still reads as undefined. */
+export function isCotangentUndefined(deg: number): boolean {
+  const m = Math.abs(deg) % 180;
+  return m < 1e-6 || 180 - m < 1e-6;
+}
+
 /** KaTeX for an exact π-multiple: `0`, `\pi`, `2\pi`, `\frac{\pi}{6}`, `-\frac{2\pi}{3}`. */
 export function formatPiLatex(f: Fraction): string {
   if (f.n === 0) return '0';

@@ -296,7 +296,9 @@ test('selecting sin reveals the strip, selecting none removes it', async ({ page
   await expect(page.locator(WAVE)).toHaveCount(0);
 });
 
-test('the wave selector is reachable and operable by keyboard', async ({ page }) => {
+test('the wave selector is reachable and operable by keyboard, walking every option in DOM order', async ({
+  page,
+}) => {
   await goto(page);
   await waveOption(page, 'none').focus();
   // { delay: 50 } is load-bearing, not decorative. Radix's roving-focus group
@@ -309,10 +311,16 @@ test('the wave selector is reachable and operable by keyboard', async ({ page })
   // deferred callback time to win the race. Confirmed by hand: the identical
   // press against a different Chromium build (151) selects correctly with no
   // delay at all, so this is a test-timing fix, not evidence of a real bug.
-  await page.keyboard.press('ArrowDown', { delay: 50 });
-  await expect(waveOption(page, 'sin θ')).toBeChecked();
-  await page.keyboard.press('ArrowDown', { delay: 50 });
-  await expect(waveOption(page, 'cos θ')).toBeChecked();
+  //
+  // Walking all seven options — none, sin, csc, cos, sec, tan, cot, the DOM
+  // order the two-column reciprocal-pair layout produces — is stronger than
+  // asserting a single hop: it also catches an accidental reorder of the
+  // radio array.
+  const chain = ['sin θ', 'csc θ', 'cos θ', 'sec θ', 'tan θ', 'cot θ'];
+  for (const label of chain) {
+    await page.keyboard.press('ArrowDown', { delay: 50 });
+    await expect(waveOption(page, label)).toBeChecked();
+  }
 });
 
 test('draws no curve at the 0 degree default, then the slider draws it', async ({ page }) => {
@@ -404,15 +412,6 @@ test('reset returns the wave selector to none', async ({ page }) => {
   await expect(page.locator(WAVE)).toHaveCount(0);
 });
 
-test('the tan option is reachable by keyboard from cos', async ({ page }) => {
-  await goto(page);
-  await waveOption(page, 'cos θ').focus();
-  // Same 50ms rationale as the sin→cos test above: Radix's roving-focus group
-  // defers the arrow-key selection to a setTimeout(0).
-  await page.keyboard.press('ArrowDown', { delay: 50 });
-  await expect(waveOption(page, 'tan θ')).toBeChecked();
-});
-
 test('selecting tan reveals the strip with its four asymptote lines', async ({ page }) => {
   await goto(page);
   await waveOption(page, 'tan θ').check();
@@ -461,6 +460,106 @@ test('the tangent segment appears in the circle with tan selected', async ({ pag
   await waveOption(page, 'tan θ').check();
   await deg(page).fill('45');
   await expect(segment).toHaveCount(1);
+});
+
+test('selecting sec reveals the strip with its four asymptote lines', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'sec θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+  await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-asymptote"]`)).toHaveCount(4);
+});
+
+// csc and cot break where sin = 0, not where cos = 0 like tan/sec — the strip
+// spans −2π…2π, so the extra pole at radians 0 makes five asymptotes visible
+// instead of tan/sec's four.
+test('selecting csc reveals the strip with its five asymptote lines', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'csc θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+  await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-asymptote"]`)).toHaveCount(5);
+});
+
+test('selecting cot reveals the strip with its five asymptote lines', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'cot θ').check();
+  await expect(page.locator(WAVE_FIGURE)).toBeVisible();
+  await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-asymptote"]`)).toHaveCount(5);
+});
+
+test('csc and cot read as undefined at the default 0°, with the asymptotes still drawn', async ({
+  page,
+}) => {
+  await goto(page);
+  // θ = 0 is the page's default state — no need to move the angle slider.
+  // It is also a pole for both csc and cot, since both break where sin = 0.
+  for (const label of ['csc θ', 'cot θ']) {
+    await waveOption(page, label).check();
+    await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-marker"]`)).toHaveCount(0);
+    await expect(curve(page)).toHaveCount(0);
+    await expect(page.locator('[data-testid="angle-wave-caption"]')).toContainText('undefined');
+    await expect(page.locator(`${WAVE_FIGURE} [data-role="wave-asymptote"]`)).toHaveCount(5);
+  }
+});
+
+// Shared by the radius-invariance and segment-presence trios below — one row
+// per reciprocal function costs the next one this shape, rather than a whole
+// copy-pasted test.
+const RECIPROCAL_WAVES = [
+  { label: 'sec θ', name: 'sec', full: 'secant', role: 'secant-segment' },
+  { label: 'csc θ', name: 'csc', full: 'cosecant', role: 'cosecant-segment' },
+  { label: 'cot θ', name: 'cot', full: 'cotangent', role: 'cotangent-segment' },
+] as const;
+
+for (const { label, name } of RECIPROCAL_WAVES) {
+  test(`the radius slider does not move the ${name} curve — r cancels out of the ratio`, async ({
+    page,
+  }) => {
+    await goto(page);
+    await waveOption(page, label).check();
+    await deg(page).fill('45');
+    const before = await curve(page).getAttribute('d');
+
+    const radius = page.locator('#slider-radius [role="slider"]');
+    await radius.focus();
+    for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
+
+    expect(await curve(page).getAttribute('d')).toBe(before);
+  });
+}
+
+test('sweeping past an asymptote breaks the csc curve into more than one subpath', async ({
+  page,
+}) => {
+  await goto(page);
+  await waveOption(page, 'csc θ').check();
+  // csc's poles are at 0, ±180, ±360 — sweeping to 200° crosses the one at 180°.
+  await deg(page).fill('200');
+  const d = (await curve(page).getAttribute('d'))!;
+  expect((d.match(/M/g) ?? []).length).toBeGreaterThan(1);
+});
+
+for (const { label, name, full, role } of RECIPROCAL_WAVES) {
+  test(`the ${full} segment appears in the circle with ${name} selected`, async ({ page }) => {
+    await goto(page);
+    const segment = page.locator(`${FIGURE} [data-role="${role}"]`);
+    await expect(segment).toHaveCount(0);
+
+    await waveOption(page, label).check();
+    await deg(page).fill('45');
+    await expect(segment).toHaveCount(1);
+  });
+}
+
+test('switching from tan to sec swaps the mark rather than adding one', async ({ page }) => {
+  await goto(page);
+  await waveOption(page, 'tan θ').check();
+  await deg(page).fill('45');
+  const tangent = page.locator(`${FIGURE} [data-role="tangent-segment"]`);
+  await expect(tangent).toHaveCount(1);
+
+  await waveOption(page, 'sec θ').check();
+  await expect(tangent).toHaveCount(0);
+  await expect(page.locator(`${FIGURE} [data-role="secant-segment"]`)).toHaveCount(1);
 });
 
 const standardAngleMarks = (page: Page) =>

@@ -5053,3 +5053,377 @@ sin/cos negative case).
 **References:**
 - TODO.md: 2026-08-03 Fix: Tangent Wave Asymptote Legibility
 - Spec: docs/superpowers/specs/2026-07-27-angle-explorer-design.md
+
+## [2026-08-03 20:05] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — reciprocal waves (sec, csc, cot)
+
+**Summary:**
+Design spec and TDD implementation plan for adding `sec θ`, `csc θ`, and
+`cot θ` to the Angle Explorer's wave strip at full parity with `tan θ`.
+Documentation only — no source or test files change in this commit.
+Adds `docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md`
+(objective, verified-before-designing table, the branch/asymptote math,
+9 requirements, 10 decisions with rejected alternatives, per-file
+architecture, testing strategy, risks) and
+`docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md` (10 TDD
+tasks with a dependency graph and per-task test lists).
+
+**Rationale:**
+The three reciprocal functions do not exist anywhere in the codebase, and
+adding them is not simply "tan with different numbers" — two facts drive
+the whole design. First, csc and cot break where sin = 0, giving them
+**five** asymptotes in view (0, ±π, ±2π) rather than tan's four, and one
+of those lands exactly on the solid y-axis the strip already draws at
+radians 0 — reproducing the ink-interleaving defect commit 31c8126 fixed
+for gridlines. Second, `ExactValue` is `{sign, radicand, denominator}`
+with no numerator coefficient, so sec and csc's chart values (`2`,
+`2√3/3`) are unrepresentable.
+
+The task order is deliberately front-loaded with two behaviour-preserving
+refactors. `AngleExplorer.tsx` currently selects wave copy through three
+ternary chains that use **tan as the `else` branch**, so widening `WaveFn`
+without touching them would ship `sec` labelled "tan θ — height is the
+tangent segment" with a green build. Converting those to exhaustive
+`Record<WaveFn, …>` maps first turns that class of bug into a compile
+error. Likewise `tanPath` already implements the general branch-interval
+algorithm all four pole functions need, so generalising it before the
+union grows keeps the new work to three table rows.
+
+Exact values are derived through one `reciprocal()` helper rather than
+three hand-written first-quadrant tables: derivation inherits the quadrant
+sign rules from `exactCoordinates` and `exactTangent`, which are already
+tested, and avoids three fresh chances to get Q3 wrong — where cos and sin
+are both negative, so sec and csc are negative but cot is positive.
+
+Alternatives considered and rejected are recorded in the spec's Decisions
+table, notably: reusing each reciprocal's existing mark in the circle
+(rejected — at θ = 60°, sec θ = 2 while the highlighted cos leg is 0.5,
+breaking the leg-equals-height invariant); decimals instead of exact
+values for sec/csc (rejected — abandons the reference chart this module
+mirrors); and nudging θ off the asymptote when csc/cot is selected at the
+default 0° (rejected — inverts the stated contract that θ is the single
+source of truth everything derives from).
+
+**Tests:**
+None — documentation-only commit. Baseline confirmed unchanged before
+branching: `npm test` 492/492 passing, working tree clean.
+
+**References:**
+- TODO.md: 2026-08-03 Feature: Angle Explorer Reciprocal Waves (sec, csc, cot)
+- Spec: docs/superpowers/specs/2026-08-03-angle-wave-reciprocals-design.md
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md
+- Extends: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
+
+## [2026-08-03 21:05] Commit Summary — angle-wave.ts spec table
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — angle-wave.ts
+
+**Summary:**
+Collapsed the six scattered `fn === 'tan'` identity checks in
+`angle-wave.ts` (`waveDomain`, `waveValue`, `wavePath`, `waveSpoken`,
+the gridline guard, the asymptote block) into one
+`WAVE_SPEC: Record<WaveFn, WaveSpec>` table. `tanPath` generalised
+into `branchPath`, parameterised by a branch centre and half-width
+instead of hardcoding tan's own. Renamed `TAN_MAX` to `POLE_MAX`.
+`waveAsymptoteRadians` now takes a required `fn` argument, with a new
+`waveAsymptoteTicks(fn)` sibling in tick space.
+
+**Rationale:**
+A future task widens `WaveFn` to include sec/csc/cot; doing that
+against six independent `fn === 'tan'` branches would mean six chances
+to miss one. One table means one place to add a row. Pure refactor —
+`WaveFn` is unchanged and every existing test passes with only
+call-site argument updates, proving no behaviour moved.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/angle-wave.test.ts` — 63/63
+(61 existing + 2 new, covering `waveAsymptoteTicks`). `npm test` —
+501/501. `npx astro check` — 0 errors.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T1
+
+## [2026-08-03 21:05] Commit Summary — isCotangentUndefined
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — angle.ts
+
+**Summary:**
+Added `isCotangentUndefined(deg)` directly below `isTangentUndefined`,
+the deliberate sibling that tests for sin = 0 (multiples of 180°)
+rather than cos = 0. Two-sided modulo test, same 1e-6 tolerance and
+reasoning as its sibling. Not yet consumed.
+
+**Rationale:**
+tan and sec break where cos = 0; csc and cot break where sin = 0 — a
+fact the existing predicate can't express. Landing this ahead of its
+consumers lets each downstream task depend on a tested primitive
+rather than inlining the modulo logic itself.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/angle.test.ts` — 24/24, including
+the two-sided-modulo regression case (`179.9999999`) and a sweep
+confirming disjointness from `isTangentUndefined`. `npm test` —
+496/496. `npx astro check` — 0 errors.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T3
+
+## [2026-08-03 21:05] Commit Summary — ExactValue numerator
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-circle.ts
+
+**Summary:**
+Widened `ExactValue` from `{sign, radicand, denominator}` to include a
+required `numerator: 1 | 2`. Updated all three formatters
+(`formatExactLatex`/`Text`/`Spoken`) and `exactToNumber` so every
+existing value (`numerator: 1`) renders byte-identically; only
+`numerator: 2` produces new output. `isRational` in
+`angle-coordinates.ts` deliberately left untouched.
+
+**Rationale:**
+secant and cosecant's exact chart values (`2`, `2√3/3`) have no
+representation in the old type. Required rather than optional-with-a-
+default, so a new construction site can't silently omit the field.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/unit-circle.test.ts` — 23/23, all
+~20 existing literals updated plus new numerator-2 formatter cases and
+an `isRational` pin. `npm test` — 501/501 once T1/T3 landed alongside.
+`npx astro check` — 0 errors.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T4
+
+## [2026-08-03 21:10] Commit Summary — exhaustive WaveFn dispatch
+
+**Change Type:** Refactor
+**Scope:** Angle Explorer — angle-wave.ts, angle-diagram.ts, AngleExplorer.tsx
+
+**Summary:**
+Converted every remaining `WaveFn`-keyed branch that used tan as an
+implicit `else` into an exhaustive lookup: the wave strip's gridline
+guard and y-axis suppression now read `waveAsymptoteTicks(fn)`; the
+diagram's tan-only if-branch became a `Record<PoleFn, {solid, dashed}>`
+(one row, tan); the component gained `WAVE_LEGEND`, `WAVE_FUNCTION_FACT`,
+and a `waveCaptionHtml` map beside the old ternaries' string literals.
+
+**Rationale:**
+Widening `WaveFn` without this refactor first would let a new function
+silently render as tan with a green build — the exact failure mode the
+whole feature needed to avoid. Landing it while `WaveFn` still has only
+three members means TypeScript already enforces exhaustiveness at this
+size, so the very next member added becomes a compile error automatically.
+
+**Tests:**
+No new assertions — every existing unit and e2e test passed untouched,
+which is the proof output stayed byte-identical. `npm test` — 525/525.
+`npx astro check` — 0 errors. `npx playwright test tests/e2e/angle.spec.ts
+tests/e2e/angle-export.spec.ts` — 48/48.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T2
+
+## [2026-08-03 21:10] Commit Summary — reciprocal exact values
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — unit-circle.ts
+
+**Summary:**
+Added `exactSecant`, `exactCosecant`, `exactCotangent`, each derived
+through one private `reciprocal(v)` helper from the already-tested
+`exactCoordinates` (sec follows cos's sign, csc follows sin's) and
+`exactTangent` (cot follows tan's), rather than hand-written
+first-quadrant tables. `exactCotangent` returns `ZERO` at tan's own
+poles, since tan's pole is cot's zero.
+
+**Rationale:**
+A hand-written table for each function would need its own quadrant
+sign rule re-derived by hand, and Q3 — where cos and sin are both
+negative, so sec and csc are negative but cot stays positive — is
+exactly where that goes wrong. Deriving through code that already
+passes its own sign tests inherits the rule instead of re-deriving it.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/unit-circle.test.ts` — 47/47,
+including per-function agreement with `1/Math.cos`/`sin`/`tan`, the
+three quadrant-sign checks, and a 16-angle × 6-function field-union
+sweep. `npm test` — 525/525. `npx astro check` — 0 errors.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T5
+
+## [2026-08-03 21:15] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — angle-coordinates.ts
+
+**Summary:**
+Generalised `tanEquation` into `ratioEquation`, driven by a `RATIO`
+table of per-function chain strings (tan's row byte-identical to the
+old hardcoded one). `CoordinateReadout` gained
+`secLatex`/`secText`/`cscLatex`/`cscText`/`cotLatex`/`cotText`.
+`waveLatex`/`waveText` deliberately deferred — they need `WaveFn`
+widened first.
+
+**Rationale:**
+The three new chains carry a third algebraic step tan's doesn't need:
+`r/(r cos θ)` alone never names the identity `sec = 1/cos`, the entire
+reason sec has a name, so the chain spells that reduction out.
+
+**Tests:**
+`npx vitest run src/scripts/explorer/angle-coordinates.test.ts` —
+34/34; the existing tan block confirmed unmodified via `git diff`
+(pure addition, zero removed lines). `npm test` — 534/534.
+`npx astro check` — 0 errors.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T6
+
+## [2026-08-03 21:20] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — angle-wave.ts, angle-diagram.ts, angle-coordinates.ts
+
+**Summary:**
+Widened `WaveFn` to `sin | cos | tan | sec | csc | cot` and filled
+every row the earlier refactors demanded: three `WAVE_SPEC` rows (sec
+shares tan's poles; csc/cot centre on 90° and break where sin = 0,
+five asymptotes in view rather than four); the diagram's B-side
+construction (`anchorB`, `meetC`, four `poleMark` rows — sec reuses
+tan's clamp unchanged, since sec is exactly the quantity that clamp
+bounds); `waveLatex`/`waveText` assembled from the six equation fields
+already on `CoordinateReadout`.
+
+**Rationale:**
+This is the "turn it on" commit — everything below the UI is now
+fully implemented and tested, still unreachable from the selector.
+`PoleFn` was originally typed `Extract<WaveFn, 'tan'>`, which does not
+widen automatically when `WaveFn` grows (`Extract` stays pinned to the
+literal named); caught during implementation and retyped as
+`Exclude<WaveFn, 'sin' | 'cos'>`, which does track `WaveFn` and so
+still forces a compile error on a missing `poleMark` row.
+
+**Tests:**
+`npx vitest run` across the three touched test files — 195/195, all
+additive (zero removed lines in any `.test.ts`, confirmed via diff).
+`npm test` — 579/579. `npx astro check` — 3 errors, all in
+`AngleExplorer.tsx` (the expected T8 handoff — three `Record<WaveFn>`
+tables missing exactly the three new keys), 0 elsewhere.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T7
+
+## [2026-08-03 21:25] Commit Summary
+
+**Change Type:** Feature
+**Scope:** Angle Explorer — AngleExplorer.tsx
+
+**Summary:**
+Closed the three compile errors T7 left open (`WAVE_LEGEND`,
+`WAVE_FUNCTION_FACT`, `waveCaptionHtml`), making sec/csc/cot
+user-selectable for the first time. The caption now reads
+`coords.waveLatex[waveFn]` directly rather than duplicating a local
+`Record` — exhaustiveness lives in `angle-coordinates.ts`, where the
+equations are owned. `coordHtml`'s now-dead `tan` field removed.
+Selector grew to a two-column grid, DOM order `none, sin, csc, cos,
+sec, tan, cot`, so consecutive pairs fill each row as reciprocal pairs.
+
+**Rationale:**
+Routing the caption through the table `angle-coordinates.ts` already
+builds, instead of re-assembling one locally, removes a second place
+that same mapping could drift. The DOM order states the reciprocal
+relationship the explorer teaches rather than leaving it implicit in a
+flat seven-item list.
+
+**Tests:**
+`npx astro check` — 0 errors, 0 warnings (the primary signal, proving
+all three tables are now genuinely exhaustive). `npm test` — 579/579.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T8
+
+## [2026-08-03 21:35] Commit Summary — angle e2e coverage
+
+**Change Type:** Test
+**Scope:** Angle Explorer — tests/e2e/angle.spec.ts
+
+**Summary:**
+Replaced the two keyboard tests broken by the DOM reorder (`cos` no
+longer lands on `tan` one `ArrowDown` later — it lands on `sec`) with
+one test walking all seven options in order. Added coverage for
+asymptote counts (sec: 4, csc/cot: 5), the undefined-at-default-0°
+case with asymptotes still drawn, radius invariance, a pole-crossing
+subpath-count test, each new circle mark's `data-role`, and a
+tan-to-sec switch confirming the old mark is removed, not left behind.
+
+**Rationale:**
+A single-hop keyboard test only proves one link in the chain; walking
+the full chain also catches an accidental reorder of the radio array,
+which is the more likely future regression given the array's DOM
+order is load-bearing for the two-column layout.
+
+**Tests:**
+`npx playwright test tests/e2e/angle.spec.ts` — 53/53, confirmed
+stable across 3 repeated runs plus a `--repeat-each=3` stress pass
+(159/159, zero flakes).
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T9
+
+## [2026-08-03 21:35] Commit Summary — export e2e coverage
+
+**Change Type:** Test
+**Scope:** Angle Explorer — tests/e2e/angle-export.spec.ts
+
+**Summary:**
+Extended the export suite to sec/csc/cot via a small data-driven loop
+mirroring the existing tangent test's shape: a defined case at 45°
+(Wave section, Function fact, Traced range), then the undefined case
+at each function's own pole (90° for sec, 0° for csc/cot).
+
+**Rationale:**
+csc and cot's pole is the page's untouched default (0°); each test
+still drives there explicitly rather than relying on never having
+moved the slider, so all three cases share identical shape and none
+depends on incidental initial state.
+
+**Tests:**
+`npx playwright test tests/e2e/angle-export.spec.ts` — 9/9, run 3
+times consecutively with no flakiness. Existing tangent export test
+confirmed unmodified.
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T10
+
+## [2026-08-03 21:40] Commit Summary
+
+**Change Type:** Docs
+**Scope:** Angle Explorer — angles.astro
+
+**Summary:**
+Extended the page's intro paragraph to name sec/csc/cot alongside
+sin/cos/tan, generalised the asymptote sentence from tan alone to all
+four ratio functions, and corrected "segment on the tangent line" to
+"segment reaching a tangent line" — accurate for tan/cot, whose marks
+lie along that line, but not sec/csc, whose marks run from the origin
+out to a point on it.
+
+**Rationale:**
+Found during the final browser verification pass: the copy still only
+mentioned three of the now six wave options, the same gap PR #32
+(`98fbe94`) fixed for tan itself when it shipped. Fixed in-branch
+rather than filed, per this repo's convention of correcting pre-
+existing gaps in the branch that surfaces them.
+
+**Tests:**
+`npx astro check` — 0 errors. `npm test` — 579/579 (unaffected, no
+test pins the paragraph text).
+
+**References:**
+- Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md
+- Follows: PR #32, commit 98fbe94

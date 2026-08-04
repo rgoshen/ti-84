@@ -722,3 +722,195 @@ describe('buildAngleDiagramSvg — standard-angle labels never collide with each
     }
   });
 });
+
+/** Pull one pole mark's solid-segment endpoints back out of the markup, by role. */
+function readSegment(
+  svg: string,
+  role: string,
+): { x1: number; y1: number; x2: number; y2: number } | null {
+  const m = svg.match(
+    new RegExp(
+      `<line data-role="${role}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"`,
+    ),
+  );
+  return m ? { x1: Number(m[1]), y1: Number(m[2]), x2: Number(m[3]), y2: Number(m[4]) } : null;
+}
+
+const segmentLength = (svg: string, role: string): number => {
+  const l = readSegment(svg, role)!;
+  return Math.hypot(l.x2 - l.x1, l.y2 - l.y1);
+};
+
+describe('buildAngleDiagramSvg — secant segment', () => {
+  it('draws nothing for sin/cos/undefined, and no tan-shaped or old-style marks for sec', () => {
+    expect(buildAngleDiagramSvg({ ...base, theta: 30 })).not.toContain(
+      'data-role="secant-segment"',
+    );
+    expect(buildAngleDiagramSvg({ ...base, theta: 30, projection: 'sin' })).not.toContain(
+      'data-role="secant-segment"',
+    );
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30, projection: 'sec' });
+    expect(svg).not.toContain('data-role="projection-leg"');
+    expect(svg).not.toContain('data-role="tangent-segment"');
+    expect(svg).not.toContain('data-role="tangent-extension"');
+  });
+
+  it("has length |sec θ| · unit, for any β and any r — unclamped, reusing tan's own theta set", () => {
+    // Same theta set tan's own unclamped length test uses: every value keeps
+    // |tan θ| under capMax (≈1.4637 at the default view/unit), and sec reuses
+    // that exact clamp, so this is the same "stays unclamped" guarantee.
+    for (const theta of [10, 30, 45, -20, -55, 135, -135]) {
+      for (const beta of [0, 40, -90]) {
+        for (const r of [0.5, 1, 1.5]) {
+          const svg = buildAngleDiagramSvg({ ...base, theta, beta, r, projection: 'sec' });
+          const expected = Math.abs(1 / Math.cos((theta * Math.PI) / 180)) * UNIT;
+          expect(segmentLength(svg, 'secant-segment')).toBeCloseTo(expected, 4);
+        }
+      }
+    }
+  });
+
+  it('reuses tan\'s exact clamp: at θ=89°, |O→T| equals maxDist, the bound tan\'s own near-asymptote test already exercises', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 89, projection: 'sec' });
+    const c = 160; // half of 320×320 viewBox
+    const maxDist = c - 4; // LABEL_MARGIN = 4
+    expect(segmentLength(svg, 'secant-segment')).toBeCloseTo(maxDist, 4);
+  });
+
+  it('keeps the length invariant under β, matching tan\'s own leg', () => {
+    const at = (beta: number) =>
+      buildAngleDiagramSvg({ ...base, theta: 40, beta, projection: 'sec' });
+    expect(segmentLength(at(0), 'secant-segment')).toBeCloseTo(
+      segmentLength(at(75), 'secant-segment'),
+      4,
+    );
+  });
+
+  it('draws the dashed extension from the tangent point to the segment endpoint, in the wave colour', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 40, projection: 'sec' });
+    expect(svg).toContain('data-role="secant-extension"');
+    const dashed = svg.match(/<line data-role="secant-extension"[^>]*>/)![0];
+    expect(dashed).toContain('stroke-dasharray');
+    expect(dashed).toContain(colors.wave);
+  });
+});
+
+describe('buildAngleDiagramSvg — cosecant and cotangent segments', () => {
+  // Both share one cap, driven by cot's raw value — so both stay unclamped
+  // exactly when |cot θ| stays under capMax (≈1.4637), which holds well away
+  // from cot's own poles at 0°/180°. Centred on 90°, mirroring csc/cot's own
+  // branch centre.
+  const nearNinety = [45, 60, 70, 110, 120, 135, -45, -60, -70, -110, -120, -135];
+
+  it('draws nothing for sin/cos/tan/undefined', () => {
+    expect(buildAngleDiagramSvg({ ...base, theta: 30 })).not.toContain(
+      'data-role="cosecant-segment"',
+    );
+    expect(buildAngleDiagramSvg({ ...base, theta: 30 })).not.toContain(
+      'data-role="cotangent-segment"',
+    );
+    expect(buildAngleDiagramSvg({ ...base, theta: 30, projection: 'cos' })).not.toContain(
+      'data-role="cotangent-segment"',
+    );
+    expect(buildAngleDiagramSvg({ ...base, theta: 30, projection: 'tan' })).not.toContain(
+      'data-role="cosecant-segment"',
+    );
+  });
+
+  it('has length |csc θ| · unit, for any β and any r — unclamped', () => {
+    for (const theta of nearNinety) {
+      for (const beta of [0, 40, -90]) {
+        for (const r of [0.5, 1, 1.5]) {
+          const svg = buildAngleDiagramSvg({ ...base, theta, beta, r, projection: 'csc' });
+          const expected = Math.abs(1 / Math.sin((theta * Math.PI) / 180)) * UNIT;
+          expect(segmentLength(svg, 'cosecant-segment')).toBeCloseTo(expected, 4);
+        }
+      }
+    }
+  });
+
+  it('has length |cot θ| · unit, for any β and any r — unclamped', () => {
+    for (const theta of nearNinety) {
+      for (const beta of [0, 40, -90]) {
+        for (const r of [0.5, 1, 1.5]) {
+          const svg = buildAngleDiagramSvg({ ...base, theta, beta, r, projection: 'cot' });
+          const expected = Math.abs(1 / Math.tan((theta * Math.PI) / 180)) * UNIT;
+          expect(segmentLength(svg, 'cotangent-segment')).toBeCloseTo(expected, 4);
+        }
+      }
+    }
+  });
+
+  it('keeps the length invariant under β for both csc and cot', () => {
+    const cscAt = (beta: number) =>
+      buildAngleDiagramSvg({ ...base, theta: 60, beta, projection: 'csc' });
+    const cotAt = (beta: number) =>
+      buildAngleDiagramSvg({ ...base, theta: 60, beta, projection: 'cot' });
+    expect(segmentLength(cscAt(0), 'cosecant-segment')).toBeCloseTo(
+      segmentLength(cscAt(75), 'cosecant-segment'),
+      4,
+    );
+    expect(segmentLength(cotAt(0), 'cotangent-segment')).toBeCloseTo(
+      segmentLength(cotAt(75), 'cotangent-segment'),
+      4,
+    );
+  });
+
+  it('keeps the clamped endpoint exactly on its tangent line near θ=0 — meetC.y equals anchorB.y at β=0', () => {
+    // The B-side twin of the existing tan test that pins the tangent
+    // segment's x-coordinate to the tangent point's x-coordinate: the
+    // tangent line at B is horizontal, so here it is meetC's y that must stay
+    // locked to anchorB's y, clamped or not.
+    const c = 160;
+    const unit = 88;
+    for (const theta of [1, 5, 10, -1, -5]) {
+      const svg = buildAngleDiagramSvg({ ...base, theta, beta: 0, projection: 'cot' });
+      const seg = readSegment(svg, 'cotangent-segment')!;
+      expect(seg.x1).toBeCloseTo(c, 6); // anchorB.x at β=0
+      expect(seg.y1).toBeCloseTo(c - unit, 6); // anchorB.y at β=0
+      expect(seg.y2).toBeCloseTo(seg.y1, 6); // meetC.y === anchorB.y
+    }
+  });
+
+  it('collapses to zero length at θ=90° for cot, drawn with a round cap so it stays visible', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 90, projection: 'cot' });
+    expect(segmentLength(svg, 'cotangent-segment')).toBeCloseTo(0, 6);
+    expect(svg.match(/<line data-role="cotangent-segment"[^>]*>/)![0]).toContain(
+      'stroke-linecap="round"',
+    );
+  });
+
+  it('emits no NaN in the markup at θ=0, where cot and csc are both undefined but still drawn clamped', () => {
+    for (const fn of ['cot', 'csc'] as const) {
+      const svg = buildAngleDiagramSvg({ ...base, theta: 0, projection: fn });
+      expect(svg).not.toContain('NaN');
+    }
+  });
+
+  it('draws the dashed guides in the wave colour: the terminal ray for cot, the closing leg for csc', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 40, beta: 0, projection: 'cot' });
+    expect(svg).toContain('data-role="cotangent-extension"');
+    expect(svg.match(/<line data-role="cotangent-extension"[^>]*>/)![0]).toContain(colors.wave);
+
+    const cscSvg = buildAngleDiagramSvg({ ...base, theta: 40, beta: 0, projection: 'csc' });
+    expect(cscSvg).toContain('data-role="cosecant-extension"');
+    expect(cscSvg.match(/<line data-role="cosecant-extension"[^>]*>/)![0]).toContain(colors.wave);
+  });
+});
+
+describe('buildAngleDiagramSvg — pole marks do not cross-contaminate', () => {
+  it('sec emits none of tan\'s marks and no old-style projection-leg', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30, projection: 'sec' });
+    expect(svg).not.toContain('data-role="tangent-segment"');
+    expect(svg).not.toContain('data-role="tangent-extension"');
+    expect(svg).not.toContain('data-role="projection-leg"');
+  });
+
+  it('cot emits none of tan\'s, sec\'s, or csc\'s marks', () => {
+    const svg = buildAngleDiagramSvg({ ...base, theta: 30, projection: 'cot' });
+    expect(svg).not.toContain('data-role="tangent-segment"');
+    expect(svg).not.toContain('data-role="secant-segment"');
+    expect(svg).not.toContain('data-role="cosecant-segment"');
+    expect(svg).not.toContain('data-role="projection-leg"');
+  });
+});

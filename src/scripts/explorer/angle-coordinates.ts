@@ -14,8 +14,12 @@
 import { degreesToRadians, formatPiLatex, piMultiple } from './angle';
 import { formatDegrees } from './angle-parse';
 import { round4 } from './format';
+import type { WaveFn } from './angle-wave';
 import {
   exactCoordinates,
+  exactCosecant,
+  exactCotangent,
+  exactSecant,
   exactTangent,
   formatExactLatex,
   formatExactSpoken,
@@ -33,6 +37,21 @@ export interface CoordinateReadout {
    *  cancels out of the ratio; showing the cancellation IS the point. */
   tanLatex: string;
   tanText: string;
+  /** `sec θ = r/x = r/(r cos θ) = 1/cos θ = …`. Same r-cancellation as tan. */
+  secLatex: string;
+  secText: string;
+  /** `csc θ = r/y = r/(r sin θ) = 1/sin θ = …`. Same r-cancellation as tan. */
+  cscLatex: string;
+  cscText: string;
+  /** `cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ = …`. Same r-cancellation. */
+  cotLatex: string;
+  cotText: string;
+  /** Maps each wave-strip function to the equation it should caption —
+   *  `sin` to `yLatex`, `cos` to `xLatex`, the four ratios to their own.
+   *  Keyed by `WaveFn` so a new function is a compile error here until this
+   *  table names its equation, rather than a silent fall-through to tan. */
+  waveLatex: Record<WaveFn, string>;
+  waveText: Record<WaveFn, string>;
   /** Screen-reader prose. No latex markup. */
   spoken: string;
   /** Narrow pair for the SVG label: `(√3/2, 1/2)` or `(1.04, 0.60)`. */
@@ -102,29 +121,82 @@ function equation(parts: EquationParts): string {
   return `${prefix}${exactPart}${relation}${decimal}`;
 }
 
+type RatioFn = 'tan' | 'sec' | 'csc' | 'cot';
+
+interface RatioChain {
+  chainLatex: string;
+  chainText: string;
+  fnLatex: string;
+  fnText: string;
+}
+
 /**
- * The tan θ worked equation: `tan θ = y/x = (r sin θ)/(r cos θ) = …`. Unlike
- * {@link equation}, there is no `r ×` prefix — r cancels out of the ratio, so
- * substituting it on both sides of the fraction would be noise. The literal
- * `(r sin θ)/(r cos θ)` step is what makes the cancellation visible; the
- * value that follows never depends on r.
+ * The worked-equation chain for each ratio function, keyed by the same
+ * `RatioFn` union {@link ratioEquation} dispatches on. tan's row reproduces
+ * the chain this module shipped before generalisation, byte-for-byte, so its
+ * existing tests stay green untouched.
+ *
+ * sec, csc, and cot carry a third algebraic step where tan's chain has two:
+ * `(r sin θ)/(r cos θ)` already names sin and cos on both sides, so tan's
+ * reader is done. But `r/(r cos θ)` alone never names the identity
+ * `sec = 1/cos` — the entire reason sec has a name — so that reduction has to
+ * be spelled out explicitly. This is deliberate, not an inconsistency to
+ * "fix" by trimming tan's chain to match or padding it to three steps.
  */
-function tanEquation(
+const RATIO: Record<RatioFn, RatioChain> = {
+  tan: {
+    chainLatex: '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta}',
+    chainText: 'tan θ = y/x = (r sin θ)/(r cos θ)',
+    fnLatex: '\\tan',
+    fnText: 'tan',
+  },
+  sec: {
+    chainLatex:
+      '\\sec\\theta = \\frac{r}{x} = \\frac{r}{r\\cos\\theta} = \\frac{1}{\\cos\\theta}',
+    chainText: 'sec θ = r/x = r/(r cos θ) = 1/cos θ',
+    fnLatex: '\\sec',
+    fnText: 'sec',
+  },
+  csc: {
+    chainLatex:
+      '\\csc\\theta = \\frac{r}{y} = \\frac{r}{r\\sin\\theta} = \\frac{1}{\\sin\\theta}',
+    chainText: 'csc θ = r/y = r/(r sin θ) = 1/sin θ',
+    fnLatex: '\\csc',
+    fnText: 'csc',
+  },
+  cot: {
+    chainLatex:
+      '\\cot\\theta = \\frac{x}{y} = \\frac{r\\cos\\theta}{r\\sin\\theta} = \\frac{\\cos\\theta}{\\sin\\theta}',
+    chainText: 'cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ',
+    fnLatex: '\\cot',
+    fnText: 'cot',
+  },
+};
+
+/**
+ * A ratio function's worked equation: `tan θ = y/x = (r sin θ)/(r cos θ) = …`,
+ * `sec θ = r/x = r/(r cos θ) = 1/cos θ = …`, and so on per {@link RATIO}.
+ * Unlike {@link equation}, there is no `r ×` prefix — r cancels out of the
+ * ratio, so substituting it on both sides of the fraction would be noise. The
+ * chain's literal steps are what make the cancellation visible; the value
+ * that follows never depends on r.
+ */
+function ratioEquation(
+  fn: RatioFn,
   exact: ExactValue | 'undefined' | null,
   value: number,
   degreeLabel: string,
   alphabet: 'latex' | 'text',
 ): string {
   const latex = alphabet === 'latex';
-  const chain = latex
-    ? '\\tan\\theta = \\frac{y}{x} = \\frac{r\\sin\\theta}{r\\cos\\theta}'
-    : 'tan θ = y/x = (r sin θ)/(r cos θ)';
+  const { chainLatex, chainText, fnLatex, fnText } = RATIO[fn];
+  const chain = latex ? chainLatex : chainText;
 
   if (exact === 'undefined') {
     return `${chain}${latex ? '\\text{ is undefined}' : ' is undefined'}`;
   }
 
-  return `${chain} = ${equation({ exact, value, r: 1, fnLatex: '\\tan', fnText: 'tan', degreeLabel, alphabet })}`;
+  return `${chain} = ${equation({ exact, value, r: 1, fnLatex, fnText, degreeLabel, alphabet })}`;
 }
 
 /** The same equation as prose, for the live region. */
@@ -158,8 +230,23 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
 
   const exactTan = exactTangent(theta);
   const tanValue = Math.tan(rad);
-  const tanLatex = tanEquation(exactTan, tanValue, degreeLabel, 'latex');
-  const tanText = tanEquation(exactTan, tanValue, degreeLabel, 'text');
+  const tanLatex = ratioEquation('tan', exactTan, tanValue, degreeLabel, 'latex');
+  const tanText = ratioEquation('tan', exactTan, tanValue, degreeLabel, 'text');
+
+  const exactSec = exactSecant(theta);
+  const secValue = 1 / Math.cos(rad);
+  const secLatex = ratioEquation('sec', exactSec, secValue, degreeLabel, 'latex');
+  const secText = ratioEquation('sec', exactSec, secValue, degreeLabel, 'text');
+
+  const exactCsc = exactCosecant(theta);
+  const cscValue = 1 / Math.sin(rad);
+  const cscLatex = ratioEquation('csc', exactCsc, cscValue, degreeLabel, 'latex');
+  const cscText = ratioEquation('csc', exactCsc, cscValue, degreeLabel, 'text');
+
+  const exactCot = exactCotangent(theta);
+  const cotValue = 1 / Math.tan(rad);
+  const cotLatex = ratioEquation('cot', exactCot, cotValue, degreeLabel, 'latex');
+  const cotText = ratioEquation('cot', exactCot, cotValue, degreeLabel, 'text');
 
   const cos = { exact: exact?.x ?? null, value: x, r, fnLatex: '\\cos', fnText: 'cos', degreeLabel };
   const sin = { exact: exact?.y ?? null, value: y, r, fnLatex: '\\sin', fnText: 'sin', degreeLabel };
@@ -196,8 +283,16 @@ export function buildCoordinateReadout(theta: number, r: number): CoordinateRead
     yLatex,
     tanLatex,
     tanText,
+    secLatex,
+    secText,
+    cscLatex,
+    cscText,
+    cotLatex,
+    cotText,
     xText,
     yText,
+    waveLatex: { sin: yLatex, cos: xLatex, tan: tanLatex, sec: secLatex, csc: cscLatex, cot: cotLatex },
+    waveText: { sin: yText, cos: xText, tan: tanText, sec: secText, csc: cscText, cot: cotText },
     labelText,
     pairText: `(${round4(x)}, ${round4(y)})`,
     spoken:

@@ -56,6 +56,28 @@ const DEFAULTS = {
   standardAngles: false,
 };
 
+/** Export legend copy for the selected wave, keyed so a new `WaveFn` member is
+ *  a compile error here rather than a silent fallback to tan's row. */
+const WAVE_LEGEND: Record<WaveFn, string> = {
+  sin: 'sin θ — height is the y-coordinate',
+  cos: 'cos θ — height is the x-coordinate',
+  tan: 'tan θ — height is the tangent segment; dashed verticals mark its asymptotes',
+  sec: 'sec θ — height is the secant from the centre to the tangent line; dashed verticals mark its asymptotes',
+  csc: 'csc θ — height is the cosecant to the tangent line at the quarter turn; dashed verticals mark its asymptotes',
+  cot: 'cot θ — height is the cotangent segment on that tangent line; dashed verticals mark its asymptotes',
+};
+
+/** Export "Function" fact copy for the selected wave, same exhaustiveness
+ *  rationale as `WAVE_LEGEND`. */
+const WAVE_FUNCTION_FACT: Record<WaveFn, string> = {
+  sin: 'y = r·sin θ',
+  cos: 'y = r·cos θ',
+  tan: 'tan θ = y/x',
+  sec: 'sec θ = r/x = 1/cos θ',
+  csc: 'csc θ = r/y = 1/sin θ',
+  cot: 'cot θ = x/y = cos θ/sin θ',
+};
+
 /** viewBox is fixed and the container is fluid, so the figure scales with no
  *  "large format" toggle — the source Demonstration only needed one because
  *  Mathematica cannot reflow. The pixels-per-unit and measure-arc radius that
@@ -115,13 +137,20 @@ export default function AngleExplorer(): React.JSX.Element {
       triple: renderMathHtml(coords.tripleLatex) ?? '',
       x: renderMathHtml(coords.xLatex) ?? '',
       y: renderMathHtml(coords.yLatex) ?? '',
-      tan: renderMathHtml(coords.tanLatex) ?? '',
     }),
-    [coords.tripleLatex, coords.xLatex, coords.yLatex, coords.tanLatex],
+    [coords.tripleLatex, coords.xLatex, coords.yLatex],
   );
 
   // `undefined` rather than 'none' is what both builders expect for "draw neither".
   const waveFn: WaveFn | undefined = wave === 'none' ? undefined : wave;
+
+  // Sourced from `coords.waveLatex`, which angle-coordinates.ts already builds
+  // as a `Record<WaveFn, string>` — exhaustiveness lives there now, so no
+  // component-level table (and no fallback to tan) is possible here.
+  const waveCaptionHtml = useMemo(
+    () => (waveFn ? renderMathHtml(coords.waveLatex[waveFn]) ?? '' : ''),
+    [coords.waveLatex, waveFn],
+  );
 
   // The readout box is aria-hidden (KaTeX markup is noise to a screen reader), so
   // this live region is how the conversion reaches assistive tech at all. Debounced
@@ -275,12 +304,7 @@ export default function AngleExplorer(): React.JSX.Element {
           ...(snapshotWave
             ? [
                 {
-                  label:
-                    snapshotWave === 'sin'
-                      ? 'sin θ — height is the y-coordinate'
-                      : snapshotWave === 'cos'
-                        ? 'cos θ — height is the x-coordinate'
-                        : 'tan θ — height is the tangent segment; dashed verticals mark its asymptotes',
+                  label: WAVE_LEGEND[snapshotWave],
                   color: lightColors.wave,
                 },
               ]
@@ -316,12 +340,7 @@ export default function AngleExplorer(): React.JSX.Element {
                   facts: [
                     {
                       label: 'Function',
-                      value:
-                        snapshotWave === 'sin'
-                          ? 'y = r·sin θ'
-                          : snapshotWave === 'cos'
-                            ? 'y = r·cos θ'
-                            : 'tan θ = y/x',
+                      value: WAVE_FUNCTION_FACT[snapshotWave],
                     },
                     {
                       label: 'Value',
@@ -428,16 +447,26 @@ export default function AngleExplorer(): React.JSX.Element {
             aria-labelledby={`${waveGroupId}-wave-group-label`}
             value={wave}
             onValueChange={(v) => setWave(v as WaveMode)}
+            className="grid grid-cols-2 gap-x-4 gap-y-2"
           >
             {(
               [
+                // DOM order (not declaration order) pairs each function with its
+                // reciprocal across the two columns below — reordering this array
+                // reorders the layout, so don't "tidy" it.
                 { value: 'none' as const, label: 'none' },
                 { value: 'sin' as const, label: 'sin θ' },
+                { value: 'csc' as const, label: 'csc θ' },
                 { value: 'cos' as const, label: 'cos θ' },
+                { value: 'sec' as const, label: 'sec θ' },
                 { value: 'tan' as const, label: 'tan θ' },
+                { value: 'cot' as const, label: 'cot θ' },
               ]
             ).map((o) => (
-              <div key={o.value} className="flex items-center gap-2">
+              <div
+                key={o.value}
+                className={`flex items-center gap-2${o.value === 'none' ? ' col-span-2' : ''}`}
+              >
                 <RadioGroupItem id={`${waveGroupId}-wave-${o.value}`} value={o.value} />
                 <Label htmlFor={`${waveGroupId}-wave-${o.value}`}>{o.label}</Label>
               </div>
@@ -590,8 +619,7 @@ export default function AngleExplorer(): React.JSX.Element {
               aria-hidden="true"
               className="mt-2 text-center text-sm text-muted-foreground"
               dangerouslySetInnerHTML={{
-                __html:
-                  waveFn === 'sin' ? coordHtml.y : waveFn === 'cos' ? coordHtml.x : coordHtml.tan,
+                __html: waveCaptionHtml,
               }}
             />
           </div>

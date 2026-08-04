@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import {
   exactCoordinates,
+  exactCosecant,
+  exactCotangent,
+  exactSecant,
   exactTangent,
   exactToNumber,
   formatExactLatex,
@@ -28,16 +31,16 @@ describe('exactCoordinates', () => {
 
   it('places the quadrantals exactly, with no floating-point residue', () => {
     expect(exactCoordinates(0)).toEqual({
-      x: { sign: 1, radicand: 1, denominator: 1 },
-      y: { sign: 0, radicand: 1, denominator: 1 },
+      x: { sign: 1, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
     });
     expect(exactCoordinates(180)).toEqual({
-      x: { sign: -1, radicand: 1, denominator: 1 },
-      y: { sign: 0, radicand: 1, denominator: 1 },
+      x: { sign: -1, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
     });
     expect(exactCoordinates(270)).toEqual({
-      x: { sign: 0, radicand: 1, denominator: 1 },
-      y: { sign: -1, radicand: 1, denominator: 1 },
+      x: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: -1, numerator: 1, radicand: 1, denominator: 1 },
     });
   });
 
@@ -68,44 +71,52 @@ describe('exactCoordinates', () => {
 
 describe('formatExactLatex', () => {
   it('renders zero, unit, rational, and radical magnitudes', () => {
-    expect(formatExactLatex({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactLatex({ sign: 1, radicand: 1, denominator: 1 })).toBe('1');
-    expect(formatExactLatex({ sign: 1, radicand: 1, denominator: 2 })).toBe('\\frac{1}{2}');
-    expect(formatExactLatex({ sign: 1, radicand: 3, denominator: 2 })).toBe(
+    expect(formatExactLatex({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 1, denominator: 1 })).toBe('1');
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe(
+      '\\frac{1}{2}',
+    );
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe(
       '\\frac{\\sqrt{3}}{2}',
     );
   });
 
   it('carries the sign, and never emits a signed zero', () => {
-    expect(formatExactLatex({ sign: -1, radicand: 1, denominator: 1 })).toBe('-1');
-    expect(formatExactLatex({ sign: -1, radicand: 2, denominator: 2 })).toBe(
+    expect(formatExactLatex({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe('-1');
+    expect(formatExactLatex({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe(
       '-\\frac{\\sqrt{2}}{2}',
     );
-    expect(formatExactLatex({ sign: 0, radicand: 1, denominator: 1 })).not.toContain('-');
+    expect(
+      formatExactLatex({ sign: 0, numerator: 1, radicand: 1, denominator: 1 }),
+    ).not.toContain('-');
   });
 });
 
 describe('formatExactText', () => {
   it('mirrors the latex form without markup, for SVG and export', () => {
-    expect(formatExactText({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactText({ sign: 1, radicand: 1, denominator: 2 })).toBe('1/2');
-    expect(formatExactText({ sign: 1, radicand: 3, denominator: 2 })).toBe('√3/2');
-    expect(formatExactText({ sign: -1, radicand: 2, denominator: 2 })).toBe('-√2/2');
-    expect(formatExactText({ sign: -1, radicand: 1, denominator: 1 })).toBe('-1');
+    expect(formatExactText({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactText({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe('1/2');
+    expect(formatExactText({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe('√3/2');
+    expect(formatExactText({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe('-√2/2');
+    expect(formatExactText({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe('-1');
   });
 });
 
 describe('formatExactSpoken', () => {
   it('reads aloud with no backslashes or braces for a screen reader to mangle', () => {
-    expect(formatExactSpoken({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactSpoken({ sign: 1, radicand: 1, denominator: 2 })).toBe('1 over 2');
-    expect(formatExactSpoken({ sign: 1, radicand: 3, denominator: 2 })).toBe(
+    expect(formatExactSpoken({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactSpoken({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe(
+      '1 over 2',
+    );
+    expect(formatExactSpoken({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe(
       'square root of 3 over 2',
     );
-    expect(formatExactSpoken({ sign: -1, radicand: 2, denominator: 2 })).toBe(
+    expect(formatExactSpoken({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe(
       'negative square root of 2 over 2',
     );
-    expect(formatExactSpoken({ sign: -1, radicand: 1, denominator: 1 })).toBe('negative 1');
+    expect(formatExactSpoken({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe(
+      'negative 1',
+    );
   });
 });
 
@@ -127,14 +138,14 @@ describe('exactTangent', () => {
   });
 
   it('renders √3/3 at 30° and 150°, with the correct sign', () => {
-    expect(exactTangent(30)).toEqual({ sign: 1, radicand: 3, denominator: 3 });
-    expect(exactTangent(150)).toEqual({ sign: -1, radicand: 3, denominator: 3 });
+    expect(exactTangent(30)).toEqual({ sign: 1, numerator: 1, radicand: 3, denominator: 3 });
+    expect(exactTangent(150)).toEqual({ sign: -1, numerator: 1, radicand: 3, denominator: 3 });
   });
 
   it('is 0 at 0° and 180°, and exactly √3 at 60°', () => {
-    expect(exactTangent(0)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
-    expect(exactTangent(180)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
-    expect(exactTangent(60)).toEqual({ sign: 1, radicand: 3, denominator: 1 });
+    expect(exactTangent(0)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactTangent(180)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactTangent(60)).toEqual({ sign: 1, numerator: 1, radicand: 3, denominator: 1 });
   });
 
   it('is positive in Q1/Q3 and negative in Q2/Q4', () => {
@@ -162,6 +173,154 @@ describe('exactTangent', () => {
   });
 });
 
+describe('exactSecant', () => {
+  it('agrees with 1/Math.cos at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 90 || deg === 270) continue;
+      const v = exactSecant(deg);
+      expect(v, `no exact secant for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.cos((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 90° and 270°, and at their normalized equivalents', () => {
+    for (const deg of [90, 270, -90, 450]) {
+      expect(exactSecant(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 1 at 0°, the fixed point of the reciprocal', () => {
+    expect(exactSecant(0)).toEqual({ sign: 1, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('renders 2√3/3 at 30° and exactly 2 at 60°', () => {
+    expect(exactSecant(30)).toEqual({ sign: 1, numerator: 2, radicand: 3, denominator: 3 });
+    expect(exactSecant(60)).toEqual({ sign: 1, numerator: 2, radicand: 1, denominator: 1 });
+  });
+
+  it('is negative in Q3, following cos', () => {
+    expect(exactToNumber(exactSecant(210) as ExactValue)).toBeLessThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactSecant(37)).toBeNull();
+    expect(exactSecant(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactSecant(390)).toEqual(exactSecant(30));
+  });
+
+  it('is undefined for a hand-typed near-90° decimal, not merely off-chart null', () => {
+    expect(exactSecant(89.9999999)).toBe('undefined');
+  });
+});
+
+describe('exactCosecant', () => {
+  it('agrees with 1/Math.sin at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 0 || deg === 180) continue;
+      const v = exactCosecant(deg);
+      expect(v, `no exact cosecant for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.sin((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 0° and 180°, and at their normalized equivalents', () => {
+    for (const deg of [0, 180, 360, -180]) {
+      expect(exactCosecant(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 1 at 90°, the fixed point of the reciprocal', () => {
+    expect(exactCosecant(90)).toEqual({ sign: 1, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('renders √2 at 45°', () => {
+    expect(exactCosecant(45)).toEqual({ sign: 1, numerator: 1, radicand: 2, denominator: 1 });
+  });
+
+  it('is negative in Q3, following sin', () => {
+    expect(exactToNumber(exactCosecant(210) as ExactValue)).toBeLessThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactCosecant(37)).toBeNull();
+    expect(exactCosecant(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactCosecant(390)).toEqual(exactCosecant(30));
+  });
+
+  it('is undefined for a hand-typed near-0° decimal, not merely off-chart null', () => {
+    expect(exactCosecant(0.0000001)).toBe('undefined');
+  });
+});
+
+describe('exactCotangent', () => {
+  it('agrees with 1/Math.tan at every chart angle away from its own poles', () => {
+    for (const deg of CHART_ANGLES) {
+      if (deg === 0 || deg === 180) continue;
+      const v = exactCotangent(deg);
+      expect(v, `no exact cotangent for ${deg}°`).not.toBeNull();
+      expect(v).not.toBe('undefined');
+      expect(exactToNumber(v as ExactValue)).toBeCloseTo(1 / Math.tan((deg * Math.PI) / 180), 10);
+    }
+  });
+
+  it('is undefined at 0° and 180°, and at their normalized equivalents', () => {
+    for (const deg of [0, 180, 360, -180]) {
+      expect(exactCotangent(deg)).toBe('undefined');
+    }
+  });
+
+  it('is 0 at 90° and 270°, tan\'s pole becoming cot\'s zero', () => {
+    expect(exactCotangent(90)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactCotangent(270)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+  });
+
+  it('is positive in Q3, following tan', () => {
+    expect(exactToNumber(exactCotangent(210) as ExactValue)).toBeGreaterThan(0);
+  });
+
+  it('returns null for integers off the chart and for non-integer degrees', () => {
+    expect(exactCotangent(37)).toBeNull();
+    expect(exactCotangent(30.5)).toBeNull();
+  });
+
+  it('normalises past-360° angles onto the same value', () => {
+    expect(exactCotangent(390)).toEqual(exactCotangent(30));
+  });
+
+  it('is undefined for a hand-typed near-0° decimal, not merely off-chart null', () => {
+    expect(exactCotangent(0.0000001)).toBe('undefined');
+  });
+});
+
+describe('reciprocal field-union sweep', () => {
+  it('keeps numerator, radicand, and denominator inside their unions for every chart angle', () => {
+    const assertInUnion = (v: ExactValue | 'undefined' | null, label: string) => {
+      if (v === null || v === 'undefined') return;
+      expect([1, 2], label).toContain(v.numerator);
+      expect([1, 2, 3], label).toContain(v.radicand);
+      expect([1, 2, 3], label).toContain(v.denominator);
+    };
+
+    for (const deg of CHART_ANGLES) {
+      const point = exactCoordinates(deg);
+      assertInUnion(point?.x ?? null, `x at ${deg}°`);
+      assertInUnion(point?.y ?? null, `y at ${deg}°`);
+      assertInUnion(exactTangent(deg), `tan at ${deg}°`);
+      assertInUnion(exactSecant(deg), `sec at ${deg}°`);
+      assertInUnion(exactCosecant(deg), `csc at ${deg}°`);
+      assertInUnion(exactCotangent(deg), `cot at ${deg}°`);
+    }
+  });
+});
+
 describe('exactCoordinates — never needs a denominator of 3', () => {
   it('proves the ExactValue.denominator widening is non-invasive for x/y', () => {
     for (const deg of CHART_ANGLES) {
@@ -173,11 +332,57 @@ describe('exactCoordinates — never needs a denominator of 3', () => {
 });
 
 describe('formatters — denominator 3', () => {
-  const rootThirdOverThree = { sign: 1 as const, radicand: 3 as const, denominator: 3 as const };
+  const rootThirdOverThree = {
+    sign: 1 as const,
+    numerator: 1 as const,
+    radicand: 3 as const,
+    denominator: 3 as const,
+  };
 
   it('renders √3/3 across all three formatters with no formatter changes needed', () => {
     expect(formatExactLatex(rootThirdOverThree)).toBe('\\frac{\\sqrt{3}}{3}');
     expect(formatExactText(rootThirdOverThree)).toBe('√3/3');
     expect(formatExactSpoken(rootThirdOverThree)).toBe('square root of 3 over 3');
+  });
+});
+
+describe('formatters — numerator 2', () => {
+  const twoRootThreeOverThree = {
+    sign: 1 as const,
+    numerator: 2 as const,
+    radicand: 3 as const,
+    denominator: 3 as const,
+  };
+  const two = {
+    sign: 1 as const,
+    numerator: 2 as const,
+    radicand: 1 as const,
+    denominator: 1 as const,
+  };
+
+  it('prefixes the radical or rational magnitude with the numerator coefficient', () => {
+    expect(formatExactLatex(twoRootThreeOverThree)).toBe('\\frac{2\\sqrt{3}}{3}');
+    expect(formatExactText(twoRootThreeOverThree)).toBe('2√3/3');
+    expect(formatExactSpoken(twoRootThreeOverThree)).toBe('2 times square root of 3 over 3');
+  });
+
+  it('renders a bare numerator when the radicand is 1', () => {
+    expect(formatExactLatex(two)).toBe('2');
+    expect(formatExactText(two)).toBe('2');
+    expect(formatExactSpoken(two)).toBe('2');
+  });
+});
+
+describe('isRational — numerator does not affect rationality', () => {
+  // isRational lives in angle-coordinates.ts and is not exported (and that
+  // file's ExactValue construction sites belong to a later task, so it is out
+  // of scope here). Its definition is `v.radicand === 1` — rationality turns
+  // on the radical alone, so a numerator of 2 must not flip it. Inlining the
+  // same boolean expression pins that contract without importing across the
+  // in-progress file boundary.
+  const isRational = (v: ExactValue): boolean => v.radicand === 1;
+
+  it('is true for numerator 2 with radicand 1', () => {
+    expect(isRational({ sign: 1, numerator: 2, radicand: 1, denominator: 1 })).toBe(true);
   });
 });

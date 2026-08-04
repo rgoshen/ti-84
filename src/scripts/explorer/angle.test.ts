@@ -6,6 +6,8 @@ import {
   turnFraction,
   piMultiple,
   isIntegerDegrees,
+  isTangentUndefined,
+  isCotangentUndefined,
   formatPiLatex,
   formatFractionLatex,
   formatFractionSpoken,
@@ -77,6 +79,37 @@ describe('isIntegerDegrees — guards the exact forms', () => {
     expect(isIntegerDegrees(30)).toBe(true);
     expect(isIntegerDegrees(-360)).toBe(true);
     expect(isIntegerDegrees(57.2958)).toBe(false);
+  });
+});
+
+describe('isCotangentUndefined', () => {
+  it('is true at multiples of 180°, where cot and csc die', () => {
+    expect(isCotangentUndefined(0)).toBe(true);
+    expect(isCotangentUndefined(180)).toBe(true);
+    expect(isCotangentUndefined(-180)).toBe(true);
+    expect(isCotangentUndefined(360)).toBe(true);
+    expect(isCotangentUndefined(-360)).toBe(true);
+    expect(isCotangentUndefined(540)).toBe(true);
+  });
+
+  it('is false away from multiples of 180°, including tan/sec’s own poles', () => {
+    expect(isCotangentUndefined(90)).toBe(false);
+    expect(isCotangentUndefined(-90)).toBe(false);
+    expect(isCotangentUndefined(270)).toBe(false);
+    expect(isCotangentUndefined(1)).toBe(false);
+    expect(isCotangentUndefined(179)).toBe(false);
+  });
+
+  it('is true at hand-typed near-multiples — the case a one-sided modulo would miss', () => {
+    expect(isCotangentUndefined(179.9999999)).toBe(true);
+    expect(isCotangentUndefined(-0.0000001)).toBe(true);
+    expect(isCotangentUndefined(360.0000001)).toBe(true);
+  });
+
+  it('never overlaps isTangentUndefined across a −360…360 sweep', () => {
+    for (let deg = -360; deg <= 360; deg += 1) {
+      expect(isTangentUndefined(deg) && isCotangentUndefined(deg)).toBe(false);
+    }
   });
 });
 
