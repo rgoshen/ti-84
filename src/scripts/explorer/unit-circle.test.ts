@@ -28,16 +28,16 @@ describe('exactCoordinates', () => {
 
   it('places the quadrantals exactly, with no floating-point residue', () => {
     expect(exactCoordinates(0)).toEqual({
-      x: { sign: 1, radicand: 1, denominator: 1 },
-      y: { sign: 0, radicand: 1, denominator: 1 },
+      x: { sign: 1, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
     });
     expect(exactCoordinates(180)).toEqual({
-      x: { sign: -1, radicand: 1, denominator: 1 },
-      y: { sign: 0, radicand: 1, denominator: 1 },
+      x: { sign: -1, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
     });
     expect(exactCoordinates(270)).toEqual({
-      x: { sign: 0, radicand: 1, denominator: 1 },
-      y: { sign: -1, radicand: 1, denominator: 1 },
+      x: { sign: 0, numerator: 1, radicand: 1, denominator: 1 },
+      y: { sign: -1, numerator: 1, radicand: 1, denominator: 1 },
     });
   });
 
@@ -68,44 +68,52 @@ describe('exactCoordinates', () => {
 
 describe('formatExactLatex', () => {
   it('renders zero, unit, rational, and radical magnitudes', () => {
-    expect(formatExactLatex({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactLatex({ sign: 1, radicand: 1, denominator: 1 })).toBe('1');
-    expect(formatExactLatex({ sign: 1, radicand: 1, denominator: 2 })).toBe('\\frac{1}{2}');
-    expect(formatExactLatex({ sign: 1, radicand: 3, denominator: 2 })).toBe(
+    expect(formatExactLatex({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 1, denominator: 1 })).toBe('1');
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe(
+      '\\frac{1}{2}',
+    );
+    expect(formatExactLatex({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe(
       '\\frac{\\sqrt{3}}{2}',
     );
   });
 
   it('carries the sign, and never emits a signed zero', () => {
-    expect(formatExactLatex({ sign: -1, radicand: 1, denominator: 1 })).toBe('-1');
-    expect(formatExactLatex({ sign: -1, radicand: 2, denominator: 2 })).toBe(
+    expect(formatExactLatex({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe('-1');
+    expect(formatExactLatex({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe(
       '-\\frac{\\sqrt{2}}{2}',
     );
-    expect(formatExactLatex({ sign: 0, radicand: 1, denominator: 1 })).not.toContain('-');
+    expect(
+      formatExactLatex({ sign: 0, numerator: 1, radicand: 1, denominator: 1 }),
+    ).not.toContain('-');
   });
 });
 
 describe('formatExactText', () => {
   it('mirrors the latex form without markup, for SVG and export', () => {
-    expect(formatExactText({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactText({ sign: 1, radicand: 1, denominator: 2 })).toBe('1/2');
-    expect(formatExactText({ sign: 1, radicand: 3, denominator: 2 })).toBe('√3/2');
-    expect(formatExactText({ sign: -1, radicand: 2, denominator: 2 })).toBe('-√2/2');
-    expect(formatExactText({ sign: -1, radicand: 1, denominator: 1 })).toBe('-1');
+    expect(formatExactText({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactText({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe('1/2');
+    expect(formatExactText({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe('√3/2');
+    expect(formatExactText({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe('-√2/2');
+    expect(formatExactText({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe('-1');
   });
 });
 
 describe('formatExactSpoken', () => {
   it('reads aloud with no backslashes or braces for a screen reader to mangle', () => {
-    expect(formatExactSpoken({ sign: 0, radicand: 1, denominator: 1 })).toBe('0');
-    expect(formatExactSpoken({ sign: 1, radicand: 1, denominator: 2 })).toBe('1 over 2');
-    expect(formatExactSpoken({ sign: 1, radicand: 3, denominator: 2 })).toBe(
+    expect(formatExactSpoken({ sign: 0, numerator: 1, radicand: 1, denominator: 1 })).toBe('0');
+    expect(formatExactSpoken({ sign: 1, numerator: 1, radicand: 1, denominator: 2 })).toBe(
+      '1 over 2',
+    );
+    expect(formatExactSpoken({ sign: 1, numerator: 1, radicand: 3, denominator: 2 })).toBe(
       'square root of 3 over 2',
     );
-    expect(formatExactSpoken({ sign: -1, radicand: 2, denominator: 2 })).toBe(
+    expect(formatExactSpoken({ sign: -1, numerator: 1, radicand: 2, denominator: 2 })).toBe(
       'negative square root of 2 over 2',
     );
-    expect(formatExactSpoken({ sign: -1, radicand: 1, denominator: 1 })).toBe('negative 1');
+    expect(formatExactSpoken({ sign: -1, numerator: 1, radicand: 1, denominator: 1 })).toBe(
+      'negative 1',
+    );
   });
 });
 
@@ -127,14 +135,14 @@ describe('exactTangent', () => {
   });
 
   it('renders √3/3 at 30° and 150°, with the correct sign', () => {
-    expect(exactTangent(30)).toEqual({ sign: 1, radicand: 3, denominator: 3 });
-    expect(exactTangent(150)).toEqual({ sign: -1, radicand: 3, denominator: 3 });
+    expect(exactTangent(30)).toEqual({ sign: 1, numerator: 1, radicand: 3, denominator: 3 });
+    expect(exactTangent(150)).toEqual({ sign: -1, numerator: 1, radicand: 3, denominator: 3 });
   });
 
   it('is 0 at 0° and 180°, and exactly √3 at 60°', () => {
-    expect(exactTangent(0)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
-    expect(exactTangent(180)).toEqual({ sign: 0, radicand: 1, denominator: 1 });
-    expect(exactTangent(60)).toEqual({ sign: 1, radicand: 3, denominator: 1 });
+    expect(exactTangent(0)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactTangent(180)).toEqual({ sign: 0, numerator: 1, radicand: 1, denominator: 1 });
+    expect(exactTangent(60)).toEqual({ sign: 1, numerator: 1, radicand: 3, denominator: 1 });
   });
 
   it('is positive in Q1/Q3 and negative in Q2/Q4', () => {
@@ -173,11 +181,57 @@ describe('exactCoordinates — never needs a denominator of 3', () => {
 });
 
 describe('formatters — denominator 3', () => {
-  const rootThirdOverThree = { sign: 1 as const, radicand: 3 as const, denominator: 3 as const };
+  const rootThirdOverThree = {
+    sign: 1 as const,
+    numerator: 1 as const,
+    radicand: 3 as const,
+    denominator: 3 as const,
+  };
 
   it('renders √3/3 across all three formatters with no formatter changes needed', () => {
     expect(formatExactLatex(rootThirdOverThree)).toBe('\\frac{\\sqrt{3}}{3}');
     expect(formatExactText(rootThirdOverThree)).toBe('√3/3');
     expect(formatExactSpoken(rootThirdOverThree)).toBe('square root of 3 over 3');
+  });
+});
+
+describe('formatters — numerator 2', () => {
+  const twoRootThreeOverThree = {
+    sign: 1 as const,
+    numerator: 2 as const,
+    radicand: 3 as const,
+    denominator: 3 as const,
+  };
+  const two = {
+    sign: 1 as const,
+    numerator: 2 as const,
+    radicand: 1 as const,
+    denominator: 1 as const,
+  };
+
+  it('prefixes the radical or rational magnitude with the numerator coefficient', () => {
+    expect(formatExactLatex(twoRootThreeOverThree)).toBe('\\frac{2\\sqrt{3}}{3}');
+    expect(formatExactText(twoRootThreeOverThree)).toBe('2√3/3');
+    expect(formatExactSpoken(twoRootThreeOverThree)).toBe('2 times square root of 3 over 3');
+  });
+
+  it('renders a bare numerator when the radicand is 1', () => {
+    expect(formatExactLatex(two)).toBe('2');
+    expect(formatExactText(two)).toBe('2');
+    expect(formatExactSpoken(two)).toBe('2');
+  });
+});
+
+describe('isRational — numerator does not affect rationality', () => {
+  // isRational lives in angle-coordinates.ts and is not exported (and that
+  // file's ExactValue construction sites belong to a later task, so it is out
+  // of scope here). Its definition is `v.radicand === 1` — rationality turns
+  // on the radical alone, so a numerator of 2 must not flip it. Inlining the
+  // same boolean expression pins that contract without importing across the
+  // in-progress file boundary.
+  const isRational = (v: ExactValue): boolean => v.radicand === 1;
+
+  it('is true for numerator 2 with radicand 1', () => {
+    expect(isRational({ sign: 1, numerator: 2, radicand: 1, denominator: 1 })).toBe(true);
   });
 });

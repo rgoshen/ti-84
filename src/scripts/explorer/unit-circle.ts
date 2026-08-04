@@ -15,14 +15,18 @@
 import { isIntegerDegrees, isTangentUndefined } from './angle';
 
 /**
- * An exact unit-circle coordinate: `(sign · √radicand) / denominator`.
+ * An exact unit-circle coordinate: `(sign · numerator · √radicand) / denominator`.
  *
- * A `radicand` of 1 means "no radical" — `{sign: 1, radicand: 1, denominator: 2}`
- * is 1/2, not √1/2. `sign: 0` is the zero coordinate and is immune to negation,
- * so `-0` can never reach the screen.
+ * A `radicand` of 1 means "no radical" — `{sign: 1, numerator: 1, radicand: 1,
+ * denominator: 2}` is 1/2, not √1/2. `sign: 0` is the zero coordinate and is
+ * immune to negation, so `-0` can never reach the screen. `numerator` is
+ * required, not optional-with-a-default, so a new construction site cannot
+ * silently omit it; 2 is the only coefficient the reference chart produces
+ * (e.g. `sec 30° = 2√3/3`), so a 3 is a type error.
  */
 export interface ExactValue {
   sign: -1 | 0 | 1;
+  numerator: 1 | 2;
   radicand: 1 | 2 | 3;
   denominator: 1 | 2 | 3;
 }
@@ -32,13 +36,13 @@ export interface ExactPoint {
   y: ExactValue;
 }
 
-const ZERO: ExactValue = { sign: 0, radicand: 1, denominator: 1 };
-const ONE: ExactValue = { sign: 1, radicand: 1, denominator: 1 };
-const HALF: ExactValue = { sign: 1, radicand: 1, denominator: 2 };
-const ROOT2_OVER_2: ExactValue = { sign: 1, radicand: 2, denominator: 2 };
-const ROOT3_OVER_2: ExactValue = { sign: 1, radicand: 3, denominator: 2 };
-const ROOT3: ExactValue = { sign: 1, radicand: 3, denominator: 1 };
-const ROOT3_OVER_3: ExactValue = { sign: 1, radicand: 3, denominator: 3 };
+const ZERO: ExactValue = { sign: 0, numerator: 1, radicand: 1, denominator: 1 };
+const ONE: ExactValue = { sign: 1, numerator: 1, radicand: 1, denominator: 1 };
+const HALF: ExactValue = { sign: 1, numerator: 1, radicand: 1, denominator: 2 };
+const ROOT2_OVER_2: ExactValue = { sign: 1, numerator: 1, radicand: 2, denominator: 2 };
+const ROOT3_OVER_2: ExactValue = { sign: 1, numerator: 1, radicand: 3, denominator: 2 };
+const ROOT3: ExactValue = { sign: 1, numerator: 1, radicand: 3, denominator: 1 };
+const ROOT3_OVER_3: ExactValue = { sign: 1, numerator: 1, radicand: 3, denominator: 3 };
 
 /**
  * (cos, sin) at the first-quadrant reference angles. A Map rather than an object
@@ -158,39 +162,48 @@ export function exactTangent(deg: number): ExactValue | 'undefined' | null {
   return flip ? negate(base) : base;
 }
 
-/** KaTeX source: `0`, `1`, `-1`, `\frac{1}{2}`, `-\frac{\sqrt{3}}{2}`. */
+/** KaTeX source: `0`, `1`, `-1`, `2`, `\frac{1}{2}`, `-\frac{\sqrt{3}}{2}`, `\frac{2\sqrt{3}}{3}`. */
 export function formatExactLatex(v: ExactValue): string {
   if (v.sign === 0) return '0';
   const sign = v.sign < 0 ? '-' : '';
-  const numerator = v.radicand === 1 ? '1' : `\\sqrt{${v.radicand}}`;
+  // numerator === 2 prefixes the radical (or stands alone, when radicand is 1)
+  // rather than multiplying it out — `2\sqrt{3}`, never `\sqrt{12}`.
+  const coefficient = v.numerator === 2 ? '2' : '';
+  const magnitude = v.radicand === 1 ? coefficient || '1' : `${coefficient}\\sqrt{${v.radicand}}`;
   return v.denominator === 1
-    ? `${sign}${numerator}`
-    : `${sign}\\frac{${numerator}}{${v.denominator}}`;
+    ? `${sign}${magnitude}`
+    : `${sign}\\frac{${magnitude}}{${v.denominator}}`;
 }
 
-/** Plain text for SVG labels and the export artifact: `0`, `1/2`, `√3/2`, `-1`. */
+/** Plain text for SVG labels and the export artifact: `0`, `1/2`, `√3/2`, `-1`, `2√3/3`. */
 export function formatExactText(v: ExactValue): string {
   if (v.sign === 0) return '0';
   const sign = v.sign < 0 ? '-' : '';
-  const numerator = v.radicand === 1 ? '1' : `√${v.radicand}`;
-  return v.denominator === 1 ? `${sign}${numerator}` : `${sign}${numerator}/${v.denominator}`;
+  const coefficient = v.numerator === 2 ? '2' : '';
+  const magnitude = v.radicand === 1 ? coefficient || '1' : `${coefficient}√${v.radicand}`;
+  return v.denominator === 1 ? `${sign}${magnitude}` : `${sign}${magnitude}/${v.denominator}`;
 }
 
 /**
  * Spoken counterpart for the screen-reader live region: `0`, `1 over 2`,
- * `square root of 3 over 2`, `negative 1`. No backslashes or braces for a
- * screen reader to read aloud.
+ * `square root of 3 over 2`, `negative 1`, `2 times square root of 3 over 3`.
+ * No backslashes or braces for a screen reader to read aloud.
  */
 export function formatExactSpoken(v: ExactValue): string {
   if (v.sign === 0) return '0';
   const sign = v.sign < 0 ? 'negative ' : '';
-  const numerator = v.radicand === 1 ? '1' : `square root of ${v.radicand}`;
+  const magnitude =
+    v.radicand === 1
+      ? v.numerator === 2
+        ? '2'
+        : '1'
+      : `${v.numerator === 2 ? '2 times ' : ''}square root of ${v.radicand}`;
   return v.denominator === 1
-    ? `${sign}${numerator}`
-    : `${sign}${numerator} over ${v.denominator}`;
+    ? `${sign}${magnitude}`
+    : `${sign}${magnitude} over ${v.denominator}`;
 }
 
 /** Numeric value, for tests to cross-check the derivation against Math.cos/sin. */
 export function exactToNumber(v: ExactValue): number {
-  return (v.sign * Math.sqrt(v.radicand)) / v.denominator;
+  return (v.sign * v.numerator * Math.sqrt(v.radicand)) / v.denominator;
 }
