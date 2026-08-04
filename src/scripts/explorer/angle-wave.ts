@@ -155,9 +155,9 @@ const WAVE_SPEC: Record<WaveFn, WaveSpec> = {
   },
 };
 
-/** Per-function y-domain half-height. sin/cos share AMP_MAX; tan gets its own,
- *  wider domain because it is unbounded and AMP_MAX would hide a third of
- *  every quarter-sweep. */
+/** Per-function y-domain half-height. sin/cos share AMP_MAX; tan, sec, csc, and
+ *  cot all share the wider POLE_MAX instead, because each is unbounded and
+ *  AMP_MAX would hide a third of every quarter-sweep. */
 export function waveDomain(fn: WaveFn): number {
   return WAVE_SPEC[fn].domain;
 }
@@ -513,9 +513,8 @@ export function buildWaveSvg(opts: WaveDiagramOptions): string {
     : '';
 
   // Same collision the gridline guard above resolves, at tick 0: a solid
-  // y-axis would sit under a dashed asymptote there. Inert for sin/cos/tan
-  // today — none has a pole at tick 0 — but csc/cot will, so this must already
-  // be in place rather than added alongside them.
+  // y-axis would sit under a dashed asymptote there. Inert for sin/cos/tan/sec
+  // — none has a pole at tick 0 — active for csc/cot, which do.
   const yAxis = asymptoteTicks.has(0)
     ? ''
     : `<line x1="${s.xFor(0)}" y1="${top}" x2="${s.xFor(0)}" y2="${bottom}" ` +

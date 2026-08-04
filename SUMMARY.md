@@ -5116,7 +5116,7 @@ branching: `npm test` 492/492 passing, working tree clean.
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md
 - Extends: docs/superpowers/specs/2026-08-02-angle-wave-tangent-design.md
 
-## [2026-08-03 21:05] Commit Summary
+## [2026-08-03 21:05] Commit Summary — angle-wave.ts spec table
 
 **Change Type:** Refactor
 **Scope:** Angle Explorer — angle-wave.ts
@@ -5146,7 +5146,7 @@ call-site argument updates, proving no behaviour moved.
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T1
 
-## [2026-08-03 21:05] Commit Summary
+## [2026-08-03 21:05] Commit Summary — isCotangentUndefined
 
 **Change Type:** Feature
 **Scope:** Angle Explorer — angle.ts
@@ -5172,7 +5172,7 @@ confirming disjointness from `isTangentUndefined`. `npm test` —
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T3
 
-## [2026-08-03 21:05] Commit Summary
+## [2026-08-03 21:05] Commit Summary — ExactValue numerator
 
 **Change Type:** Feature
 **Scope:** Angle Explorer — unit-circle.ts
@@ -5199,7 +5199,7 @@ an `isRational` pin. `npm test` — 501/501 once T1/T3 landed alongside.
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T4
 
-## [2026-08-03 21:10] Commit Summary
+## [2026-08-03 21:10] Commit Summary — exhaustive WaveFn dispatch
 
 **Change Type:** Refactor
 **Scope:** Angle Explorer — angle-wave.ts, angle-diagram.ts, AngleExplorer.tsx
@@ -5228,7 +5228,7 @@ tests/e2e/angle-export.spec.ts` — 48/48.
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T2
 
-## [2026-08-03 21:10] Commit Summary
+## [2026-08-03 21:10] Commit Summary — reciprocal exact values
 
 **Change Type:** Feature
 **Scope:** Angle Explorer — unit-circle.ts
@@ -5347,7 +5347,7 @@ all three tables are now genuinely exhaustive). `npm test` — 579/579.
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T8
 
-## [2026-08-03 21:35] Commit Summary
+## [2026-08-03 21:35] Commit Summary — angle e2e coverage
 
 **Change Type:** Test
 **Scope:** Angle Explorer — tests/e2e/angle.spec.ts
@@ -5375,7 +5375,7 @@ stable across 3 repeated runs plus a `--repeat-each=3` stress pass
 **References:**
 - Plan: docs/superpowers/plans/2026-08-03-angle-wave-reciprocals.md, Task T9
 
-## [2026-08-03 21:35] Commit Summary
+## [2026-08-03 21:35] Commit Summary — export e2e coverage
 
 **Change Type:** Test
 **Scope:** Angle Explorer — tests/e2e/angle-export.spec.ts

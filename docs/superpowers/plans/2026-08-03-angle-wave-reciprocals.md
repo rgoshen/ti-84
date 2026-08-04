@@ -10,7 +10,7 @@ one commit with a `SUMMARY.md` entry written before it.
 
 ## Task order and dependencies
 
-```
+```text
 T1 ──▶ T2 ──────────────▶ T7 ──▶ T8 ──▶ T9
                           ▲             └─▶ T10
 T3 ──▶ T5 ──▶ T6 ─────────┘
@@ -180,7 +180,7 @@ fnLatex, fnText}`. tan's row reproduces `:120-121` **verbatim**. Six new flat fi
 per row of tan's block:
 - exact chain at 30°, both alphabets
 - r-independence: `buildCoordinateReadout(30, 0.5).secLatex === buildCoordinateReadout(30, 1.5).secLatex`, ×3
-- `=` vs `≈`: `sec 60°` is exactly 2, so ` = 2` with no `\approx`
+- `=` vs `≈`: `sec 60°` is exactly 2, so `= 2` with no `\approx`
 - undefined in both alphabets: sec at 90°, csc/cot at 0° and 180°
 - named fallback at 37°: `… = \sec 37^\circ \approx 1.2521`
 - `cot 90°` states `0` once, not `0 = 0`
@@ -280,7 +280,7 @@ The existing tan case stays untouched.
 ## Verification
 
 ```bash
-npx vitest run src/scripts/explorer/<touched>.test.ts   # per task, red first
+npx vitest run src/scripts/explorer/angle-wave.test.ts   # substitute the task's own test file, red first
 npm test                                                 # 492 baseline, must grow
 npx astro check                                          # 0 errors
 npx playwright test tests/e2e/angle.spec.ts tests/e2e/angle-export.spec.ts
@@ -301,4 +301,9 @@ Shut down the dev server as soon as the browser pass finishes.
 
 ## Status
 
-Planned. No implementation yet.
+Complete. All 10 tasks landed as separate commits on `feature/angle-wave-reciprocals`
+(PR #33), plus one addendum fixing an intro-copy gap found during manual verification.
+579 unit tests pass (up from the 492 baseline), 62 e2e tests pass (up from 48), `astro
+check` is clean. Manually verified in both themes: asymptote counts and colours, curve
+breaking through every pole, radius-slider invariance, position-slider rigid rotation,
+and csc/cot's undefined state at the default 0° angle.

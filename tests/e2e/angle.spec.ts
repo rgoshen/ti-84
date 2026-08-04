@@ -501,50 +501,31 @@ test('csc and cot read as undefined at the default 0°, with the asymptotes stil
   }
 });
 
-test('the radius slider does not move the sec curve — r cancels out of the ratio', async ({
-  page,
-}) => {
-  await goto(page);
-  await waveOption(page, 'sec θ').check();
-  await deg(page).fill('45');
-  const before = await curve(page).getAttribute('d');
+// Shared by the radius-invariance and segment-presence trios below — one row
+// per reciprocal function costs the next one this shape, rather than a whole
+// copy-pasted test.
+const RECIPROCAL_WAVES = [
+  { label: 'sec θ', name: 'sec', full: 'secant', role: 'secant-segment' },
+  { label: 'csc θ', name: 'csc', full: 'cosecant', role: 'cosecant-segment' },
+  { label: 'cot θ', name: 'cot', full: 'cotangent', role: 'cotangent-segment' },
+] as const;
 
-  const radius = page.locator('#slider-radius [role="slider"]');
-  await radius.focus();
-  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
+for (const { label, name } of RECIPROCAL_WAVES) {
+  test(`the radius slider does not move the ${name} curve — r cancels out of the ratio`, async ({
+    page,
+  }) => {
+    await goto(page);
+    await waveOption(page, label).check();
+    await deg(page).fill('45');
+    const before = await curve(page).getAttribute('d');
 
-  expect(await curve(page).getAttribute('d')).toBe(before);
-});
+    const radius = page.locator('#slider-radius [role="slider"]');
+    await radius.focus();
+    for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
 
-test('the radius slider does not move the csc curve — r cancels out of the ratio', async ({
-  page,
-}) => {
-  await goto(page);
-  await waveOption(page, 'csc θ').check();
-  await deg(page).fill('45');
-  const before = await curve(page).getAttribute('d');
-
-  const radius = page.locator('#slider-radius [role="slider"]');
-  await radius.focus();
-  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
-
-  expect(await curve(page).getAttribute('d')).toBe(before);
-});
-
-test('the radius slider does not move the cot curve — r cancels out of the ratio', async ({
-  page,
-}) => {
-  await goto(page);
-  await waveOption(page, 'cot θ').check();
-  await deg(page).fill('45');
-  const before = await curve(page).getAttribute('d');
-
-  const radius = page.locator('#slider-radius [role="slider"]');
-  await radius.focus();
-  for (let i = 0; i < 5; i++) await radius.press('ArrowRight');
-
-  expect(await curve(page).getAttribute('d')).toBe(before);
-});
+    expect(await curve(page).getAttribute('d')).toBe(before);
+  });
+}
 
 test('sweeping past an asymptote breaks the csc curve into more than one subpath', async ({
   page,
@@ -557,35 +538,17 @@ test('sweeping past an asymptote breaks the csc curve into more than one subpath
   expect((d.match(/M/g) ?? []).length).toBeGreaterThan(1);
 });
 
-test('the secant segment appears in the circle with sec selected', async ({ page }) => {
-  await goto(page);
-  const segment = page.locator(`${FIGURE} [data-role="secant-segment"]`);
-  await expect(segment).toHaveCount(0);
+for (const { label, name, full, role } of RECIPROCAL_WAVES) {
+  test(`the ${full} segment appears in the circle with ${name} selected`, async ({ page }) => {
+    await goto(page);
+    const segment = page.locator(`${FIGURE} [data-role="${role}"]`);
+    await expect(segment).toHaveCount(0);
 
-  await waveOption(page, 'sec θ').check();
-  await deg(page).fill('45');
-  await expect(segment).toHaveCount(1);
-});
-
-test('the cosecant segment appears in the circle with csc selected', async ({ page }) => {
-  await goto(page);
-  const segment = page.locator(`${FIGURE} [data-role="cosecant-segment"]`);
-  await expect(segment).toHaveCount(0);
-
-  await waveOption(page, 'csc θ').check();
-  await deg(page).fill('45');
-  await expect(segment).toHaveCount(1);
-});
-
-test('the cotangent segment appears in the circle with cot selected', async ({ page }) => {
-  await goto(page);
-  const segment = page.locator(`${FIGURE} [data-role="cotangent-segment"]`);
-  await expect(segment).toHaveCount(0);
-
-  await waveOption(page, 'cot θ').check();
-  await deg(page).fill('45');
-  await expect(segment).toHaveCount(1);
-});
+    await waveOption(page, label).check();
+    await deg(page).fill('45');
+    await expect(segment).toHaveCount(1);
+  });
+}
 
 test('switching from tan to sec swaps the mark rather than adding one', async ({ page }) => {
   await goto(page);

@@ -816,6 +816,7 @@ describe('buildWaveSvg — y-axis suppression fires for csc/cot at tick 0', () =
   const s = waveScales();
   const x0 = s.xFor(0);
   const top = s.yFor(AMP_MAX);
+  const bottom = s.yFor(-AMP_MAX);
 
   it('suppresses the solid y-axis for csc and cot, which have a pole at tick 0', () => {
     for (const fn of ['csc', 'cot'] as const) {
@@ -824,13 +825,18 @@ describe('buildWaveSvg — y-axis suppression fires for csc/cot at tick 0', () =
     }
   });
 
+  // The y-axis line ends at y2="${bottom}"; the k=0 gridline (drawn whenever a
+  // function has no pole there) shares the same x1/y1 but ends at
+  // y2="${bottom + TICK_OVERSHOOT}" instead. Asserting only the x1/y1 prefix
+  // would pass on the gridline alone even if the y-axis itself were missing —
+  // the full endpoint is what makes these positive controls non-vacuous.
   it('positive control: sin still draws its y-axis', () => {
     const svg = buildWaveSvg({ ...waveBase, fn: 'sin', theta: 45 });
-    expect(svg).toContain(`<line x1="${x0}" y1="${top}"`);
+    expect(svg).toContain(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${bottom}" `);
   });
 
   it('leaves tan unaffected — it has no pole at tick 0', () => {
     const svg = buildWaveSvg({ ...waveBase, fn: 'tan', theta: 45 });
-    expect(svg).toContain(`<line x1="${x0}" y1="${top}"`);
+    expect(svg).toContain(`<line x1="${x0}" y1="${top}" x2="${x0}" y2="${bottom}" `);
   });
 });

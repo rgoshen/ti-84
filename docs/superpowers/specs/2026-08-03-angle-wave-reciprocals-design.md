@@ -148,7 +148,7 @@ zero) and `'undefined'` at sin's zeros.
 `tanEquation:112` becomes `ratioEquation`, driven by a table of chain strings. tan's row
 reproduces `:120-121` verbatim so its six existing assertions stay green untouched.
 
-```
+```text
 sec θ = r/x = r/(r cos θ) = 1/cos θ
 csc θ = r/y = r/(r sin θ) = 1/sin θ
 cot θ = x/y = (r cos θ)/(r sin θ) = cos θ/sin θ
@@ -169,7 +169,7 @@ caption ternary.
 
 Two anchors, two meet points, one shared clamp:
 
-```
+```text
 anchorA = unit at β            (1,0)     meetT = anchorA + tan θ · unit at β+90°
 anchorB = unit at β+90°        (0,1)     meetC = anchorB + cot θ · unit at β
 ```
