@@ -30,7 +30,7 @@ Every task's requirements implicitly include this section.
 - **No new dependencies, no new exports, no new `WaveDiagramOptions` field.** This is an attribute-value change.
 - **No new theme colour.** Reuse the existing `colors.wall` slot, documented in `theme.ts` as *"Vertical asymptote guide (drawn dashed)"*. `theme.test.ts`'s `MARK_KEYS` already covers `wall` for 3:1 non-text contrast (WCAG 2.1 SC 1.4.11) in both themes, so no new contrast test is needed.
 - **Assert against `explorerColors(...)`, never hard-coded hex.** A literal `'#e24b4a'` would keep passing while the palette moved on. The test must read from the same source the renderer does.
-- **No export-legend change.** The legend covers the polar figure's main geometry and already omits gridlines, unit references and the marker. A red asymptote row would duplicate the existing red "Terminal side" swatch.
+- **No new asymptote legend row.** The legend covers the polar figure's main geometry and already omits gridlines, unit references and the marker. A new red row would duplicate the existing red "Terminal side" swatch — but the existing tan θ row's label text, and the page's intro copy, are free to name the asymptote marks explicitly, since that's wording on an existing row/paragraph, not a new legend entry. (See the Post-Implementation Note below: this ended up in scope.)
 - **Conventional Commits.** `fix:`, `test:`, `docs:`. **No co-author or AI-generation trailers.**
 - **Append a `SUMMARY.md` entry before every commit**, using the format already in that file (`## [YYYY-MM-DD HH:MM] Commit Summary` with Change Type / Scope / Summary / Rationale / Bug Fix Context / References).
 - **Branch:** `feature/angle-wave-asymptote-legibility`, already created. No direct commits to `main`.
@@ -200,3 +200,7 @@ git commit -m "fix(explorer): make tan wave asymptotes read as asymptotes, not g
 **Type consistency.** No types change. `colors.wall` and `colors.axis` are both existing `ExplorerColors` fields, spelled identically in the test and the implementation.
 
 **One gap worth flagging to the reviewer:** Step 2's second test is only *partially* red at the start — the width assertion already passes (1 > 0.75) and only the dasharray assertion fails. That is honest and expected, not a broken test; the width assertion exists to pin the relationship going forward, not to catch today's bug. The first test is the one that proves the defect.
+
+## Post-Implementation Note
+
+The final whole-branch review found that making the marks louder (Step 3) without ever naming them as asymptotes anywhere the user reads left the stated goal half-met: the tan θ legend label (`AngleExplorer.tsx`) and this page's intro copy (`angles.astro`) still didn't tie the word "asymptote" to the dashed verticals on screen — closing a sentence the original tangent-wave design spec had specified but PR #31 shipped only half of. Both were extended as a follow-up fix, verified clean by re-review, and merged on top of Task 1 in commit `98fbe94` — copy-only, no new legend row, no logic change.

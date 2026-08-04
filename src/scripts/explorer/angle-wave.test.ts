@@ -552,6 +552,8 @@ describe('buildWaveSvg — tan', () => {
 
     for (const line of lines) {
       expect(widthOf(line)).toBeGreaterThan(widthOf(gridline));
+      // 1.5 is render.ts:123's dashedLine width — the cross-explorer wall value.
+      expect(line).toContain('stroke-width="1.5"');
       expect(line).toContain('stroke-dasharray="6 6"');
     }
   });
