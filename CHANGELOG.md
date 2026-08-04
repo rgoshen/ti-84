@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file. It is generated
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 from [Conventional Commits](https://www.conventionalcommits.org/) — do not edit by hand.
 
+## [0.11.1](https://github.com/rgoshen/ti-84/compare/v0.11.0...v0.11.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **explorer:** make tan wave asymptotes read as asymptotes, not gridlines ([31c8126](https://github.com/rgoshen/ti-84/commit/31c8126fe607e91ee98ab61c3f35857b373f916b))
+
 # [0.11.0](https://github.com/rgoshen/ti-84/compare/v0.10.0...v0.11.0) (2026-08-03)
 
 
